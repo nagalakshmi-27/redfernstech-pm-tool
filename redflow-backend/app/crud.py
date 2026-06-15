@@ -41,3 +41,9 @@ def update_user(db: Session, user: models.User, user_update: schemas.UserUpdate)
     db.commit()
     db.refresh(user)
     return user
+
+def update_password(db: Session, user: models.User, new_password: str):
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    db.refresh(user)
+    return user

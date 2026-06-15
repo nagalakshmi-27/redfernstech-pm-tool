@@ -4,15 +4,28 @@ import { useState } from "react";
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
 
-  const handleSubmit = (e) => {
+  const [message, setMessage] = useState("");
+  const handleSubmit = async (e) => { // <-- Add async
     e.preventDefault();
-
     if (!email) {
       alert("Please enter your email");
       return;
     }
-
-    alert("Reset link sent to your email");
+    try {
+      const response = await fetch("http://127.0.0.1:8000/users/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to process request");
+      }
+      
+      setMessage("If that email exists, a reset link was sent to your inbox!");
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (
@@ -25,7 +38,7 @@ export default function ForgotPassword() {
         <p className="text-center text-gray-500 mb-8">
           Enter your email address and we'll send a reset link
         </p>
-
+        {message && <p className="text-green-600 text-center">{message}</p>}
         <form onSubmit={handleSubmit} className="space-y-5">
           <input
             type="email"
