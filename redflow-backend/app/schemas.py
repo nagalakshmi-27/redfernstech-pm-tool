@@ -1,22 +1,24 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List
 
-# --- USER SCHEMAS ---
+# --- USERS ---
 class UserBase(BaseModel):
     email: EmailStr
     role: str
-
+    full_name: Optional[str] = None # Added this!
 class UserCreate(UserBase):
     password: str
-
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = None
 class UserResponse(UserBase):
     id: int
     created_at: datetime
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# --- PROJECT SCHEMAS ---
+# --- PROJECTS ---
 class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -30,24 +32,8 @@ class ProjectResponse(ProjectBase):
     id: int
     created_by_id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# --- TASK SCHEMAS ---
-class TaskBase(BaseModel):
-    title: str
-    description: Optional[str] = None
-    status: str = "To Do"
-    priority: str = "Medium"
-    due_date: Optional[datetime] = None
-
-class TaskCreate(TaskBase):
-    project_id: int
-    assignee_id: Optional[int] = None
-
-class TaskResponse(TaskBase):
-    id: int
-    project_id: int
-    assignee_id: Optional[int]
-    created_at: datetime
-    class Config:
-        orm_mode = True
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str

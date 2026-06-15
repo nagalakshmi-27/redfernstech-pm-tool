@@ -7,16 +7,39 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => { // <-- We added "async" here!
     e.preventDefault();
-
     if (!email || !password) {
       alert("Please fill all fields");
       return;
     }
-    localStorage.setItem("isLoggedIn", "true");
+    
+    try {
+      // 1. Send the data to your backend
+      const response = await fetch("http://127.0.0.1:8000/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, password: password })
+      });
+      // 2. Check if the backend rejected the login
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Login failed");
+      }
+      // 3. Get the JWT token from the backend
+      const data = await response.json();
+      
+      // 4. Save the real token securely!
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("isLoggedIn", "true");
 
-    navigate("/dashboard");
+      localStorage.setItem("userEmail", data.user.email);
+      // 5. Go to the dashboard
+      navigate("/dashboard");
+      
+    } catch (err) {
+      alert(err.message); // This will show "Incorrect email or password" if they guess wrong
+    }
   };
 
   return (
