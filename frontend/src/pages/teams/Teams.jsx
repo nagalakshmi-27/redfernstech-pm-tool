@@ -1,0 +1,232 @@
+import MainLayout from "../../layouts/MainLayout";
+import { useState } from "react";
+import { validateEmail } from "../../utils/validation";
+import { useContext } from "react";
+import AppContext from "../../context/AppContext";
+
+export default function Teams() {
+  const { members, setMembers } = useContext(AppContext);
+  const [showModal, setShowModal] = useState(false);
+  const [memberName, setMemberName] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState("");
+  const [department, setDepartment] = useState("");
+  const handleAddMember = () => {
+  if (!memberName.trim()) {
+  alert("Member Name is required");
+  return;
+}
+
+if (!memberEmail.trim()) {
+  alert("Email is required");
+  return;
+}
+if (!validateEmail(memberEmail)) {
+  alert("Please enter a valid email");
+  return;
+}
+
+if (!memberRole.trim()) {
+  alert("Role is required");
+  return;
+}
+
+if (!department.trim()) {
+  alert("Department is required");
+  return;
+}
+
+  const newMember = {
+    id: Date.now(),
+    name: memberName,
+    email: memberEmail,
+    role: memberRole,
+    department,
+  };
+
+  setMembers([...members, newMember]);
+
+  setMemberName("");
+  setMemberEmail("");
+  setMemberRole("");
+  setDepartment("");
+  setShowModal(false);
+};
+const totalMembers = members.length;
+
+const developers = members.filter(
+  (member) => member.department === "Development"
+).length;
+
+const designers = members.filter(
+  (member) => member.department === "Design"
+).length;
+
+const managers = members.filter(
+  (member) => member.department === "Management"
+).length;
+
+
+
+  return (
+    <MainLayout>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Teams</h1>
+
+        <button
+  onClick={() => setShowModal(true)}
+  className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+>
+  + Add Member
+</button>
+      </div>
+      <div className="grid grid-cols-4 gap-4 mb-6">
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-gray-500 text-sm">Total Members</p>
+    <h2 className="text-2xl font-bold">{totalMembers}</h2>
+  </div>
+
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-gray-500 text-sm">Developers</p>
+    <h2 className="text-2xl font-bold text-green-600">
+      {developers}
+    </h2>
+  </div>
+
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-gray-500 text-sm">Designers</p>
+    <h2 className="text-2xl font-bold text-blue-600">
+      {designers}
+    </h2>
+  </div>
+
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-gray-500 text-sm">Managers</p>
+    <h2 className="text-2xl font-bold text-purple-600">
+      {managers}
+    </h2>
+  </div>
+</div>
+      
+
+      <div className="grid grid-cols-2 gap-6">
+        {members.map((member) => (
+          <div
+            key={member.id}
+            className="bg-white rounded-xl shadow p-6"
+          >
+            <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-lg font-bold mb-3">
+  {member.name.charAt(0)}
+</div>
+            <h2 className="text-xl font-semibold mb-2">
+              {member.name}
+            </h2>
+
+            <p className="text-blue-600 mb-2">
+              {member.role}
+            </p>
+
+            <p className="text-gray-600">
+              {member.email}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+  Department: {member.department}
+</p>
+          </div>
+        ))}
+      </div>
+      {showModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div className="bg-white p-6 rounded-xl w-[500px]">
+      <h2 className="text-2xl font-bold mb-4">
+        Add Team Member
+      </h2>
+
+      <div className="space-y-4">
+
+        <div>
+          <label className="block mb-2 font-medium">
+            Name
+          </label>
+          <input
+  type="text"
+  placeholder="Enter Name"
+  value={memberName}
+  onChange={(e) => setMemberName(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
+        </div>
+
+        <div>
+          <label className="block mb-2 font-medium">
+            Email
+          </label>
+          <input
+            type="email"
+            placeholder="Enter Email"
+            value={memberEmail}
+            onChange={(e) => setMemberEmail(e.target.value)}
+            className="w-full border p-3 rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-2 font-medium">
+            Role
+          </label>
+          <select
+  value={memberRole}
+  onChange={(e) => setMemberRole(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+>
+  <option value="">Select Role</option>
+  <option>Admin</option>
+  <option>Project Manager</option>
+  <option>Frontend Developer</option>
+  <option>Backend Developer</option>
+  <option>UI/UX Designer</option>
+  <option>QA Engineer</option>
+</select>
+        </div>
+
+        <div>
+  <label className="block mb-2 font-medium">
+    Department
+  </label>
+
+  <select
+    value={department}
+    onChange={(e) => setDepartment(e.target.value)}
+    className="w-full border p-3 rounded-lg"
+  >
+    <option value="">Select Department</option>
+    <option>Development</option>
+    <option>Design</option>
+    <option>Management</option>
+    <option>QA</option>
+  </select>
+</div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowModal(false)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={handleAddMember}
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+          >
+            Add Member
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
+    </MainLayout>
+  );
+}
