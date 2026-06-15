@@ -1,4 +1,6 @@
+import { useNavigate } from "react-router-dom";
 export default function TopNavbar() {
+  const navigate = useNavigate();
   return (
     <div className="h-16 bg-white border-b flex items-center justify-between px-6">
       <input
@@ -8,7 +10,12 @@ export default function TopNavbar() {
       />
 
       <div className="flex items-center gap-4">
-  <button className="text-xl">🔔</button>
+  <button
+  onClick={() => navigate("/notifications")}
+  className="text-xl"
+>
+  🔔
+</button>
 
   <button
     onClick={() => {

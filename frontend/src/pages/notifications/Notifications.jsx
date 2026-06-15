@@ -1,23 +1,9 @@
 import MainLayout from "../../layouts/MainLayout";
+import { useContext } from "react";
+import AppContext from "../../context/AppContext";
 
 export default function Notifications() {
-  const notifications = [
-    {
-      id: 1,
-      message: "New task assigned to you",
-      time: "2 hours ago",
-    },
-    {
-      id: 2,
-      message: "Project status updated",
-      time: "Yesterday",
-    },
-    {
-      id: 3,
-      message: "Sprint review scheduled",
-      time: "Today",
-    },
-  ];
+  const { activities } = useContext(AppContext);
 
   return (
     <MainLayout>
@@ -26,20 +12,22 @@ export default function Notifications() {
       </h1>
 
       <div className="space-y-4">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className="bg-white rounded-xl shadow p-4"
-          >
-            <h3 className="font-semibold">
-              🔔 {notification.message}
-            </h3>
-
-            <p className="text-gray-500 text-sm">
-              {notification.time}
-            </p>
-          </div>
-        ))}
+        {activities.length > 0 ? (
+  activities.map((activity, index) => (
+    <div
+      key={index}
+      className="bg-white rounded-xl shadow p-4"
+    >
+      <h3 className="font-semibold">
+        🔔 {activity}
+      </h3>
+    </div>
+  ))
+) : (
+  <div className="bg-white rounded-xl shadow p-4">
+    No Notifications Yet
+  </div>
+)}
       </div>
     </MainLayout>
   );
