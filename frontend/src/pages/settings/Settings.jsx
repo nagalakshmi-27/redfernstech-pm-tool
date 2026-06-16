@@ -58,20 +58,6 @@ export default function Settings() {
 }
   };
 
-  // 3. Handle Password Change (Dummy function to prevent crashes)
-  const handlePasswordChange = async () => {
-    if (newPassword !== confirmPassword) {
-      setMessage("New passwords do not match!");
-      return;
-    }
-    
-    // For now, we just close the box and show a message
-    setMessage("Password update feature coming soon!");
-    setShowPasswordSection(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  };
 
   // 3. Handle Password Change (Dummy function to prevent crashes)
   const handlePasswordChange = async () => {
