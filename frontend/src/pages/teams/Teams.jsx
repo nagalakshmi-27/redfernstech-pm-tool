@@ -1,5 +1,11 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState } from "react";
+import {
+  Users,
+  Code,
+  Palette,
+  Briefcase,
+} from "lucide-react";
 import { validateEmail } from "../../utils/validation";
 import { useContext } from "react";
 import AppContext from "../../context/AppContext";
@@ -80,32 +86,72 @@ const managers = members.filter(
   + Add Member
 </button>
       </div>
-      <div className="grid grid-cols-4 gap-4 mb-6">
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">Total Members</p>
-    <h2 className="text-2xl font-bold">{totalMembers}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          Total Members
+        </p>
+
+        <p className="text-3xl font-bold mt-2">
+          {totalMembers}
+        </p>
+      </div>
+
+      <Users size={22} />
+    </div>
   </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">Developers</p>
-    <h2 className="text-2xl font-bold text-green-600">
-      {developers}
-    </h2>
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          Developers
+        </p>
+
+        <p className="text-3xl font-bold mt-2">
+          {developers}
+        </p>
+      </div>
+
+      <Code size={22} />
+    </div>
   </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">Designers</p>
-    <h2 className="text-2xl font-bold text-blue-600">
-      {designers}
-    </h2>
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-indigo-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          Designers
+        </p>
+
+        <p className="text-3xl font-bold mt-2">
+          {designers}
+        </p>
+      </div>
+
+      <Palette size={22} />
+    </div>
   </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">Managers</p>
-    <h2 className="text-2xl font-bold text-purple-600">
-      {managers}
-    </h2>
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-purple-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          Managers
+        </p>
+
+        <p className="text-3xl font-bold mt-2">
+          {managers}
+        </p>
+      </div>
+
+      <Briefcase size={22} />
+    </div>
   </div>
+
 </div>
       
 
