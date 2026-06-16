@@ -228,67 +228,67 @@ const filteredEvents = selectedEvents.filter((event) =>
 </div>
 <div className="grid grid-cols-4 gap-4 mb-6">
 
-  <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition-all">
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-sm">
+      <p className="text-gray-500 text-base font-medium">
         Total Events
       </p>
 
-      <h2 className="text-2xl font-bold">
+      <p className="text-3xl font-bold mt-2">
         {totalEvents}
-      </h2>
+      </p>
     </div>
 
-    <CalendarDays size={28} />
+    <CalendarDays size={22} />
   </div>
 </div>
 
-  <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition-all">
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-sm">
+      <p className="text-gray-500 text-base font-medium">
         Upcoming
       </p>
 
-      <h2 className="text-2xl font-bold text-blue-600">
+      <p className="text-3xl font-bold mt-2">
         {upcomingEvents}
-      </h2>
+      </p>
     </div>
 
-    <Clock size={28} />
+    <Clock size={22} />
   </div>
 </div>
 
-  <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition-all">
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-sm">
+      <p className="text-gray-500 text-base font-medium">
         Completed
       </p>
 
-      <h2 className="text-2xl font-bold text-green-600">
+      <p className="text-3xl font-bold mt-2">
         {completedEvents}
-      </h2>
+      </p>
     </div>
 
-    <CheckCircle size={28} />
+    <CheckCircle size={22} />
   </div>
 </div>
 
-  <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition-all">
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-sm">
+      <p className="text-gray-500 text-base font-medium">
         Cancelled
       </p>
 
-      <h2 className="text-2xl font-bold text-red-600">
+      <p className="text-3xl font-bold mt-2">
         {cancelledEvents}
-      </h2>
+      </p>
     </div>
 
-    <XCircle size={28} />
+    <XCircle size={22} />
   </div>
 </div>
 </div>

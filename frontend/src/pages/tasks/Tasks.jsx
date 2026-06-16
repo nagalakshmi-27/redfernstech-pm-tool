@@ -1,5 +1,11 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useContext } from "react";
+import {
+  ListTodo,
+  Clock3,
+  PlayCircle,
+  CheckCircle,
+} from "lucide-react";
 import AppContext from "../../context/AppContext";
 export default function Tasks() {
   const {
@@ -7,13 +13,14 @@ export default function Tasks() {
   setTasks,
   activities,
   setActivities,
-  members,
+  projects,
 } = useContext(AppContext);
   const [showModal, setShowModal] = useState(false);
   const [taskName, setTaskName] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("To Do");
   const [assignee, setAssignee] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
@@ -31,7 +38,9 @@ const inProgressTasks = tasks.filter(
 const completedTasks = tasks.filter(
   (task) => task.status === "Completed"
 ).length;
-
+const selectedProjectData = projects.find(
+  (project) => project.name === selectedProject
+);
 const handleCreateTask = () => {
   if (!taskName.trim()) {
     alert("Task Name is required");
@@ -73,15 +82,15 @@ const handleCreateTask = () => {
     );
   } else {
     const newTask = {
-      id: Date.now(),
-      name: taskName,
-      description: taskDescription,
-      priority,
-      status,
-      assignee,
-      dueDate,
-    };
-
+  id: Date.now(),
+  name: taskName,
+  description: taskDescription,
+  priority,
+  status,
+  assignee,
+  project: selectedProject,
+  dueDate,
+};
     setTasks([...tasks, newTask]);
 
 setActivities([
@@ -95,6 +104,7 @@ setActivities([
   setPriority("Medium");
   setStatus("To Do");
   setAssignee("");
+  setSelectedProject("");
   setDueDate("");
   setEditingTaskId(null);
   setShowModal(false);
@@ -123,43 +133,66 @@ const handleDeleteTask = (id) => {
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          Total Tasks
+        </p>
+        <p className="text-3xl font-bold mt-2">
+          {totalTasks}
+        </p>
+      </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">
-      Total Tasks
-    </p>
-    <h2 className="text-2xl font-bold">
-      {totalTasks}
-    </h2>
+      <ListTodo size={22} />
+    </div>
   </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">
-      To Do
-    </p>
-    <h2 className="text-2xl font-bold text-gray-600">
-      {todoTasks}
-    </h2>
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          To Do
+        </p>
+        <p className="text-3xl font-bold mt-2">
+          {todoTasks}
+        </p>
+      </div>
+
+      <Clock3 size={22} />
+    </div>
   </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">
-      In Progress
-    </p>
-    <h2 className="text-2xl font-bold text-green-600">
-      {inProgressTasks}
-    </h2>
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          In Progress
+        </p>
+        <p className="text-3xl font-bold mt-2">
+          {inProgressTasks}
+        </p>
+      </div>
+
+      <PlayCircle size={22} />
+    </div>
   </div>
 
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-gray-500 text-sm">
-      Completed
-    </p>
-    <h2 className="text-2xl font-bold text-blue-600">
-      {completedTasks}
-    </h2>
+  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-purple-500">
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="text-gray-500 text-base font-medium">
+          Completed
+        </p>
+        <p className="text-3xl font-bold mt-2">
+          {completedTasks}
+        </p>
+      </div>
+
+      <CheckCircle size={22} />
+    </div>
   </div>
 
 </div>
@@ -207,6 +240,9 @@ const handleDeleteTask = (id) => {
 <p>
   Assignee: {task.assignee}
 </p>
+<p className="text-sm text-gray-500">
+  Project: {task.project}
+</p>
 
             <p className="text-sm text-gray-500 mt-1">
   Due Date: {task.dueDate}
@@ -220,6 +256,7 @@ const handleDeleteTask = (id) => {
       setPriority(task.priority);
       setStatus(task.status);
       setAssignee(task.assignee);
+      setSelectedProject(task.project);
       setDueDate(task.dueDate);
       setShowModal(true);
     }}
@@ -303,6 +340,33 @@ const handleDeleteTask = (id) => {
         </div>
 
         <div>
+  <label className="block mb-2 font-medium">
+    Project
+  </label>
+
+  <select
+    value={selectedProject}
+    onChange={(e) =>
+      setSelectedProject(e.target.value)
+    }
+    className="w-full border p-3 rounded-lg"
+  >
+    <option value="">
+      Select Project
+    </option>
+
+    {projects.map((project) => (
+      <option
+        key={project.id}
+        value={project.name}
+      >
+        {project.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+        <div>
           <label className="block mb-2 font-medium">
             Assignee
           </label>
@@ -315,14 +379,16 @@ const handleDeleteTask = (id) => {
     Select Team Member
   </option>
 
-  {members.map((member) => (
-    <option
-      key={member.id}
-      value={member.name}
-    >
-      {member.name}
-    </option>
-  ))}
+  {selectedProjectData?.members?.map(
+    (memberName) => (
+      <option
+        key={memberName}
+        value={memberName}
+      >
+        {memberName}
+      </option>
+    )
+  )}
 </select>
         </div>
         <div>
