@@ -39,8 +39,10 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     description = Column(String, nullable=True)
-    start_date = Column(DateTime, nullable=True)
-    end_date = Column(DateTime, nullable=True)
+    start_date = Column(String, nullable=True) 
+    end_date = Column(String, nullable=True)   
+    status = Column(String, default="Planning") 
+    members = Column(String, nullable=True) # <--- ADDED MEMBERS!
     created_by_id = Column(Integer, ForeignKey("users.id"))
 
     creator = relationship("User", back_populates="projects")

@@ -47,3 +47,40 @@ def update_password(db: Session, user: models.User, new_password: str):
     db.commit()
     db.refresh(user)
     return user
+
+def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
+    db_project = models.Project(
+        name=project.name,
+        description=project.description,
+        start_date=project.start_date,
+        end_date=project.end_date,
+        status=project.status,
+        members=project.members,
+        created_by_id=user_id
+    )
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+def get_user_projects(db: Session, user_id: int):
+    return db.query(models.Project).filter(models.Project.created_by_id == user_id).all()
+
+def update_project(db: Session, project_id: int, project_update: schemas.ProjectUpdate, user_id: int):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.created_by_id == user_id).first()
+    if not db_project: return None
+    
+    update_data = project_update.model_dump(exclude_unset=True) # or .dict() for older pydantic
+    for key, value in update_data.items():
+        setattr(db_project, key, value)
+        
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+def delete_project(db: Session, project_id: int, user_id: int):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.created_by_id == user_id).first()
+    if not db_project: return False
+    db.delete(db_project)
+    db.commit()
+    return True

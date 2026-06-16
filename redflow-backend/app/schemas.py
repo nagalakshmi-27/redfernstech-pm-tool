@@ -22,11 +22,21 @@ class UserResponse(UserBase):
 class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    start_date: Optional[str] = None 
+    end_date: Optional[str] = None
+    status: Optional[str] = "Planning"
+    members: Optional[str] = None # <--- ADDED MEMBERS!
 
 class ProjectCreate(ProjectBase):
     pass
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    status: Optional[str] = None
+    members: Optional[str] = None # <--- ADDED MEMBERS!
 
 class ProjectResponse(ProjectBase):
     id: int
