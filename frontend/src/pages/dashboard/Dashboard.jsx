@@ -21,6 +21,29 @@ export default function Dashboard() {
   )
   .slice(0, 3);
 
+  let activeProjects = 0;
+
+projects.forEach((project) => {
+  const projectTasks = tasks.filter(
+    (task) => task.project === project.name
+  );
+
+  const completedTasks = projectTasks.filter(
+    (task) => task.status === "Completed"
+  );
+
+  const progress =
+    projectTasks.length > 0
+      ? Math.round(
+          (completedTasks.length / projectTasks.length) * 100
+        )
+      : 0;
+
+  if (progress > 0 && progress < 100) {
+    activeProjects++;
+  }
+});
+
   return (
     <MainLayout>
       <h1 className="text-3xl font-bold mb-6">
@@ -56,12 +79,7 @@ export default function Dashboard() {
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {
-          projects.filter(
-            (project) =>
-              project.status === "In Progress"
-          ).length
-        }
+        {activeProjects}
       </p>
     </div>
 

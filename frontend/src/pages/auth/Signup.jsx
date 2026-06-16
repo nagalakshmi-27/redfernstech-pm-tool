@@ -14,39 +14,48 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => { // <-- We added "async" here!
     e.preventDefault();
-
-    if (
-      !firstName ||
-      !lastName ||
-      !email ||
-      !password ||
-      !confirmPassword
-    ) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       setError("Please fill all fields");
       return;
     }
-
     if (!validateEmail(email)) {
       setError("Please enter a valid email address");
       return;
     }
-
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
-
     setError("");
-
-    navigate("/");
+    try {
+      // 1. Send the data to your backend
+      const response = await fetch("http://127.0.0.1:8000/users/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: email, 
+          password: password, 
+          role: "team_mate" 
+        })
+      });
+      // 2. Check if the backend rejected it (like if the email is already used)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Signup failed");
+      }
+      alert("Account created successfully! Please sign in.");
+      navigate("/"); // Send them to the login page
+      
+    } catch (err) {
+      setError(err.message); // This will show the error in your red UI box!
+    }
   };
 
   return (

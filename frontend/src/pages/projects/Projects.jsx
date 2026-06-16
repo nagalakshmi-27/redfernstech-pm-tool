@@ -25,18 +25,34 @@ export default function Projects() {
   const totalProjects = projects.length;
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
-const planningProjects = projects.filter(
-  (project) => project.status === "Planning"
-).length;
+  let planningProjects = 0;
+let inProgressProjects = 0;
+let completedProjects = 0;
 
-const inProgressProjects = projects.filter(
-  (project) => project.status === "In Progress"
-).length;
+projects.forEach((project) => {
+  const projectTasks = tasks.filter(
+    (task) => task.project === project.name
+  );
 
-const completedProjects = projects.filter(
-  (project) => project.status === "Completed"
-).length;
+  const completedTasks = projectTasks.filter(
+    (task) => task.status === "Completed"
+  );
 
+  const progress =
+    projectTasks.length > 0
+      ? Math.round(
+          (completedTasks.length / projectTasks.length) * 100
+        )
+      : 0;
+
+  if (progress === 100) {
+    completedProjects++;
+  } else if (progress > 0) {
+    inProgressProjects++;
+  } else {
+    planningProjects++;
+  }
+});
   const handleCreateProject = () => {
   if (!projectName.trim()) {
     alert("Project Name is required");
@@ -216,12 +232,20 @@ const handleDeleteProject = (id) => {
     );
 
     const progress =
-      projectTasks.length > 0
-        ? Math.round(
-            (completedTasks.length /
-              projectTasks.length) * 100
-          )
-        : 0;
+  projectTasks.length > 0
+    ? Math.round(
+        (completedTasks.length /
+          projectTasks.length) * 100
+      )
+    : 0;
+
+let projectStatus = "Planning";
+
+if (progress === 100) {
+  projectStatus = "Completed";
+} else if (progress > 0) {
+  projectStatus = "In Progress";
+}
 
     return (
       <div
@@ -237,14 +261,14 @@ const handleDeleteProject = (id) => {
 
 <span
   className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${
-  project.status === "In Progress"
-    ? "bg-green-100 text-green-700"
-    : project.status === "Completed"
-    ? "bg-blue-100 text-blue-700"
-    : "bg-yellow-100 text-yellow-700"
-}`}
+    projectStatus === "In Progress"
+      ? "bg-green-100 text-green-700"
+      : projectStatus === "Completed"
+      ? "bg-blue-100 text-blue-700"
+      : "bg-yellow-100 text-yellow-700"
+  }`}
 >
-  {project.status}
+  {projectStatus}
 </span>
 
 <div className="mb-4">
