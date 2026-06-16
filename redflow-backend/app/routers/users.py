@@ -67,6 +67,21 @@ def get_my_settings(current_user: models.User = Depends(get_current_user)):
 def update_my_settings(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return crud.update_user(db=db, user=current_user, user_update=user_update)
 
+# --- CHANGE PASSWORD LOGIC ---
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.put("/me/password")
+def change_password(passwords: ChangePasswordRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # 1. Verify the current password is correct
+    if not crud.verify_password(passwords.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect current password!")
+    
+    # 2. Save the new password
+    crud.update_password(db, current_user, passwords.new_password)
+    return {"message": "Password successfully updated!"}
+
 # --- PASSWORD RESET LOGIC ---
 
 # 1. Pydantic Schemas for our requests

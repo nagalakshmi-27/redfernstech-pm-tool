@@ -63,13 +63,37 @@ export default function Settings() {
       setMessage("New passwords do not match!");
       return;
     }
+    if (newPassword.length < 8) {
+      setMessage("Password must be at least 8 characters long!");
+      return;
+    }
     
-    // For now, we just close the box and show a message
-    setMessage("Password update feature coming soon!");
-    setShowPasswordSection(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      const response = await fetch("http://127.0.0.1:8000/users/me/password", {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ 
+          current_password: currentPassword, 
+          new_password: newPassword 
+        })
+      });
+      if (response.ok) {
+        setMessage("Password updated successfully!");
+        setShowPasswordSection(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setMessage(""), 4000);
+      } else {
+        const errData = await response.json();
+        setMessage(errData.detail || "Failed to update password.");
+      }
+    } catch (err) {
+      setMessage("Failed to connect to backend.");
+    }
   };
 
   const handleLogout = () => {
@@ -84,7 +108,11 @@ export default function Settings() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
 
       <div className="bg-white rounded-xl shadow p-6 space-y-4">
-        {message && <div className="p-3 bg-green-100 text-green-700 rounded-lg">{message}</div>}
+        {message && (
+  <div className={`p-3 rounded-lg ${message.toLowerCase().includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+    {message}
+  </div>
+)}
 
         <div>
           <label className="block font-medium mb-2">Full Name</label>
