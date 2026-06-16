@@ -14,9 +14,13 @@ app = FastAPI(title="RedFlow API")
 # Configure CORS so the React frontend can communicate with the backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # Your React frontend URL
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "*"
+    ],
     allow_credentials=True,
-    allow_methods=["*"], # Allow all methods (GET, POST, PUT, DELETE)
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 

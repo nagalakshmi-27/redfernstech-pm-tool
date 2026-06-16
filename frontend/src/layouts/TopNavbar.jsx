@@ -1,17 +1,8 @@
-import { useEffect, useState } from "react";
-
 export default function TopNavbar() {
-  // These were missing!
-  const [userInitial, setUserInitial] = useState("U");
-  const [userEmail, setUserEmail] = useState("");
-
-  useEffect(() => {
-    const email = localStorage.getItem("userEmail");
-    if (email) {
-      setUserEmail(email);
-      setUserInitial(email.charAt(0).toUpperCase());
-    }
-  }, []);
+  const userEmail = localStorage.getItem("userEmail") || "";
+  const userInitial = userEmail
+    ? userEmail.charAt(0).toUpperCase()
+    : "U";
 
   return (
     <div className="h-16 bg-white border-b flex items-center justify-between px-6">
@@ -22,8 +13,12 @@ export default function TopNavbar() {
       />
 
       <div className="flex items-center gap-4">
-        {userEmail && <span className="text-gray-600 text-sm font-medium mr-2">{userEmail}</span>}
-        
+        {userEmail && (
+          <span className="text-gray-600 text-sm font-medium mr-2">
+            {userEmail}
+          </span>
+        )}
+
         <button className="text-xl">🔔</button>
 
         <button
@@ -38,8 +33,8 @@ export default function TopNavbar() {
           Logout
         </button>
 
-        <div 
-          className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold" 
+        <div
+          className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold"
           title={userEmail}
         >
           {userInitial}

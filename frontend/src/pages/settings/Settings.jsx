@@ -53,8 +53,24 @@ export default function Settings() {
         setMessage("Failed to save settings.");
       }
     } catch (err) {
-      setMessage("Failed to save settings.");
+  console.error("Failed to save settings:", err);
+  setMessage("Failed to save settings.");
+}
+  };
+
+  // 3. Handle Password Change (Dummy function to prevent crashes)
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      setMessage("New passwords do not match!");
+      return;
     }
+    
+    // For now, we just close the box and show a message
+    setMessage("Password update feature coming soon!");
+    setShowPasswordSection(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   // 3. Handle Password Change (Dummy function to prevent crashes)

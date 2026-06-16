@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .. import crud, schemas, database, auth
+from .. import crud, schemas, database, auth, models
 import smtplib
 from email.mime.text import MIMEText
 import os
