@@ -14,10 +14,19 @@ export default function Projects() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
 
+  // DYNAMIC STATUS HELPER!
+  const getDynamicStatus = (project) => {
+    const projectTasks = tasks.filter((task) => task.project_id === project.id);
+    if (projectTasks.length === 0) return "Planning";
+    const completedTasks = projectTasks.filter((task) => task.status === "Completed");
+    if (completedTasks.length === projectTasks.length) return "Completed";
+    return "In Progress";
+  };
+
   const totalProjects = projects.length;
-  const planningProjects = projects.filter((p) => p.status === "Planning").length;
-  const inProgressProjects = projects.filter((p) => p.status === "In Progress").length;
-  const completedProjects = projects.filter((p) => p.status === "Completed").length;
+  const planningProjects = projects.filter((p) => getDynamicStatus(p) === "Planning").length;
+  const inProgressProjects = projects.filter((p) => getDynamicStatus(p) === "In Progress").length;
+  const completedProjects = projects.filter((p) => getDynamicStatus(p) === "Completed").length;
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) { alert("Project Name is required"); return; }
@@ -28,13 +37,13 @@ export default function Projects() {
 
     const token = localStorage.getItem("token");
     
-    // We convert the array of selected checkboxes into a comma-separated string for Python!
+    // Notice how we don't even care about status here anymore because it's calculated on the fly!
     const projectData = {
       name: projectName,
       description: projectDescription,
       start_date: startDate,
       end_date: endDate,
-      status: "Planning",
+      status: "Planning", 
       members: selectedMembers.join(",") 
     };
 
@@ -111,7 +120,6 @@ export default function Projects() {
         </button>
       </div>
 
-      {/* STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
           <div className="flex justify-between items-center">
@@ -154,15 +162,15 @@ export default function Projects() {
         </div>
       </div>
 
-      {/* PROJECT CARDS */}
       <div className="grid grid-cols-2 gap-6">
         {projects.map((project) => {
-          // Calculate Progress (Will become dynamic in Tasks phase!)
-          const projectTasks = tasks.filter((task) => task.project === project.name);
+          // Dynamic calculation!
+          const dynamicStatus = getDynamicStatus(project);
+          
+          const projectTasks = tasks.filter((task) => task.project_id === project.id);
           const completedTasks = projectTasks.filter((task) => task.status === "Completed");
           const progress = projectTasks.length > 0 ? Math.round((completedTasks.length / projectTasks.length) * 100) : 0;
 
-          // Figure out how many members we have by splitting the string back into an array
           const memberArray = project.members ? project.members.split(",") : [];
 
           return (
@@ -171,10 +179,10 @@ export default function Projects() {
               <p className="text-gray-600 mb-3">{project.description}</p>
 
               <span className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${
-                  project.status === "In Progress" ? "bg-green-100 text-green-700" : 
-                  project.status === "Completed" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
+                  dynamicStatus === "In Progress" ? "bg-green-100 text-green-700" : 
+                  dynamicStatus === "Completed" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
                 }`}>
-                {project.status}
+                {dynamicStatus}
               </span>
 
               <div className="mb-4">
@@ -200,7 +208,7 @@ export default function Projects() {
                     setProjectDescription(project.description);
                     setStartDate(project.start_date || "");
                     setEndDate(project.end_date || "");
-                    setSelectedMembers(memberArray); // Restore checkboxes
+                    setSelectedMembers(memberArray);
                     setShowModal(true);
                   }}
                   className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
@@ -219,7 +227,6 @@ export default function Projects() {
         })}
       </div>
 
-      {/* CREATE / EDIT MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-xl w-[500px]">

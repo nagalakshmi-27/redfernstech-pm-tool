@@ -17,14 +17,14 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     full_name = Column(String, nullable=True)
     hashed_password = Column(String)
-    role = Column(String) # admin, pm, team_mate, client
+    role = Column(String) 
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     projects = relationship("Project", back_populates="creator")
-    tasks = relationship("Task", back_populates="assignee")
     teams = relationship("Team", secondary=team_members, back_populates="members")
     notifications = relationship("Notification", back_populates="user")
+    # (The tasks relationship has been safely removed!)
 
 class Team(Base):
     __tablename__ = "teams"
@@ -51,18 +51,17 @@ class Project(Base):
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
+    name = Column(String, index=True) # Changed from title to name
     description = Column(String, nullable=True)
-    status = Column(String, default="To Do") # To Do, In Progress, Completed
-    priority = Column(String, default="Medium") # Low, Medium, High
-    due_date = Column(DateTime, nullable=True)
+    status = Column(String, default="To Do") 
+    priority = Column(String, default="Medium") 
+    due_date = Column(String, nullable=True) # Changed to String
     created_at = Column(DateTime, default=datetime.utcnow)
     
     project_id = Column(Integer, ForeignKey("projects.id"))
-    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assignee_name = Column(String, nullable=True) # Uses a string name now!
 
     project = relationship("Project", back_populates="tasks")
-    assignee = relationship("User", back_populates="tasks")
 
 class Notification(Base):
     __tablename__ = "notifications"
