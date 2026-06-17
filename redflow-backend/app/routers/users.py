@@ -150,12 +150,12 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="You cannot invite yourself.")
         
     token = auth.create_reset_token(invite.email) 
-    crud.create_invitation(db, invite.email, invite.role, invite.department, token, current_user.id)
+    crud.create_invitation(db, invite.email, token, current_user.id) # <--- Removed role/dept
     
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")
     invite_link = f"http://localhost:5173/accept-invite?token={token}"
-    msg = MIMEText(f"You have been invited to join a team on RedFlow as a {invite.role}!\n\nClick here to accept:\n{invite_link}")
+    msg = MIMEText(f"You have been invited to join a team on RedFlow!\n\nClick here to accept:\n{invite_link}") # <--- Removed role
     msg["Subject"] = "You're invited to a RedFlow Team!"
     msg["From"] = sender_email
     msg["To"] = invite.email
@@ -165,7 +165,7 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
             server.login(sender_email, sender_password)
             server.send_message(msg)
     except Exception as e:
-        print("SMTP Email skipped during local testing.")
+        pass
         
     return {"message": "Invite sent successfully!"}
 
@@ -174,7 +174,7 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
     invite = crud.get_invitation_by_token(db, token)
     if not invite:
         raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
-    return {"email": invite.email, "role": invite.role, "department": invite.department}
+    return {"email": invite.email} # <--- Removed role/dept
 
 @router.post("/invite/accept")
 def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(get_db)):
@@ -190,3 +190,14 @@ def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(
 def get_my_teammates(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # crud.get_teammates already includes the current_user at the top of the list!
     return crud.get_teammates(db, current_user.id)
+
+@router.delete("/teammates/{teammate_id}")
+def delete_teammate(teammate_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # SECURITY: Prevent the user from deleting themselves!
+    if teammate_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot remove yourself from your own team!")
+        
+    success = crud.remove_teammate(db, current_user.id, teammate_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Teammate not found or they are not on your team.")
+    return {"message": "Teammate removed successfully!"}

@@ -4,13 +4,14 @@ import { ListTodo, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function Tasks() {
-  const { tasks, setTasks, activities, setActivities, projects } = useContext(AppContext);
+  const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
+  const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
   
   const [showModal, setShowModal] = useState(false);
   const [taskName, setTaskName] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("To Do");
-  const [assignee, setAssignee] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -21,14 +22,12 @@ export default function Tasks() {
   const inProgressTasks = tasks.filter((task) => task.status === "In Progress").length;
   const completedTasks = tasks.filter((task) => task.status === "Completed").length;
 
-  // We find the selected project by ID, and split its comma-separated members string into an array!
-  const selectedProjectObj = projects.find((p) => p.id === parseInt(selectedProject));
-  const memberArray = selectedProjectObj?.members ? selectedProjectObj.members.split(",") : [];
+
 
   const handleCreateTask = async () => {
     if (!taskName.trim()) { alert("Task Name is required"); return; }
     if (!taskDescription.trim()) { alert("Task Description is required"); return; }
-    if (!assignee.trim()) { alert("Assignee is required"); return; }
+    if (!assigneeId) { alert("Assignee is required"); return; }
     if (!dueDate) { alert("Due Date is required"); return; }
     if (!selectedProject) { alert("Please select a project"); return; }
 
@@ -41,7 +40,7 @@ export default function Tasks() {
       priority: priority,
       status: status,
       due_date: dueDate,
-      assignee_name: assignee, 
+      assignee_id: parseInt(assigneeId), 
       project_id: parseInt(selectedProject)
     };
 
@@ -76,7 +75,7 @@ export default function Tasks() {
     setTaskDescription("");
     setPriority("Medium");
     setStatus("To Do");
-    setAssignee("");
+    setAssigneeId("");
     setSelectedProject("");
     setDueDate("");
     setEditingTaskId(null);
@@ -100,6 +99,26 @@ export default function Tasks() {
     }
   };
 
+  const handleStatusChange = async (taskId, newStatus) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (response.ok) {
+        const updatedTask = await response.json();
+        setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
+        setActivities([`🔄 Task status updated to ${newStatus}`, ...activities]);
+      } else {
+        alert("Failed to update status");
+      }
+    } catch (err) {
+      alert("Error updating status");
+    }
+  };
+
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
@@ -111,7 +130,7 @@ export default function Tasks() {
             setTaskDescription("");
             setPriority("Medium");
             setStatus("To Do");
-            setAssignee("");
+            setAssigneeId("");
             setSelectedProject("");
             setDueDate("");
             setShowModal(true);
@@ -190,36 +209,50 @@ export default function Tasks() {
             <p className="text-sm text-gray-500">
               Project: {projects.find(p => p.id === task.project_id)?.name || "Unknown"}
             </p>
-            <p>Assignee: {task.assignee_name}</p>
+            <p>Assignee: {members.find(m => m.id === task.assignee_id)?.full_name || "Unknown"}</p>
             <p className="text-sm text-gray-500 mt-1">
               Due Date: {task.due_date}
             </p>
-            
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => {
-                  setEditingTaskId(task.id);
-                  setTaskName(task.name);
-                  setTaskDescription(task.description);
-                  setPriority(task.priority);
-                  setStatus(task.status);
-                  setAssignee(task.assignee_name);
-                  setSelectedProject(task.project_id);
-                  setDueDate(task.due_date || "");
-                  setShowModal(true);
-                }}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDeleteTask(task.id)}
-                className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
-              >
-                Delete
-              </button>
+            {projects.find((p) => p.id === task.project_id)?.created_by_id === currentUserId ? (
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => {
+                      setEditingTaskId(task.id);
+                      setTaskName(task.name);
+                      setTaskDescription(task.description);
+                      setPriority(task.priority);
+                      setStatus(task.status);
+                      setAssigneeId(task.assignee_id || "");
+                      setSelectedProject(task.project_id);
+                      setDueDate(task.due_date || "");
+                      setShowModal(true);
+                    }}
+                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTask(task.id)}
+                    className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <label className="text-sm font-medium mr-2">Update Status:</label>
+                  <select
+                    value={task.status}
+                    onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                    className="border p-1 rounded-lg text-sm"
+                  >
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              )}
             </div>
-          </div>
         ))}
       </div>
 
@@ -271,11 +304,11 @@ export default function Tasks() {
 
               <div>
                 <label className="block mb-2 font-medium">Assignee</label>
-                <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="w-full border p-3 rounded-lg">
+                <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full border p-3 rounded-lg">
                   <option value="">Select Team Member</option>
-                  {memberArray.map((memberName) => (
-                    <option key={memberName} value={memberName}>
-                      {memberName}
+                  {members.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.full_name}
                     </option>
                   ))}
                 </select>

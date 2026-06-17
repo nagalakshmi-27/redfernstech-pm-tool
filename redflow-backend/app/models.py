@@ -11,6 +11,13 @@ team_members = Table(
     Column("team_id", Integer, ForeignKey("teams.id"))
 )
 
+project_members = Table(
+    "project_members",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("project_id", Integer, ForeignKey("projects.id"))
+)
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -18,13 +25,14 @@ class User(Base):
     full_name = Column(String, nullable=True)
     hashed_password = Column(String)
     role = Column(String) 
+    department = Column(String, nullable=True) # <--- ADDED THIS!
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     projects = relationship("Project", back_populates="creator")
+    assigned_projects = relationship("Project", secondary=project_members, back_populates="members")
     teams = relationship("Team", secondary=team_members, back_populates="members")
     notifications = relationship("Notification", back_populates="user")
-    # (The tasks relationship has been safely removed!)
 
 class Team(Base):
     __tablename__ = "teams"
@@ -42,11 +50,11 @@ class Project(Base):
     start_date = Column(String, nullable=True) 
     end_date = Column(String, nullable=True)   
     status = Column(String, default="Planning") 
-    members = Column(String, nullable=True) # <--- ADDED MEMBERS!
     created_by_id = Column(Integer, ForeignKey("users.id"))
 
     creator = relationship("User", back_populates="projects")
     tasks = relationship("Task", back_populates="project")
+    members = relationship("User", secondary=project_members, back_populates="assigned_projects")
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -59,9 +67,10 @@ class Task(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     project_id = Column(Integer, ForeignKey("projects.id"))
-    assignee_name = Column(String, nullable=True) # Uses a string name now!
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     project = relationship("Project", back_populates="tasks")
+    assignee = relationship("User")
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -77,8 +86,6 @@ class Invitation(Base):
     __tablename__ = "invitations"
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, index=True)
-    role = Column(String)
-    department = Column(String)
     token = Column(String, unique=True, index=True)
     status = Column(String, default="Pending")
     invited_by_id = Column(Integer, ForeignKey("users.id"))

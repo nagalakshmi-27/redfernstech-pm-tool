@@ -67,7 +67,7 @@ const handleDeleteMember = async (memberId) => {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/users/${memberId}`,
+      `http://127.0.0.1:8000/users/teammates/${memberId}`,
       {
         method: "DELETE",
         headers: {
@@ -192,14 +192,16 @@ const handleDeleteMember = async (memberId) => {
             <p className="text-sm text-gray-500 mt-2">
   Department: {member.department}
 </p>
-<div className="mt-4">
-  <button
-    onClick={() => handleDeleteMember(member.id)}
-    className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600"
-  >
-    Delete
-  </button>
-</div>
+{member.email !== localStorage.getItem("userEmail") && (
+  <div className="mt-4">
+    <button
+      onClick={() => handleDeleteMember(member.id)}
+      className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600"
+    >
+      Delete
+    </button>
+  </div>
+)}
           </div>
         ))}
       </div>

@@ -6,12 +6,17 @@ from typing import Optional, List
 class UserBase(BaseModel):
     email: EmailStr
     role: str
-    full_name: Optional[str] = None # Added this!
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+
 class UserCreate(UserBase):
     password: str
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = None
+    department: Optional[str] = None
+
 class UserResponse(UserBase):
     id: int
     created_at: datetime
@@ -25,10 +30,9 @@ class ProjectBase(BaseModel):
     start_date: Optional[str] = None 
     end_date: Optional[str] = None
     status: Optional[str] = "Planning"
-    members: Optional[str] = None # <--- ADDED MEMBERS!
 
 class ProjectCreate(ProjectBase):
-    pass
+    member_ids: List[int] = []
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -36,11 +40,12 @@ class ProjectUpdate(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     status: Optional[str] = None
-    members: Optional[str] = None # <--- ADDED MEMBERS!
+    member_ids: Optional[List[int]] = None
 
 class ProjectResponse(ProjectBase):
     id: int
     created_by_id: int
+    members: List[UserResponse] = []
     class Config:
         from_attributes = True
 
@@ -56,7 +61,7 @@ class TaskBase(BaseModel):
     priority: Optional[str] = "Medium"
     due_date: Optional[str] = None
     project_id: int
-    assignee_name: Optional[str] = None
+    assignee_id: Optional[int] = None
 
 class TaskCreate(TaskBase):
     pass
@@ -68,7 +73,7 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = None
     due_date: Optional[str] = None
     project_id: Optional[int] = None
-    assignee_name: Optional[str] = None
+    assignee_id: Optional[int] = None
 
 class TaskResponse(TaskBase):
     id: int
@@ -79,8 +84,6 @@ class TaskResponse(TaskBase):
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
     email: EmailStr
-    role: str
-    department: str
 class InviteAccept(BaseModel):
     token: str
 class TeammateResponse(BaseModel):

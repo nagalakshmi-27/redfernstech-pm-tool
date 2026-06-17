@@ -38,6 +38,8 @@ def update_user(db: Session, user: models.User, user_update: schemas.UserUpdate)
         user.full_name = user_update.full_name
     if user_update.role is not None:
         user.role = user_update.role
+    if user_update.department is not None: # <--- ADDED THIS!
+        user.department = user_update.department
     db.commit()
     db.refresh(user)
     return user
@@ -55,9 +57,13 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
         start_date=project.start_date,
         end_date=project.end_date,
         status=project.status,
-        members=project.members,
         created_by_id=user_id
     )
+    
+    if project.member_ids:
+        users = db.query(models.User).filter(models.User.id.in_(project.member_ids)).all()
+        db_project.members = users
+        
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
@@ -65,14 +71,10 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
 
 from sqlalchemy import or_
 def get_user_projects(db: Session, user_id: int):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user or not user.full_name:
-        return db.query(models.Project).filter(models.Project.created_by_id == user_id).all()
-        
     return db.query(models.Project).filter(
         or_(
             models.Project.created_by_id == user_id,
-            models.Project.members.contains(user.full_name)
+            models.Project.members.any(models.User.id == user_id)
         )
     ).all()
 
@@ -81,6 +83,12 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
     if not db_project: return None
     
     update_data = project_update.model_dump(exclude_unset=True) # or .dict() for older pydantic
+    
+    if "member_ids" in update_data:
+        member_ids = update_data.pop("member_ids")
+        users = db.query(models.User).filter(models.User.id.in_(member_ids)).all()
+        db_project.members = users
+
     for key, value in update_data.items():
         setattr(db_project, key, value)
         
@@ -108,7 +116,7 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
         priority=task.priority,
         due_date=task.due_date,
         project_id=task.project_id,
-        assignee_name=task.assignee_name
+        assignee_id=task.assignee_id
     )
     db.add(db_task)
     db.commit()
@@ -116,30 +124,40 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
     return db_task
 
 def get_user_tasks(db: Session, user_id: int):
-    # First, get the user so we know their full name
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    
-    # If they don't have a name yet, fallback to only showing what they created
-    if not user or not user.full_name:
-        return db.query(models.Task).join(models.Project).filter(models.Project.created_by_id == user_id).all()
-
-    # Return tasks if they created the project OR if they are a member of the project!
+    # Return tasks if they created the project OR if it is assigned specifically to their ID!
     return db.query(models.Task).join(models.Project).filter(
         or_(
             models.Project.created_by_id == user_id,
-            models.Project.members.contains(user.full_name)
+            models.Task.assignee_id == user_id
         )
     ).all()
 
 def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user_id: int):
-    # SECURITY CHECK: We join the Project table to verify they own the project this task belongs to!
-    db_task = db.query(models.Task).join(models.Project).filter(models.Task.id == task_id, models.Project.created_by_id == user_id).first()
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not db_task: return None
     
+    project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
+
+    is_creator = project.created_by_id == user_id
+    is_assignee = db_task.assignee_id == user_id
+    
+    if not is_creator and not is_assignee:
+        return None 
+
     update_data = task_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_task, key, value)
-        
+    
+    if is_assignee and not is_creator:
+        if "status" in update_data:
+            db_task.status = update_data["status"]
+            db_notification = models.Notification(
+                user_id=project.created_by_id,
+                message=f"Task '{db_task.name}' status updated to '{db_task.status}'"
+            )
+            db.add(db_notification)
+    else:
+        for key, value in update_data.items():
+            setattr(db_task, key, value)
+            
     db.commit()
     db.refresh(db_task)
     return db_task
@@ -152,19 +170,15 @@ def delete_task(db: Session, task_id: int, user_id: int):
     return True
 
 def get_teammates(db: Session, user_id: int):
-    # 1. Grab your own user profile first!
     me = db.query(models.User).filter(models.User.id == user_id).first()
-    
-    # 2. Add yourself as the first default team member
     teammates = [{
         "id": me.id,
         "email": me.email,
         "full_name": me.full_name or "Me",
         "role": me.role or "Admin",
-        "department": "Owner"
+        "department": me.department or "Management" # <--- Now safely pulls your department!
     }]
     
-    # 3. Now find all the people you invited and add them too
     invites = db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id, models.Invitation.status == "Accepted").all()
     for invite in invites:
         user = get_user_by_email(db, invite.email)
@@ -173,15 +187,14 @@ def get_teammates(db: Session, user_id: int):
                 "id": user.id,
                 "email": user.email,
                 "full_name": user.full_name,
-                "role": invite.role,
-                "department": invite.department
+                "role": user.role,               # <--- PULLS FROM USER PROFILE
+                "department": user.department    # <--- PULLS FROM USER PROFILE
             })
-            
     return teammates
 
-def create_invitation(db: Session, email: str, role: str, department: str, token: str, user_id: int):
+def create_invitation(db: Session, email: str, token: str, user_id: int): 
     db.query(models.Invitation).filter(models.Invitation.email == email, models.Invitation.invited_by_id == user_id).delete()
-    db_invite = models.Invitation(email=email, role=role, department=department, token=token, invited_by_id=user_id)
+    db_invite = models.Invitation(email=email, token=token, invited_by_id=user_id)
     db.add(db_invite)
     db.commit()
     db.refresh(db_invite)
@@ -189,3 +202,23 @@ def create_invitation(db: Session, email: str, role: str, department: str, token
 
 def get_invitation_by_token(db: Session, token: str):
     return db.query(models.Invitation).filter(models.Invitation.token == token, models.Invitation.status == "Pending").first()
+
+def remove_teammate(db: Session, user_id: int, teammate_id: int):
+    # 1. Find the target user's account
+    target_user = db.query(models.User).filter(models.User.id == teammate_id).first()
+    if not target_user:
+        return False
+        
+    # 2. Find the exact invitation YOU sent to THEM
+    invitation = db.query(models.Invitation).filter(
+        models.Invitation.invited_by_id == user_id,
+        models.Invitation.email == target_user.email
+    ).first()
+    
+    # 3. If it exists, delete it!
+    if not invitation:
+        return False
+        
+    db.delete(invitation)
+    db.commit()
+    return True

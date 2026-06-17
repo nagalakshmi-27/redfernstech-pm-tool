@@ -44,7 +44,7 @@ export default function Projects() {
       start_date: startDate,
       end_date: endDate,
       status: "Planning", 
-      members: selectedMembers.join(",") 
+      member_ids: selectedMembers 
     };
 
     try {
@@ -171,7 +171,7 @@ export default function Projects() {
           const completedTasks = projectTasks.filter((task) => task.status === "Completed");
           const progress = projectTasks.length > 0 ? Math.round((completedTasks.length / projectTasks.length) * 100) : 0;
 
-          const memberArray = project.members ? project.members.split(",") : [];
+          const memberArray = project.members || [];
 
           return (
             <div key={project.id} className="bg-white rounded-xl shadow p-6">
@@ -196,7 +196,7 @@ export default function Projects() {
               </div>
 
               <p className="text-gray-600">Members: {memberArray.length}</p>
-              <p className="text-sm text-gray-500 mt-1">{project.members || "No members assigned"}</p>
+              <p className="text-sm text-gray-500 mt-1">{memberArray.map(m => m.full_name).join(", ") || "No members assigned"}</p>
               <p className="text-sm text-gray-500 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-gray-500">End: {project.end_date}</p>
 
@@ -208,7 +208,7 @@ export default function Projects() {
                     setProjectDescription(project.description);
                     setStartDate(project.start_date || "");
                     setEndDate(project.end_date || "");
-                    setSelectedMembers(memberArray);
+                    setSelectedMembers(memberArray.map(m => m.id));
                     setShowModal(true);
                   }}
                   className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
@@ -250,16 +250,16 @@ export default function Projects() {
                     <label key={member.id} className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={selectedMembers.includes(member.name)}
+                        checked={selectedMembers.includes(member.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedMembers([...selectedMembers, member.name]);
+                            setSelectedMembers([...selectedMembers, member.id]);
                           } else {
-                            setSelectedMembers(selectedMembers.filter((name) => name !== member.name));
+                            setSelectedMembers(selectedMembers.filter((id) => id !== member.id));
                           }
                         }}
                       />
-                      {member.name}
+                      {member.full_name}
                     </label>
                   ))}
                 </div>

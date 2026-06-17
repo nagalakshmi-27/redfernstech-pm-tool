@@ -21,7 +21,7 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current
 def update_task(task_id: int, task: schemas.TaskUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     updated_task = crud.update_task(db=db, task_id=task_id, task_update=task, user_id=current_user.id)
     if not updated_task:
-        raise HTTPException(status_code=403, detail="Not authorized! Only the project creator can edit this task.")
+        raise HTTPException(status_code=403, detail="Not authorized to edit this task.")
     return updated_task
 
 @router.delete("/{task_id}")
