@@ -6,6 +6,7 @@ export default function Settings() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [department, setDepartment] = useState("");
   const [message, setMessage] = useState("");
 
   // Security (Password) States that were missing!
@@ -28,6 +29,7 @@ export default function Settings() {
           setFullName(data.full_name || "");
           setEmail(data.email || "");
           setRole(data.role || "");
+          setDepartment(data.department || "");
         }
       } catch (err) {
         console.error("Failed to load settings", err);
@@ -45,7 +47,7 @@ export default function Settings() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ full_name: fullName, role: role })
+        body: JSON.stringify({ full_name: fullName, role: role, department: department, })
       });
 
       if (response.ok) {
@@ -96,7 +98,7 @@ export default function Settings() {
         const errData = await response.json();
         setMessage(errData.detail || "Failed to update password.");
       }
-    } catch (err) {
+    } catch {
       setMessage("Failed to connect to backend.");
     }
   };
@@ -156,6 +158,19 @@ export default function Settings() {
             className="w-full border p-3 rounded-lg"
           />
         </div>
+
+        <div>
+  <label className="block font-medium mb-2">
+    Department
+  </label>
+
+  <input
+    type="text"
+    value={department}
+    onChange={(e) => setDepartment(e.target.value)}
+    className="w-full border p-3 rounded-lg"
+  />
+</div>
 
         {/* Security Section */}
         <div className="mt-8">

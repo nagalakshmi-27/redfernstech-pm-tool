@@ -11,17 +11,13 @@ import { useContext } from "react";
 import AppContext from "../../context/AppContext";
 
 export default function Teams() {
-  const { members, setMembers } = useContext(AppContext);
+  const { members} = useContext(AppContext);
   const [showModal, setShowModal] = useState(false);
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState("");
-  const [department, setDepartment] = useState("");
   const handleAddMember = async () => {
     if (!memberEmail.trim()) { alert("Email is required"); return; }
     if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
-    if (!memberRole.trim()) { alert("Role is required"); return; }
-    if (!department.trim()) { alert("Department is required"); return; }
     try {
       const response = await fetch("http://127.0.0.1:8000/users/invite", {
         method: "POST",
@@ -29,24 +25,21 @@ export default function Teams() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ 
-          email: memberEmail, 
-          role: memberRole, 
-          department: department 
-        })
+        body: JSON.stringify({
+  email: memberEmail
+})
       });
       if (response.ok) {
         alert("Invitation sent successfully to " + memberEmail + "!");
         setMemberName("");
         setMemberEmail("");
-        setMemberRole("");
-        setDepartment("");
         setShowModal(false);
       } else {
         const errData = await response.json();
-        alert("Failed to send invite: " + errData.detail);
+console.log(errData);
+alert("Failed to send invite: " + JSON.stringify(errData));
       }
-    } catch (err) {
+    } catch{
       alert("Failed to connect to backend.");
     }
   };
@@ -65,7 +58,35 @@ const managers = members.filter(
   (member) => member.department === "Management"
 ).length;
 
+const handleDeleteMember = async (memberId) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this member?"
+  );
 
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/users/${memberId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      alert("Member deleted successfully!");
+      window.location.reload();
+    } else {
+      const errData = await response.json();
+      alert(errData.detail || "Failed to delete member");
+    }
+  } catch {
+    alert("Failed to connect to backend");
+  }
+};
 
   return (
     <MainLayout>
@@ -171,6 +192,14 @@ const managers = members.filter(
             <p className="text-sm text-gray-500 mt-2">
   Department: {member.department}
 </p>
+<div className="mt-4">
+  <button
+    onClick={() => handleDeleteMember(member.id)}
+    className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600"
+  >
+    Delete
+  </button>
+</div>
           </div>
         ))}
       </div>
@@ -209,42 +238,6 @@ const managers = members.filter(
           />
         </div>
 
-        <div>
-          <label className="block mb-2 font-medium">
-            Role
-          </label>
-          <select
-  value={memberRole}
-  onChange={(e) => setMemberRole(e.target.value)}
-  className="w-full border p-3 rounded-lg"
->
-  <option value="">Select Role</option>
-  <option>Admin</option>
-  <option>Project Manager</option>
-  <option>Frontend Developer</option>
-  <option>Backend Developer</option>
-  <option>UI/UX Designer</option>
-  <option>QA Engineer</option>
-</select>
-        </div>
-
-        <div>
-  <label className="block mb-2 font-medium">
-    Department
-  </label>
-
-  <select
-    value={department}
-    onChange={(e) => setDepartment(e.target.value)}
-    className="w-full border p-3 rounded-lg"
-  >
-    <option value="">Select Department</option>
-    <option>Development</option>
-    <option>Design</option>
-    <option>Management</option>
-    <option>QA</option>
-  </select>
-</div>
 
         <div className="flex justify-end gap-3">
           <button
