@@ -1,4 +1,7 @@
+import { useNavigate } from "react-router-dom";
+
 export default function TopNavbar() {
+  const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail") || "";
   const userInitial = userEmail
     ? userEmail.charAt(0).toUpperCase()
@@ -19,7 +22,12 @@ export default function TopNavbar() {
           </span>
         )}
 
-        <button className="text-xl">🔔</button>
+        <button
+  onClick={() => navigate("/notifications")}
+  className="text-xl hover:scale-110 transition"
+>
+  🔔
+</button>
 
         <button
           onClick={() => {

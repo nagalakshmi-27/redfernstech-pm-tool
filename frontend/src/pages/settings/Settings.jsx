@@ -13,6 +13,8 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswordValidation, setShowPasswordValidation] =
+  useState(false);
 
   // 1. Load the user's data when the page opens
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function Settings() {
 
   // 3. Handle Password Change (Dummy function to prevent crashes)
   const handlePasswordChange = async () => {
+    setShowPasswordValidation(true);
     if (newPassword !== confirmPassword) {
       setMessage("New passwords do not match!");
       return;
@@ -79,6 +82,14 @@ export default function Settings() {
     localStorage.removeItem("userEmail");
     window.location.href = "/";
   };
+
+  const passwordChecks = {
+  length: newPassword.length >= 8,
+  uppercase: /[A-Z]/.test(newPassword),
+  lowercase: /[a-z]/.test(newPassword),
+  number: /\d/.test(newPassword),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
+};
 
   return (
     <MainLayout>
@@ -118,7 +129,7 @@ export default function Settings() {
         </div>
 
         {/* Security Section */}
-        <div className="mt-8 border-t pt-6">
+        <div className="mt-8">
           <h2 className="text-xl font-semibold mb-4">Security</h2>
 
           {!showPasswordSection ? (
@@ -145,10 +156,29 @@ export default function Settings() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full border p-3 rounded-lg"
               />
+              {showPasswordValidation && (
+  <div className="text-sm space-y-1">
+    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.length ? "✓" : "✗"} At least 8 characters
+    </p>
 
-              <p className="text-sm text-gray-500">
-                Password must contain at least 8 characters, one number and one special character.
-              </p>
+    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
+    </p>
+
+    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
+    </p>
+
+    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.number ? "✓" : "✗"} One number
+    </p>
+
+    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.special ? "✓" : "✗"} One special character
+    </p>
+  </div>
+)}
 
               <input
                 type="password"

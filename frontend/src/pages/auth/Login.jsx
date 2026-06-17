@@ -6,13 +6,34 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPasswordRules, setShowPasswordRules] =
+  useState(false);
 
   const handleLogin = async (e) => { // <-- We added "async" here!
     e.preventDefault();
     if (!email || !password) {
-      alert("Please fill all fields");
-      return;
-    }
+  alert("Please fill all fields");
+  return;
+}
+const passwordChecks = {
+  length: password.length >= 8,
+  uppercase: /[A-Z]/.test(password),
+  lowercase: /[a-z]/.test(password),
+  number: /\d/.test(password),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+};
+
+const isPasswordValid =
+  passwordChecks.length &&
+  passwordChecks.uppercase &&
+  passwordChecks.lowercase &&
+  passwordChecks.number &&
+  passwordChecks.special;
+
+if (!isPasswordValid) {
+  setShowPasswordRules(true);
+  return;
+}
     
     try {
       // 1. Send the data to your backend
@@ -41,6 +62,14 @@ export default function Login() {
       alert(err.message); // This will show "Incorrect email or password" if they guess wrong
     }
   };
+
+  const passwordChecks = {
+  length: password.length >= 8,
+  uppercase: /[A-Z]/.test(password),
+  lowercase: /[a-z]/.test(password),
+  number: /\d/.test(password),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
@@ -74,12 +103,36 @@ export default function Login() {
             </label>
 
             <input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border p-3 rounded-lg"
-            />
+  type="password"
+  placeholder="Enter your password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
+
+{showPasswordRules && (
+  <div className="mt-2 text-sm space-y-1">
+    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.length ? "✓" : "✗"} At least 8 characters
+    </p>
+
+    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
+    </p>
+
+    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
+    </p>
+
+    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.number ? "✓" : "✗"} One number
+    </p>
+
+    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.special ? "✓" : "✗"} One special character
+    </p>
+  </div>
+)}
           </div>
 
           <div className="text-right">

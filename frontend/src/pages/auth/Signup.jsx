@@ -13,6 +13,15 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPasswordRules, setShowPasswordRules] = useState(false);
+
+  const passwordChecks = {
+  length: password.length >= 8,
+  uppercase: /[A-Z]/.test(password),
+  lowercase: /[a-z]/.test(password),
+  number: /\d/.test(password),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+};
 
   const handleSignup = async (e) => { // <-- We added "async" here!
     e.preventDefault();
@@ -25,10 +34,12 @@ export default function Signup() {
       return;
     }
     const passwordError = validatePassword(password);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
+
+if (passwordError) {
+  setShowPasswordRules(true);
+  setError("");
+  return;
+}
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -102,12 +113,36 @@ export default function Signup() {
           />
 
           <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+  type="password"
+  placeholder="Password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
+
+{showPasswordRules && (
+  <div className="text-sm space-y-1">
+    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.length ? "✓" : "✗"} At least 8 characters
+    </p>
+
+    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
+    </p>
+
+    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
+    </p>
+
+    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.number ? "✓" : "✗"} One number
+    </p>
+
+    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.special ? "✓" : "✗"} One special character
+    </p>
+  </div>
+)}
 
           <input
             type="password"

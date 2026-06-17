@@ -12,16 +12,35 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showPasswordRules, setShowPasswordRules] = useState(false);
+
+
+  const passwordChecks = {
+  length: newPassword.length >= 8,
+  uppercase: /[A-Z]/.test(newPassword),
+  lowercase: /[a-z]/.test(newPassword),
+  number: /\d/.test(newPassword),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
+}; 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+if (!passwordRegex.test(newPassword)) {
+  setShowPasswordRules(true);
+  setError("");
+  return;
+}
+
+if (newPassword !== confirmPassword) {
+  setError("Passwords do not match");
+  return;
+}
 
     try {
       const response = await fetch("http://127.0.0.1:8000/users/reset-password", {
@@ -75,6 +94,30 @@ export default function ResetPassword() {
             className="w-full border p-3 rounded-lg"
             required
           />
+
+          {showPasswordRules && (
+  <div className="text-sm space-y-1">
+    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.length ? "✓" : "✗"} At least 8 characters
+    </p>
+
+    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
+    </p>
+
+    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
+    </p>
+
+    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.number ? "✓" : "✗"} One number
+    </p>
+
+    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.special ? "✓" : "✗"} One special character
+    </p>
+  </div>
+)}
 
           <input
             type="password"

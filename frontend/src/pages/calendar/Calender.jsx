@@ -53,6 +53,20 @@ export default function Calendar() {
       return;
     }
 
+    const selectedEventDate = new Date(eventDate);
+selectedEventDate.setHours(0, 0, 0, 0);
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+if (
+  !editingEventId &&
+  selectedEventDate < today
+) {
+  alert("Cannot create events for past dates");
+  return;
+}
+
     if (editingEventId) {
   const updatedEvents = events.map((event) =>
     event.id === editingEventId
@@ -110,6 +124,25 @@ const handleEditEvent = (event) => {
   setEventCategory(event.category);
   setEditingEventId(event.id);
   setShowModal(true);
+};
+const toggleEventStatus = (id) => {
+  const updatedEvents = events.map((event) => {
+    if (event.id !== id) return event;
+
+    if (event.status === "Cancelled") {
+      return event;
+    }
+
+    return {
+      ...event,
+      status:
+        event.status === "Completed"
+          ? "Upcoming"
+          : "Completed",
+    };
+  });
+
+  setEvents(updatedEvents);
 };
 
   const monthNames = [
@@ -177,19 +210,47 @@ const goToToday = () => {
   setSelectedDate(today.getDate());
 };
 
-  const totalEvents = events.length;
+  
 
-const upcomingEvents = events.filter(
-  (event) => event.status === "Upcoming"
-).length;
+const pendingTasks = events.filter((event) => {
+  const daysRemaining = Math.ceil(
+    (new Date(event.date).setHours(0, 0, 0, 0) -
+      new Date().setHours(0, 0, 0, 0)) /
+      (1000 * 60 * 60 * 24)
+  );
 
-const completedEvents = events.filter(
+  return (
+    event.status === "Upcoming" &&
+    daysRemaining >= 0
+  );
+}).length;
+
+const completedTasks = events.filter(
   (event) => event.status === "Completed"
 ).length;
 
-const cancelledEvents = events.filter(
+const missedTasks = events.filter((event) => {
+  const daysRemaining = Math.ceil(
+    (new Date(event.date).setHours(0, 0, 0, 0) -
+      new Date().setHours(0, 0, 0, 0)) /
+      (1000 * 60 * 60 * 24)
+  );
+
+  return (
+    daysRemaining < 0 &&
+    event.status !== "Completed" &&
+    event.status !== "Cancelled"
+  );
+}).length;
+
+const cancelledTasks = events.filter(
   (event) => event.status === "Cancelled"
 ).length;
+
+const totalEvents =
+  events.length -
+  missedTasks -
+  cancelledTasks;
 
   const selectedEvents = events.filter((event) => {
   if (!selectedDate) return false;
@@ -248,11 +309,11 @@ const filteredEvents = selectedEvents.filter((event) =>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-gray-500 text-base font-medium">
-        Upcoming
+        Pending
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {upcomingEvents}
+        {pendingTasks}
       </p>
     </div>
 
@@ -268,7 +329,7 @@ const filteredEvents = selectedEvents.filter((event) =>
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {completedEvents}
+        {completedTasks}
       </p>
     </div>
 
@@ -280,13 +341,15 @@ const filteredEvents = selectedEvents.filter((event) =>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-gray-500 text-base font-medium">
-        Cancelled
+        Missed
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {cancelledEvents}
+        {missedTasks}
       </p>
+      
     </div>
+    
 
     <XCircle size={22} />
   </div>
@@ -360,16 +423,16 @@ const filteredEvents = selectedEvents.filter((event) =>
   return (
     <div
       key={index}
-      onClick={() => !isPastDate && setSelectedDate(day)}
+      onClick={() => setSelectedDate(day)}
       className={`h-25 border rounded-lg p-2 transition-all ${
   isPastDate
-    ? "bg-gray-100 opacity-60 cursor-not-allowed"
-    : "cursor-pointer hover:bg-blue-50 hover:shadow-md"
+  ? "bg-gray-100 opacity-60 cursor-pointer"
+  : "cursor-pointer hover:bg-blue-50 hover:shadow-md"
 } ${
         selectedDate === day
           ? "bg-blue-100 border-blue-500 shadow-md"
           : isToday
-          ? "border-green-500"
+? "border-blue-500 bg-blue-50"
           : ""
       }`}
     >
@@ -384,27 +447,49 @@ const filteredEvents = selectedEvents.filter((event) =>
           </span>
         )}
 
-        {eventCount > 0 && (
-  <span
-    className={`text-xs px-2 py-1 rounded-full w-fit ${
-      events.some(
-        (event) =>
-          new Date(event.date).getDate() === day &&
-          event.status === "Completed"
-      )
-        ? "bg-green-100 text-green-700"
-        : events.some(
-            (event) =>
-              new Date(event.date).getDate() === day &&
-              event.status === "Cancelled"
-          )
-        ? "bg-red-100 text-red-700"
-        : "bg-blue-100 text-blue-700"
-    }`}
-  >
-    {eventCount} Event{eventCount > 1 ? "s" : ""}
-  </span>
-)}
+        {eventCount > 0 && (() => {
+  const dayEvents = events.filter((event) => {
+    const eventDate = new Date(event.date);
+
+    return (
+      eventDate.getDate() === day &&
+      eventDate.getMonth() === currentMonth.getMonth() &&
+      eventDate.getFullYear() === currentMonth.getFullYear()
+    );
+  });
+
+  const pendingCount = dayEvents.filter(
+  (event) => event.status === "Upcoming"
+).length;
+
+  const isPastDeadline =
+    new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    ).setHours(0, 0, 0, 0) <
+    new Date().setHours(0, 0, 0, 0);
+
+  return (
+    <span
+      className={`text-xs px-2 py-1 rounded-full w-fit ${
+  isPastDeadline && pendingCount > 0
+    ? "bg-red-100 text-red-800"
+    : pendingCount === 0
+    ? "bg-green-100 text-green-700"
+    : pendingCount > 0
+    ? "bg-yellow-100 text-yellow-800"
+    : "bg-blue-100 text-blue-700"
+}`}
+    >
+      {isPastDeadline && pendingCount > 0
+  ? "Missed"
+  : pendingCount === 0
+  ? "Completed"
+  : `${pendingCount} Pending`}
+    </span>
+  );
+})()}
       </div>
     </div>
   );
@@ -452,7 +537,10 @@ const filteredEvents = selectedEvents.filter((event) =>
     new Date().setHours(0,0,0,0)) /
     (1000 * 60 * 60 * 24)
 );
-
+const isMissed =
+  daysRemaining < 0 &&
+  event.status !== "Completed" &&
+  event.status !== "Cancelled";
   return (
     <div
       key={event.id}
@@ -463,21 +551,40 @@ const filteredEvents = selectedEvents.filter((event) =>
     {event.title}
   </p>
 
+  <div className="flex items-center gap-3">
   <span
-  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-    event.category === "Deadline"
-      ? "bg-red-100 text-red-700"
-      : event.category === "Meeting"
-      ? "bg-blue-100 text-blue-700"
-      : event.category === "Sprint"
-      ? "bg-purple-100 text-purple-700"
-      : event.category === "Release"
-      ? "bg-green-100 text-green-700"
-      : "bg-orange-100 text-orange-700"
-  }`}
->
-  {event.category}
-</span>
+    className={`px-2 py-1 text-xs font-semibold rounded-full ${
+      event.category === "Deadline"
+        ? "bg-red-100 text-red-700"
+        : event.category === "Meeting"
+        ? "bg-blue-100 text-blue-700"
+        : event.category === "Sprint"
+        ? "bg-purple-100 text-purple-700"
+        : event.category === "Release"
+        ? "bg-green-100 text-green-700"
+        : "bg-orange-100 text-orange-700"
+    }`}
+  >
+    {event.category}
+  </span>
+
+  <button
+    onClick={() => toggleEventStatus(event.id)}
+    className={`relative w-10 h-5 rounded-full transition-all ${
+      event.status === "Completed"
+        ? "bg-green-500"
+        : "bg-gray-300"
+    }`}
+  >
+    <span
+      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+        event.status === "Completed"
+          ? "right-0.5"
+          : "left-0.5"
+      }`}
+    />
+  </button>
+</div>
 
 </div>
 
@@ -496,21 +603,23 @@ const filteredEvents = selectedEvents.filter((event) =>
   </p>
 )}
 
-{daysRemaining < 0 && (
-  <p className="text-sm text-red-600 font-medium mt-1">
-    ⚠️ Overdue by {Math.abs(daysRemaining)} day{Math.abs(daysRemaining) > 1 ? "s" : ""}
+{isMissed && (
+  <p className="text-sm text-orange-600 font-medium mt-1">
+    ⚠️ Missed Deadline • {Math.abs(daysRemaining)} day{Math.abs(daysRemaining) > 1 ? "s" : ""} overdue
   </p>
 )}
 <span
   className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
-    event.status === "Completed"
+    isMissed
+      ? "bg-orange-100 text-orange-700"
+      : event.status === "Completed"
       ? "bg-green-100 text-green-700"
       : event.status === "Cancelled"
       ? "bg-red-100 text-red-700"
       : "bg-blue-100 text-blue-700"
   }`}
 >
-  {event.status}
+  {isMissed ? "Missed" : event.status}
 </span>
 <div className="flex gap-4 mt-2">
   <button
@@ -574,11 +683,12 @@ const filteredEvents = selectedEvents.filter((event) =>
                 </label>
 
                 <input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full border p-3 rounded-lg"
-                />
+  type="date"
+  value={eventDate}
+  min={new Date().toISOString().split("T")[0]}
+  onChange={(e) => setEventDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
               <div>
   <label className="block mb-2 font-medium">
@@ -586,14 +696,14 @@ const filteredEvents = selectedEvents.filter((event) =>
   </label>
 
   <select
-    value={eventStatus}
-    onChange={(e) => setEventStatus(e.target.value)}
-    className="w-full border p-3 rounded-lg"
-  >
-    <option>Upcoming</option>
-    <option>Completed</option>
-    <option>Cancelled</option>
-  </select>
+  value={eventStatus}
+  onChange={(e) => setEventStatus(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+>
+  <option>Upcoming</option>
+  <option>Completed</option>
+  <option>Cancelled</option>
+</select>
 </div>
 <div>
   <label className="block mb-2 font-medium">
