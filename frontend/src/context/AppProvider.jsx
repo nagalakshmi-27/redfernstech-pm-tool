@@ -1,71 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppContext from "./AppContext";
 
 export function AppProvider({ children }) {
-  const [projects, setProjects] = useState([
-  {
-    id: 1,
-    name: "PM Tool",
-    status: "Active",
-  },
-]);
-  const [tasks, setTasks] = useState([
-  {
-    id: 1,
-    name: "Design Dashboard",
-    description: "Create dashboard UI",
-    priority: "High",
-    status: "In Progress",
-    assignee: "Akash",
-    dueDate: "2026-06-20",
-  },
-  {
-    id: 2,
-    name: "Create Login UI",
-    description: "Develop Login Page",
-    priority: "Medium",
-    status: "To Do",
-    assignee: "Nagalakshmi",
-    dueDate: "2026-06-25",
-  },
-]);
-  const [members, setMembers] = useState([
-  {
-    id: 1,
-    name: "Nagalakshmi",
-    role: "Frontend Developer",
-    email: "naga@redferns.com",
-    department: "Development",
-  },
-  {
-    id: 2,
-    name: "Akash",
-    role: "Backend Developer",
-    email: "akash@redferns.com",
-    department: "Development",
-  },
-  {
-    id: 3,
-    name: "Akanksha",
-    role: "UI/UX Designer",
-    email: "akanksha@redferns.com",
-    department: "Design",
-  },
-]);
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]); // <--- Starts empty now!
+  
+  // We keep this fake data for the Teams UI for now
+  const [members, setMembers] = useState([]);
+  
   const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return; 
+
+      try {
+        // Fetch Projects
+        const projRes = await fetch("http://127.0.0.1:8000/projects/", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (projRes.ok) {
+          const projData = await projRes.json();
+          setProjects(projData);
+        }
+
+        // Fetch Tasks!
+        const teamRes = await fetch("http://127.0.0.1:8000/users/teammates", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (teamRes.ok) {
+          const teamData = await teamRes.json();
+          // We map full_name to 'name' so your UI cards work perfectly!
+          const formattedMembers = teamData.map(m => ({ ...m, name: m.full_name || m.email }));
+          setMembers(formattedMembers);
+        }
+        const taskRes = await fetch("http://127.0.0.1:8000/tasks/", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (taskRes.ok) {
+          const taskData = await taskRes.json();
+          setTasks(taskData);
+        }
+
+      } catch (err) {
+        console.error("Failed to load data from database", err);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   return (
     <AppContext.Provider
-      value={{
-        projects,
-        setProjects,
-        tasks,
-        setTasks,
-        members,
-        setMembers,
-        activities,
-        setActivities,
-      }}
+      value={{ projects, setProjects, tasks, setTasks, members, setMembers, activities, setActivities }}
     >
       {children}
     </AppContext.Provider>

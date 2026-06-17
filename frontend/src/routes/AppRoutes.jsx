@@ -4,6 +4,7 @@ import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
 import ResetPassword from "../pages/auth/ResetPassword";
 import ForgotPassword from "../pages/auth/ForgotPassword";
+import AcceptInvite from "../pages/auth/AcceptInvite";
 
 import Dashboard from "../pages/dashboard/Dashboard";
 import Projects from "../pages/projects/Projects";
@@ -23,6 +24,7 @@ export default function AppRoutes() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/tasks" element={<Tasks />} />

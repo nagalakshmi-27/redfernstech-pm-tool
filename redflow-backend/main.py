@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models
 from app.routers import users # Import your new router
+from app.routers import users, projects  # Projects
+from app.routers import users, projects, tasks #Tasks
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -24,7 +26,10 @@ app.add_middleware(
 
 # Include your routers
 app.include_router(users.router)
+app.include_router(projects.router)
+app.include_router(tasks.router) 
 
 @app.get("/")
 def read_root():
     return {"message": "RedFlow Backend is running!"}
+

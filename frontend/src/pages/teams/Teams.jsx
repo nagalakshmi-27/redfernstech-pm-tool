@@ -17,47 +17,40 @@ export default function Teams() {
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState("");
   const [department, setDepartment] = useState("");
-  const handleAddMember = () => {
-  if (!memberName.trim()) {
-  alert("Member Name is required");
-  return;
-}
-
-if (!memberEmail.trim()) {
-  alert("Email is required");
-  return;
-}
-if (!validateEmail(memberEmail)) {
-  alert("Please enter a valid email");
-  return;
-}
-
-if (!memberRole.trim()) {
-  alert("Role is required");
-  return;
-}
-
-if (!department.trim()) {
-  alert("Department is required");
-  return;
-}
-
-  const newMember = {
-    id: Date.now(),
-    name: memberName,
-    email: memberEmail,
-    role: memberRole,
-    department,
+  const handleAddMember = async () => {
+    if (!memberEmail.trim()) { alert("Email is required"); return; }
+    if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
+    if (!memberRole.trim()) { alert("Role is required"); return; }
+    if (!department.trim()) { alert("Department is required"); return; }
+    try {
+      const response = await fetch("http://127.0.0.1:8000/users/invite", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ 
+          email: memberEmail, 
+          role: memberRole, 
+          department: department 
+        })
+      });
+      if (response.ok) {
+        alert("Invitation sent successfully to " + memberEmail + "!");
+        setMemberName("");
+        setMemberEmail("");
+        setMemberRole("");
+        setDepartment("");
+        setShowModal(false);
+      } else {
+        const errData = await response.json();
+        alert("Failed to send invite: " + errData.detail);
+      }
+    } catch (err) {
+      alert("Failed to connect to backend.");
+    }
   };
 
-  setMembers([...members, newMember]);
-
-  setMemberName("");
-  setMemberEmail("");
-  setMemberRole("");
-  setDepartment("");
-  setShowModal(false);
-};
 const totalMembers = members.length;
 
 const developers = members.filter(
