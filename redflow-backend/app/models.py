@@ -72,3 +72,14 @@ class Notification(Base):
     
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="notifications")
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    role = Column(String)
+    department = Column(String)
+    token = Column(String, unique=True, index=True)
+    status = Column(String, default="Pending")
+    invited_by_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)

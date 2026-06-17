@@ -75,3 +75,17 @@ class TaskResponse(TaskBase):
     created_at: datetime
     class Config:
         from_attributes = True
+    
+# --- INVITATIONS ---
+class InviteCreate(BaseModel):
+    email: EmailStr
+    role: str
+    department: str
+class InviteAccept(BaseModel):
+    token: str
+class TeammateResponse(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: Optional[str] = None
+    role: str
+    department: str

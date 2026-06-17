@@ -6,11 +6,7 @@ export function AppProvider({ children }) {
   const [tasks, setTasks] = useState([]); // <--- Starts empty now!
   
   // We keep this fake data for the Teams UI for now
-  const [members, setMembers] = useState([
-    { id: 1, name: "Nagalakshmi", role: "Frontend Developer", email: "naga@redferns.com", department: "Development" },
-    { id: 2, name: "Akash", role: "Backend Developer", email: "akash@redferns.com", department: "Development" },
-    { id: 3, name: "Akanksha", role: "UI/UX Designer", email: "akanksha@redferns.com", department: "Design" },
-  ]);
+  const [members, setMembers] = useState([]);
   
   const [activities, setActivities] = useState([]);
 
@@ -30,6 +26,15 @@ export function AppProvider({ children }) {
         }
 
         // Fetch Tasks!
+        const teamRes = await fetch("http://127.0.0.1:8000/users/teammates", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (teamRes.ok) {
+          const teamData = await teamRes.json();
+          // We map full_name to 'name' so your UI cards work perfectly!
+          const formattedMembers = teamData.map(m => ({ ...m, name: m.full_name || m.email }));
+          setMembers(formattedMembers);
+        }
         const taskRes = await fetch("http://127.0.0.1:8000/tasks/", {
           headers: { "Authorization": `Bearer ${token}` }
         });
