@@ -2,9 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models
-from app.routers import users # Import your new router
-from app.routers import users, projects  # Projects
-from app.routers import users, projects, tasks #Tasks
+from app.routers import users, projects, tasks, events, notifications
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -28,6 +26,8 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(tasks.router) 
+app.include_router(events.router)
+app.include_router(notifications.router)
 
 @app.get("/")
 def read_root():

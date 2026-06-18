@@ -1,36 +1,41 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState } from "react";
-import {
-  CalendarDays,
-  Clock,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "../../context/AppContext";
+import { CalendarDays, Clock, CheckCircle, XCircle } from "lucide-react";
 
 export default function Calendar() {
-  const [events, setEvents] = useState([
-    {
-  id: 1,
-  title: "PM Tool Deadline",
-  date: "2026-06-20",
-  status: "Upcoming",
-  category: "Deadline",
-},
-{
-  id: 2,
-  title: "Website Release",
-  date: "2026-06-25",
-  status: "Upcoming",
-  category: "Release",
-},
-{
-  id: 3,
-  title: "Sprint Review",
-  date: "2026-06-30",
-  status: "Upcoming",
-  category: "Sprint",
-},
-  ]);
+  const { tasks, members } = useContext(AppContext);
+  const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
+  const [manualEvents, setManualEvents] = useState([]); // This stores events from your DB
+
+  // 1. Fetch your events from the database when the page loads!
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://127.0.0.1:8000/events/", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setManualEvents(await response.json());
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  // 2. MAGICAL MERGE! Combine manual events and your real tasks into one giant calendar array!
+  const events = [
+    ...manualEvents,
+    ...tasks
+      .filter(task => task.assignee_id === currentUserId)
+      .map(task => ({
+      id: `task-${task.id}`, // Add a prefix so it doesn't conflict with event IDs
+      title: task.name,
+      date: task.due_date,
+      status: task.status === "Completed" ? "Completed" : "Upcoming",
+      category: "Task", // Label it specifically as a task!
+      isTask: true      // Flag it so we know it's not a manual event
+    }))
+  ];
 
   const [showModal, setShowModal] = useState(false);
   const [eventTitle, setEventTitle] = useState("");
@@ -42,7 +47,7 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!eventTitle.trim()) {
       alert("Event Title is required");
       return;
@@ -54,96 +59,99 @@ export default function Calendar() {
     }
 
     const selectedEventDate = new Date(eventDate);
-selectedEventDate.setHours(0, 0, 0, 0);
+    selectedEventDate.setHours(0, 0, 0, 0);
 
-const today = new Date();
-today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-if (
-  !editingEventId &&
-  selectedEventDate < today
-) {
-  alert("Cannot create events for past dates");
-  return;
-}
+    if (!editingEventId && selectedEventDate < today) {
+      alert("Cannot create events for past dates");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const eventData = {
+      title: eventTitle,
+      date: eventDate,
+      type: eventCategory,
+      status: eventStatus
+    };
 
     if (editingEventId) {
-  const updatedEvents = events.map((event) =>
-    event.id === editingEventId
-      ? {
-          ...event,
-          title: eventTitle,
-          date: eventDate,
-          status: eventStatus,
-          category: eventCategory,
-        }
-      : event
-  );
-
-  setEvents(updatedEvents);
-} else {
-  const newEvent = {
-    id: Date.now(),
-    title: eventTitle,
-    date: eventDate,
-    status: eventStatus,
-    category: eventCategory,
-  };
-
-  setEvents([...events, newEvent]);
-}
+      alert("Editing manual events is not yet supported by the backend!");
+    } else {
+      const response = await fetch("http://127.0.0.1:8000/events/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(eventData)
+      });
+      if (response.ok) {
+        const newEvent = await response.json();
+        setManualEvents([...manualEvents, newEvent]); 
+      }
+    }
 
     setEventTitle("");
-setEventDate("");
-setEventStatus("Upcoming");
-setEventCategory("Meeting");
-setEditingEventId(null);
-setShowModal(false);
+    setEventDate("");
+    setEventStatus("Upcoming");
+    setEventCategory("Meeting");
+    setEditingEventId(null);
+    setShowModal(false);
   };
+    const handleDeleteEvent = async (id) => {
+    // Prevent deleting Tasks from the Calendar screen
+    if (typeof id === 'string' && id.startsWith('task-')) {
+      alert("You can only delete tasks from the Tasks page!");
+      return;
+    }
 
-  const handleDeleteEvent = (id) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this event?"
-  );
+    const confirmDelete = window.confirm("Are you sure you want to delete this event?");
+    if (!confirmDelete) return;
 
-  if (!confirmDelete) {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`http://127.0.0.1:8000/events/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (response.ok) {
+      setManualEvents(manualEvents.filter((event) => event.id !== id));
+    }
+  };
+const handleEditEvent = (event) => {
+  if (event.isTask) {
+    alert("Please go to the Tasks page to edit tasks!");
     return;
   }
-
-  const updatedEvents = events.filter(
-    (event) => event.id !== id
-  );
-
-  setEvents(updatedEvents);
-};
-
-const handleEditEvent = (event) => {
   setEventTitle(event.title);
   setEventDate(event.date);
   setEventStatus(event.status);
-  setEventCategory(event.category);
+  setEventCategory(event.category || event.type);
   setEditingEventId(event.id);
   setShowModal(true);
 };
-const toggleEventStatus = (id) => {
-  const updatedEvents = events.map((event) => {
-    if (event.id !== id) return event;
-
-    if (event.status === "Cancelled") {
-      return event;
+  const toggleEventStatus = async (id, currentStatus) => {
+    if (typeof id === 'string' && id.startsWith('task-')) {
+      alert("Please change task status from the Tasks page!");
+      return;
     }
 
-    return {
-      ...event,
-      status:
-        event.status === "Completed"
-          ? "Upcoming"
-          : "Completed",
-    };
-  });
+    const newStatus = currentStatus === "Completed" ? "Upcoming" : "Completed";
+    
+    const token = localStorage.getItem("token");
+    const response = await fetch(`http://127.0.0.1:8000/events/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ status: newStatus })
+    });
 
-  setEvents(updatedEvents);
-};
+    if (response.ok) {
+      const updatedEvent = await response.json();
+      setManualEvents(manualEvents.map(e => e.id === id ? updatedEvent : e));
+    } else {
+      alert("Failed to update status");
+    }
+  };
 
   const monthNames = [
     "January",
@@ -569,7 +577,7 @@ const isMissed =
   </span>
 
   <button
-    onClick={() => toggleEventStatus(event.id)}
+    onClick={() => toggleEventStatus(event.id, event.status)}
     className={`relative w-10 h-5 rounded-full transition-all ${
       event.status === "Completed"
         ? "bg-green-500"

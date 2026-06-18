@@ -222,3 +222,42 @@ def remove_teammate(db: Session, user_id: int, teammate_id: int):
     db.delete(invitation)
     db.commit()
     return True
+
+def get_user_events(db: Session, user_id: int):
+    return db.query(models.Event).filter(models.Event.created_by_id == user_id).all()
+
+def create_event(db: Session, event: schemas.EventCreate, user_id: int):
+    db_event = models.Event(
+        title=event.title,
+        description=event.description,
+        date=event.date,
+        type=event.type,
+        status=event.status,
+        created_by_id=user_id
+    )
+    db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+    return db_event
+
+def update_event(db: Session, event_id: int, event_update: schemas.EventUpdate, user_id: int):
+    db_event = db.query(models.Event).filter(models.Event.id == event_id, models.Event.created_by_id == user_id).first()
+    if not db_event: return None
+    
+    update_data = event_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_event, key, value)
+        
+    db.commit()
+    db.refresh(db_event)
+    return db_event
+
+def delete_event(db: Session, event_id: int, user_id: int):
+    db_event = db.query(models.Event).filter(models.Event.id == event_id, models.Event.created_by_id == user_id).first()
+    if not db_event: return False
+    db.delete(db_event)
+    db.commit()
+    return True
+
+def get_user_notifications(db: Session, user_id: int, limit: int = 10):
+    return db.query(models.Notification).filter(models.Notification.user_id == user_id).order_by(models.Notification.created_at.desc()).limit(limit).all()

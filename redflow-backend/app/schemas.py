@@ -92,3 +92,37 @@ class TeammateResponse(BaseModel):
     full_name: Optional[str] = None
     role: str
     department: str
+
+# --- EVENTS ---
+class EventBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    date: str
+    type: Optional[str] = "Meeting"
+    status: Optional[str] = "Upcoming"
+
+class EventCreate(EventBase):
+    pass
+
+class EventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    date: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+
+class EventResponse(EventBase):
+    id: int
+    created_by_id: int
+    class Config:
+        from_attributes = True
+
+# --- NOTIFICATIONS ---
+class NotificationResponse(BaseModel):
+    id: int
+    message: str
+    is_read: bool
+    created_at: datetime
+    user_id: int
+    class Config:
+        from_attributes = True

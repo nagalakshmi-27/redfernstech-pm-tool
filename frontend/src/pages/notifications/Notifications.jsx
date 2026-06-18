@@ -1,9 +1,26 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useContext } from "react";
-import AppContext from "../../context/AppContext";
+import { useState, useEffect } from "react";
 
 export default function Notifications() {
-  const { activities } = useContext(AppContext);
+  const [dbNotifications, setDbNotifications] = useState([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://127.0.0.1:8000/notifications/", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setDbNotifications(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications");
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   return (
     <MainLayout>
@@ -12,14 +29,14 @@ export default function Notifications() {
       </h1>
 
       <div className="space-y-4 max-w-4xl">
-        {activities.length > 0 ? (
-  activities.map((activity, index) => (
+        {dbNotifications.length > 0 ? (
+  dbNotifications.slice(0, 10).map((activity, index) => (
     <div
-      key={index}
+      key={activity.id || index}
       className="bg-white rounded-xl shadow p-4 md:p-5"
     >
       <h3 className="font-semibold break-words text-sm md:text-base">
-        🔔 {activity}
+        🔔 {activity.message}
       </h3>
     </div>
   ))

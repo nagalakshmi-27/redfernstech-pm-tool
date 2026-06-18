@@ -90,3 +90,15 @@ class Invitation(Base):
     status = Column(String, default="Pending")
     invited_by_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Event(Base):
+    __tablename__ = "events"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    description = Column(String, nullable=True)
+    date = Column(String) # e.g., "2026-06-25"
+    type = Column(String, default="Meeting") # Meeting, Reminder, etc.
+    status = Column(String, default="Upcoming") 
+    
+    created_by_id = Column(Integer, ForeignKey("users.id"))
+    creator = relationship("User")
