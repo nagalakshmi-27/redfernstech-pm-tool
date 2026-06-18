@@ -12,7 +12,7 @@ export default function Calendar() {
   useEffect(() => {
     const fetchEvents = async () => {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://127.0.0.1:8000/events/", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -80,7 +80,7 @@ export default function Calendar() {
     if (editingEventId) {
       alert("Editing manual events is not yet supported by the backend!");
     } else {
-      const response = await fetch("http://127.0.0.1:8000/events/", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(eventData)
@@ -109,7 +109,7 @@ export default function Calendar() {
     if (!confirmDelete) return;
 
     const token = localStorage.getItem("token");
-    const response = await fetch(`http://127.0.0.1:8000/events/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/events/${id}`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${token}` }
     });
@@ -139,7 +139,7 @@ const handleEditEvent = (event) => {
     const newStatus = currentStatus === "Completed" ? "Upcoming" : "Completed";
     
     const token = localStorage.getItem("token");
-    const response = await fetch(`http://127.0.0.1:8000/events/${id}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/events/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
       body: JSON.stringify({ status: newStatus })

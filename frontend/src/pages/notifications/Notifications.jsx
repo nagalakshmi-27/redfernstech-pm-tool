@@ -8,7 +8,7 @@ export default function Notifications() {
     const fetchNotifications = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://127.0.0.1:8000/notifications/", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/notifications/`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {

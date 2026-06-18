@@ -25,7 +25,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   useEffect(() => {
     const fetchMyData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/users/me", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
           headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
         });
         if (response.ok) {
@@ -45,7 +45,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // 2. Save Profile Data
   const handleSave = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/me", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
@@ -80,7 +80,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     }
     
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/me/password", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me/password`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",

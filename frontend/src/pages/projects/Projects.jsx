@@ -14,19 +14,10 @@ export default function Projects() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
 
-  // DYNAMIC STATUS HELPER!
-  const getDynamicStatus = (project) => {
-    const projectTasks = tasks.filter((task) => task.project_id === project.id);
-    if (projectTasks.length === 0) return "Planning";
-    const completedTasks = projectTasks.filter((task) => task.status === "Completed");
-    if (completedTasks.length === projectTasks.length) return "Completed";
-    return "In Progress";
-  };
-
   const totalProjects = projects.length;
-  const planningProjects = projects.filter((p) => getDynamicStatus(p) === "Planning").length;
-  const inProgressProjects = projects.filter((p) => getDynamicStatus(p) === "In Progress").length;
-  const completedProjects = projects.filter((p) => getDynamicStatus(p) === "Completed").length;
+  const planningProjects = projects.filter((p) => p.calculated_status === "Planning").length;
+  const inProgressProjects = projects.filter((p) => p.calculated_status === "In Progress").length;
+  const completedProjects = projects.filter((p) => p.calculated_status === "Completed").length;
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) { alert("Project Name is required"); return; }
@@ -49,7 +40,7 @@ export default function Projects() {
 
     try {
       if (editingProjectId) {
-        const response = await fetch(`http://127.0.0.1:8000/projects/${editingProjectId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${editingProjectId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(projectData)
@@ -59,7 +50,7 @@ export default function Projects() {
           setProjects(projects.map((p) => p.id === editingProjectId ? updatedProject : p));
         }
       } else {
-        const response = await fetch("http://127.0.0.1:8000/projects/", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(projectData)
@@ -88,7 +79,7 @@ export default function Projects() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/projects/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       });
@@ -164,11 +155,9 @@ export default function Projects() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {projects.map((project) => {
-          // Dynamic calculation!
-          const dynamicStatus = getDynamicStatus(project);
-          const projectTasks = tasks.filter((task) => task.project_id === project.id);
-          const completedTasks = projectTasks.filter((task) => task.status === "Completed");
-          const progress = projectTasks.length > 0 ? Math.round((completedTasks.length / projectTasks.length) * 100) : 0;
+          // Backend-calculated dynamic properties!
+          const dynamicStatus = project.calculated_status;
+          const progress = project.progress;
 
           const memberArray = project.members || [];
 

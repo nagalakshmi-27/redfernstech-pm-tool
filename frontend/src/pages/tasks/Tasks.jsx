@@ -46,7 +46,7 @@ export default function Tasks() {
 
     try {
       if (editingTaskId) {
-        const response = await fetch(`http://127.0.0.1:8000/tasks/${editingTaskId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${editingTaskId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(taskData)
@@ -56,7 +56,7 @@ export default function Tasks() {
           setTasks(tasks.map((t) => t.id === editingTaskId ? updatedTask : t));
         }
       } else {
-        const response = await fetch("http://127.0.0.1:8000/tasks/", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(taskData)
@@ -87,7 +87,7 @@ export default function Tasks() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/tasks/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       });
@@ -102,7 +102,7 @@ export default function Tasks() {
   const handleStatusChange = async (taskId, newStatus) => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://127.0.0.1:8000/tasks/${taskId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus })

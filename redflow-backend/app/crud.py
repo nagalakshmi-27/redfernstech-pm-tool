@@ -63,6 +63,10 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
     if project.member_ids:
         users = db.query(models.User).filter(models.User.id.in_(project.member_ids)).all()
         db_project.members = users
+        for u in users:
+            if u.id != user_id:
+                notif = models.Notification(user_id=u.id, message=f"You have been added to the project '{db_project.name}'.")
+                db.add(notif)
         
     db.add(db_project)
     db.commit()
@@ -87,6 +91,13 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
     if "member_ids" in update_data:
         member_ids = update_data.pop("member_ids")
         users = db.query(models.User).filter(models.User.id.in_(member_ids)).all()
+        
+        old_user_ids = [u.id for u in db_project.members]
+        for u in users:
+            if u.id not in old_user_ids and u.id != user_id:
+                notif = models.Notification(user_id=u.id, message=f"You have been added to the project '{db_project.name}'.")
+                db.add(notif)
+                
         db_project.members = users
 
     for key, value in update_data.items():
@@ -119,6 +130,11 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
         assignee_id=task.assignee_id
     )
     db.add(db_task)
+    
+    if task.assignee_id and task.assignee_id != user_id:
+        notif = models.Notification(user_id=task.assignee_id, message=f"You have been assigned a new task: '{task.name}'.")
+        db.add(notif)
+        
     db.commit()
     db.refresh(db_task)
     return db_task
@@ -156,6 +172,9 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
             db.add(db_notification)
     else:
         for key, value in update_data.items():
+            if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
+                notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.")
+                db.add(notif)
             setattr(db_task, key, value)
             
     db.commit()

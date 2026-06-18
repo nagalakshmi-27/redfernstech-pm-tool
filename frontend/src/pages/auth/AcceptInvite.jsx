@@ -13,7 +13,7 @@ export default function AcceptInvite() {
   useEffect(() => {
     const fetchInvite = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/users/invite/${token}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/${token}`);
         if (response.ok) {
           const data = await response.json();
           setInviteDetails(data);
@@ -29,7 +29,7 @@ export default function AcceptInvite() {
 
   const handleAccept = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/invite/accept", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token })

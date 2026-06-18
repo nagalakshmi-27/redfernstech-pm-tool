@@ -17,7 +17,7 @@ export function AppProvider({ children }) {
 
       try {
         // Fetch Projects
-        const projRes = await fetch("http://127.0.0.1:8000/projects/", {
+        const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (projRes.ok) {
@@ -26,7 +26,7 @@ export function AppProvider({ children }) {
         }
 
         // Fetch Tasks!
-        const teamRes = await fetch("http://127.0.0.1:8000/users/teammates", {
+        const teamRes = await fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (teamRes.ok) {
@@ -35,7 +35,7 @@ export function AppProvider({ children }) {
           const formattedMembers = teamData.map(m => ({ ...m, name: m.full_name || m.email }));
           setMembers(formattedMembers);
         }
-        const taskRes = await fetch("http://127.0.0.1:8000/tasks/", {
+        const taskRes = await fetch(`${import.meta.env.VITE_API_URL}/tasks/`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (taskRes.ok) {

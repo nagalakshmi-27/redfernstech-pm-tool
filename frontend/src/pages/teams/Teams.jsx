@@ -19,7 +19,7 @@ export default function Teams() {
     if (!memberEmail.trim()) { alert("Email is required"); return; }
     if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/invite", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -67,7 +67,7 @@ const handleDeleteMember = async (memberId) => {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/users/teammates/${memberId}`,
+      `${import.meta.env.VITE_API_URL}/users/teammates/${memberId}`,
       {
         method: "DELETE",
         headers: {

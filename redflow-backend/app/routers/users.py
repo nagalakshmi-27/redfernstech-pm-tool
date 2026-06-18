@@ -183,6 +183,13 @@ def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(
         raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
         
     invite.status = "Accepted"
+    
+    notif = models.Notification(
+        user_id=invite.invited_by_id, 
+        message=f"{invite.email} has accepted your team invitation!"
+    )
+    db.add(notif)
+    
     db.commit()
     return {"message": "Successfully joined the team!"}
 

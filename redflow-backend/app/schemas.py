@@ -46,6 +46,8 @@ class ProjectResponse(ProjectBase):
     id: int
     created_by_id: int
     members: List[UserResponse] = []
+    progress: int = 0
+    calculated_status: str = "Planning"
     class Config:
         from_attributes = True
 
