@@ -2,9 +2,9 @@ import { Link } from "react-router-dom";
 
 export default function Sidebar() {
   return (
-    <div className="w-64 h-screen bg-slate-900 text-white">
+    <div className="w-64 min-h-screen bg-slate-900 text-white">
       {/* Logo / App Name */}
-      <div className="p-5 border-b border-slate-700">
+      <div className="p-5 border-b border-slate-700 flex items-center">
         <h1 className="text-2xl font-bold">
           RedFerns PM
         </h1>
@@ -16,7 +16,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/dashboard"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               Dashboard
             </Link>
@@ -25,7 +25,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/projects"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               Projects
             </Link>
@@ -34,7 +34,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/tasks"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               My Tasks
             </Link>
@@ -43,7 +43,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/teams"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               Teams
             </Link>
@@ -52,7 +52,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/calendar"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               Calendar
             </Link>
@@ -61,7 +61,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/notifications"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               Notifications
             </Link>
@@ -70,7 +70,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/settings"
-              className="block p-2 rounded hover:bg-slate-800"
+              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
             >
               Settings
             </Link>

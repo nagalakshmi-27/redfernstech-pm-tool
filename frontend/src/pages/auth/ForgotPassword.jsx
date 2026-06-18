@@ -8,11 +8,19 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => { // <-- Add async
     e.preventDefault();
     if (!email) {
-      alert("Please enter your email");
-      return;
-    }
+  alert("Please enter your email");
+  return;
+}
+
+const emailRegex =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (!emailRegex.test(email)) {
+  alert("Please enter a valid email address");
+  return;
+}
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/forgot-password", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email })
@@ -41,12 +49,13 @@ export default function ForgotPassword() {
         {message && <p className="text-green-600 text-center">{message}</p>}
         <form onSubmit={handleSubmit} className="space-y-5">
           <input
-            type="email"
-            placeholder="Enter Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+  type="email"
+  placeholder="Enter Email Address"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+  required
+/>
 
           <button
             type="submit"

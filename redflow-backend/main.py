@@ -2,23 +2,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models
-from app.routers import users # Import your new router
-from app.routers import users, projects  # Projects
-from app.routers import users, projects, tasks #Tasks
+from app.routers import users, projects, tasks, events, notifications
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="RedFlow API")
 
-# Configure CORS so the React frontend can communicate with the backend
+import os
+
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173,http://127.0.0.1:5173")
+origins = [url.strip() for url in frontend_url.split(",") if url.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "*"
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,6 +26,8 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(tasks.router) 
+app.include_router(events.router)
+app.include_router(notifications.router)
 
 @app.get("/")
 def read_root():

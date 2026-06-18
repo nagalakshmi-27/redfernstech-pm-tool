@@ -25,5 +25,5 @@ def update_project(project_id: int, project: schemas.ProjectUpdate, db: Session 
 def delete_project(project_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     success = crud.delete_project(db=db, project_id=project_id, user_id=current_user.id)
     if not success:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=403, detail="Forbidden")
     return {"message": "Project deleted successfully"}

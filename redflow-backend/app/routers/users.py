@@ -138,3 +138,73 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     
     crud.update_password(db, user, request.new_password)
     return {"message": "Password successfully reset!"}
+
+# --- TEAMS & INVITATIONS LOGIC ---
+@router.post("/invite")
+def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    target_user = crud.get_user_by_email(db, email=invite.email)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found! They must register an account first.")
+    
+    if invite.email == current_user.email:
+        raise HTTPException(status_code=400, detail="You cannot invite yourself.")
+        
+    token = auth.create_reset_token(invite.email) 
+    crud.create_invitation(db, invite.email, token, current_user.id) # <--- Removed role/dept
+    
+    sender_email = os.getenv("SMTP_USERNAME")
+    sender_password = os.getenv("SMTP_PASSWORD")
+    invite_link = f"http://localhost:5173/accept-invite?token={token}"
+    msg = MIMEText(f"You have been invited to join a team on RedFlow!\n\nClick here to accept:\n{invite_link}") # <--- Removed role
+    msg["Subject"] = "You're invited to a RedFlow Team!"
+    msg["From"] = sender_email
+    msg["To"] = invite.email
+    
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+    except Exception as e:
+        pass
+        
+    return {"message": "Invite sent successfully!"}
+
+@router.get("/invite/{token}")
+def get_invite_info(token: str, db: Session = Depends(get_db)):
+    invite = crud.get_invitation_by_token(db, token)
+    if not invite:
+        raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
+    return {"email": invite.email} # <--- Removed role/dept
+
+@router.post("/invite/accept")
+def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(get_db)):
+    invite = crud.get_invitation_by_token(db, accept_data.token)
+    if not invite:
+        raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
+        
+    invite.status = "Accepted"
+    
+    notif = models.Notification(
+        user_id=invite.invited_by_id, 
+        message=f"{invite.email} has accepted your team invitation!"
+    )
+    db.add(notif)
+    
+    db.commit()
+    return {"message": "Successfully joined the team!"}
+
+@router.get("/teammates", response_model=list[schemas.TeammateResponse])
+def get_my_teammates(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # crud.get_teammates already includes the current_user at the top of the list!
+    return crud.get_teammates(db, current_user.id)
+
+@router.delete("/teammates/{teammate_id}")
+def delete_teammate(teammate_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # SECURITY: Prevent the user from deleting themselves!
+    if teammate_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot remove yourself from your own team!")
+        
+    success = crud.remove_teammate(db, current_user.id, teammate_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Teammate not found or they are not on your team.")
+    return {"message": "Teammate removed successfully!"}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 
 export default function ResetPassword() {
@@ -12,19 +13,40 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showPasswordRules, setShowPasswordRules] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+
+  const passwordChecks = {
+  length: newPassword.length >= 8,
+  uppercase: /[A-Z]/.test(newPassword),
+  lowercase: /[a-z]/.test(newPassword),
+  number: /\d/.test(newPassword),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
+}; 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+if (!passwordRegex.test(newPassword)) {
+  setShowPasswordRules(true);
+  setError("");
+  return;
+}
+
+if (newPassword !== confirmPassword) {
+  setError("Passwords do not match");
+  return;
+}
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/reset-password", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: token, new_password: newPassword })
@@ -67,23 +89,67 @@ export default function ResetPassword() {
           {error && <div className="bg-red-100 border border-red-300 text-red-700 p-3 rounded-lg">{error}</div>}
           {message && <div className="bg-green-100 border border-green-300 text-green-700 p-3 rounded-lg">{message}</div>}
 
-          <input
-            type="password"
-            placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-            required
-          />
+          <div className="relative">
+  <input
+    type={showNewPassword ? "text" : "password"}
+    placeholder="New Password"
+    value={newPassword}
+    onChange={(e) => setNewPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+    required
+  />
 
-          <input
-            type="password"
-            placeholder="Confirm New Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-            required
-          />
+  <button
+    type="button"
+    onClick={() => setShowNewPassword(!showNewPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
+
+          {showPasswordRules && (
+  <div className="text-sm space-y-1">
+    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.length ? "✓" : "✗"} At least 8 characters
+    </p>
+
+    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
+    </p>
+
+    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
+    </p>
+
+    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.number ? "✓" : "✗"} One number
+    </p>
+
+    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.special ? "✓" : "✗"} One special character
+    </p>
+  </div>
+)}
+
+          <div className="relative">
+  <input
+    type={showConfirmPassword ? "text" : "password"}
+    placeholder="Confirm New Password"
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+    required
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
 
           <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-300">
             Update Password

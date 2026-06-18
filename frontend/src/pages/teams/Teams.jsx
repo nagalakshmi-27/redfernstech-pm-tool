@@ -11,53 +11,39 @@ import { useContext } from "react";
 import AppContext from "../../context/AppContext";
 
 export default function Teams() {
-  const { members, setMembers } = useContext(AppContext);
+  const { members} = useContext(AppContext);
   const [showModal, setShowModal] = useState(false);
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState("");
-  const [department, setDepartment] = useState("");
-  const handleAddMember = () => {
-  if (!memberName.trim()) {
-  alert("Member Name is required");
-  return;
-}
-
-if (!memberEmail.trim()) {
-  alert("Email is required");
-  return;
-}
-if (!validateEmail(memberEmail)) {
-  alert("Please enter a valid email");
-  return;
-}
-
-if (!memberRole.trim()) {
-  alert("Role is required");
-  return;
-}
-
-if (!department.trim()) {
-  alert("Department is required");
-  return;
-}
-
-  const newMember = {
-    id: Date.now(),
-    name: memberName,
-    email: memberEmail,
-    role: memberRole,
-    department,
+  const handleAddMember = async () => {
+    if (!memberEmail.trim()) { alert("Email is required"); return; }
+    if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({
+  email: memberEmail
+})
+      });
+      if (response.ok) {
+        alert("Invitation sent successfully to " + memberEmail + "!");
+        setMemberName("");
+        setMemberEmail("");
+        setShowModal(false);
+      } else {
+        const errData = await response.json();
+console.log(errData);
+alert("Failed to send invite: " + JSON.stringify(errData));
+      }
+    } catch{
+      alert("Failed to connect to backend.");
+    }
   };
 
-  setMembers([...members, newMember]);
-
-  setMemberName("");
-  setMemberEmail("");
-  setMemberRole("");
-  setDepartment("");
-  setShowModal(false);
-};
 const totalMembers = members.length;
 
 const developers = members.filter(
@@ -72,16 +58,44 @@ const managers = members.filter(
   (member) => member.department === "Management"
 ).length;
 
+const handleDeleteMember = async (memberId) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this member?"
+  );
 
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/users/teammates/${memberId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      alert("Member deleted successfully!");
+      window.location.reload();
+    } else {
+      const errData = await response.json();
+      alert(errData.detail || "Failed to delete member");
+    }
+  } catch {
+    alert("Failed to connect to backend");
+  }
+};
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Teams</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Teams</h1>
 
         <button
   onClick={() => setShowModal(true)}
-  className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+  className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
 >
   + Add Member
 </button>
@@ -155,16 +169,16 @@ const managers = members.filter(
 </div>
       
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {members.map((member) => (
           <div
             key={member.id}
-            className="bg-white rounded-xl shadow p-6"
+            className="bg-white rounded-xl shadow p-4 md:p-6"
           >
             <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-lg font-bold mb-3">
   {member.name.charAt(0)}
 </div>
-            <h2 className="text-xl font-semibold mb-2">
+            <h2 className="text-lg md:text-xl font-semibold mb-2 break-words">
               {member.name}
             </h2>
 
@@ -172,18 +186,28 @@ const managers = members.filter(
               {member.role}
             </p>
 
-            <p className="text-gray-600">
+            <p className="text-gray-600 break-all">
               {member.email}
             </p>
             <p className="text-sm text-gray-500 mt-2">
   Department: {member.department}
 </p>
+{member.email !== localStorage.getItem("userEmail") && (
+  <div className="mt-4">
+    <button
+      onClick={() => handleDeleteMember(member.id)}
+      className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600"
+    >
+      Delete
+    </button>
+  </div>
+)}
           </div>
         ))}
       </div>
       {showModal && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-    <div className="bg-white p-6 rounded-xl w-[500px]">
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px]">
       <h2 className="text-2xl font-bold mb-4">
         Add Team Member
       </h2>
@@ -216,54 +240,18 @@ const managers = members.filter(
           />
         </div>
 
-        <div>
-          <label className="block mb-2 font-medium">
-            Role
-          </label>
-          <select
-  value={memberRole}
-  onChange={(e) => setMemberRole(e.target.value)}
-  className="w-full border p-3 rounded-lg"
->
-  <option value="">Select Role</option>
-  <option>Admin</option>
-  <option>Project Manager</option>
-  <option>Frontend Developer</option>
-  <option>Backend Developer</option>
-  <option>UI/UX Designer</option>
-  <option>QA Engineer</option>
-</select>
-        </div>
 
-        <div>
-  <label className="block mb-2 font-medium">
-    Department
-  </label>
-
-  <select
-    value={department}
-    onChange={(e) => setDepartment(e.target.value)}
-    className="w-full border p-3 rounded-lg"
-  >
-    <option value="">Select Department</option>
-    <option>Development</option>
-    <option>Design</option>
-    <option>Management</option>
-    <option>QA</option>
-  </select>
-</div>
-
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
           <button
             onClick={() => setShowModal(false)}
-            className="px-4 py-2 border rounded-lg"
+            className="px-4 py-2 border rounded-lg w-full sm:w-auto"
           >
             Cancel
           </button>
 
           <button
             onClick={handleAddMember}
-            className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
           >
             Add Member
           </button>

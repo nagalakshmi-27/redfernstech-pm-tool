@@ -4,13 +4,14 @@ import { ListTodo, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function Tasks() {
-  const { tasks, setTasks, activities, setActivities, projects } = useContext(AppContext);
+  const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
+  const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
   
   const [showModal, setShowModal] = useState(false);
   const [taskName, setTaskName] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("To Do");
-  const [assignee, setAssignee] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -21,14 +22,12 @@ export default function Tasks() {
   const inProgressTasks = tasks.filter((task) => task.status === "In Progress").length;
   const completedTasks = tasks.filter((task) => task.status === "Completed").length;
 
-  // We find the selected project by ID, and split its comma-separated members string into an array!
-  const selectedProjectObj = projects.find((p) => p.id === parseInt(selectedProject));
-  const memberArray = selectedProjectObj?.members ? selectedProjectObj.members.split(",") : [];
+
 
   const handleCreateTask = async () => {
     if (!taskName.trim()) { alert("Task Name is required"); return; }
     if (!taskDescription.trim()) { alert("Task Description is required"); return; }
-    if (!assignee.trim()) { alert("Assignee is required"); return; }
+    if (!assigneeId) { alert("Assignee is required"); return; }
     if (!dueDate) { alert("Due Date is required"); return; }
     if (!selectedProject) { alert("Please select a project"); return; }
 
@@ -41,13 +40,13 @@ export default function Tasks() {
       priority: priority,
       status: status,
       due_date: dueDate,
-      assignee_name: assignee, 
+      assignee_id: parseInt(assigneeId), 
       project_id: parseInt(selectedProject)
     };
 
     try {
       if (editingTaskId) {
-        const response = await fetch(`http://127.0.0.1:8000/tasks/${editingTaskId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${editingTaskId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(taskData)
@@ -57,7 +56,7 @@ export default function Tasks() {
           setTasks(tasks.map((t) => t.id === editingTaskId ? updatedTask : t));
         }
       } else {
-        const response = await fetch("http://127.0.0.1:8000/tasks/", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(taskData)
@@ -68,7 +67,7 @@ export default function Tasks() {
           setActivities([`📝 ${newTask.name} task created`, ...activities]);
         }
       }
-    } catch (err) {
+    } catch{
       alert("Failed to save task to database.");
     }
 
@@ -76,7 +75,7 @@ export default function Tasks() {
     setTaskDescription("");
     setPriority("Medium");
     setStatus("To Do");
-    setAssignee("");
+    setAssigneeId("");
     setSelectedProject("");
     setDueDate("");
     setEditingTaskId(null);
@@ -88,22 +87,42 @@ export default function Tasks() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/tasks/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       });
       if (response.ok) {
         setTasks(tasks.filter((task) => task.id !== id));
       }
-    } catch (err) {
+    } catch{
       alert("Failed to connect to backend.");
+    }
+  };
+
+  const handleStatusChange = async (taskId, newStatus) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (response.ok) {
+        const updatedTask = await response.json();
+        setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
+        setActivities([`🔄 Task status updated to ${newStatus}`, ...activities]);
+      } else {
+        alert("Failed to update status");
+      }
+    } catch {
+      alert("Error updating status");
     }
   };
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Tasks</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">My Tasks</h1>
         <button
           onClick={() => {
             setEditingTaskId(null);
@@ -111,12 +130,12 @@ export default function Tasks() {
             setTaskDescription("");
             setPriority("Medium");
             setStatus("To Do");
-            setAssignee("");
+            setAssigneeId("");
             setSelectedProject("");
             setDueDate("");
             setShowModal(true);
           }}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
         >
           + Create Task
         </button>
@@ -164,13 +183,13 @@ export default function Tasks() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {tasks.map((task) => (
-          <div key={task.id} className="bg-white rounded-xl shadow p-6">
+          <div key={task.id} className="bg-white rounded-xl shadow p-4 md:p-6">
             <h2 className="text-xl font-semibold mb-3">{task.name}</h2>
             <p className="text-gray-600 mb-3">{task.description}</p>
 
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 mb-4">
               <span className={`px-3 py-1 rounded-full text-sm ${
                 task.priority === "High" ? "bg-red-100 text-red-700" :
                 task.priority === "Medium" ? "bg-yellow-100 text-yellow-700" :
@@ -190,42 +209,66 @@ export default function Tasks() {
             <p className="text-sm text-gray-500">
               Project: {projects.find(p => p.id === task.project_id)?.name || "Unknown"}
             </p>
-            <p>Assignee: {task.assignee_name}</p>
+            <p>Assignee: {members.find(m => m.id === task.assignee_id)?.full_name || "Unknown"}</p>
             <p className="text-sm text-gray-500 mt-1">
               Due Date: {task.due_date}
             </p>
-            
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => {
-                  setEditingTaskId(task.id);
-                  setTaskName(task.name);
-                  setTaskDescription(task.description);
-                  setPriority(task.priority);
-                  setStatus(task.status);
-                  setAssignee(task.assignee_name);
-                  setSelectedProject(task.project_id);
-                  setDueDate(task.due_date || "");
-                  setShowModal(true);
-                }}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDeleteTask(task.id)}
-                className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
-              >
-                Delete
-              </button>
+            {projects.find((p) => p.id === task.project_id)?.created_by_id === currentUserId ? (
+                <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                  <button
+                    onClick={() => {
+                      setEditingTaskId(task.id);
+                      setTaskName(task.name);
+                      setTaskDescription(task.description);
+                      setPriority(task.priority);
+                      setStatus(task.status);
+                      setAssigneeId(task.assignee_id || "");
+                      setSelectedProject(task.project_id);
+                      setDueDate(task.due_date || "");
+                      setShowModal(true);
+                    }}
+                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTask(task.id)}
+                    className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+  <span className="text-sm font-medium text-gray-700">
+    Update Status:
+  </span>
+
+  <select
+    value={task.status}
+    onChange={(e) => handleStatusChange(task.id, e.target.value)}
+    className={`px-3 py-2 rounded-lg text-sm font-medium border cursor-pointer
+      ${
+        task.status === "Completed"
+          ? "bg-green-50 text-green-700 border-green-300"
+          : task.status === "In Progress"
+          ? "bg-blue-50 text-blue-700 border-blue-300"
+          : "bg-gray-50 text-gray-700 border-gray-300"
+      }`}
+  >
+    <option value="To Do">To Do</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Completed">Completed</option>
+  </select>
+</div>
+              )}
             </div>
-          </div>
         ))}
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">{editingTaskId ? "Edit Task" : "Create Task"}</h2>
 
             <div className="space-y-4">
@@ -271,11 +314,11 @@ export default function Tasks() {
 
               <div>
                 <label className="block mb-2 font-medium">Assignee</label>
-                <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="w-full border p-3 rounded-lg">
+                <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full border p-3 rounded-lg">
                   <option value="">Select Team Member</option>
-                  {memberArray.map((memberName) => (
-                    <option key={memberName} value={memberName}>
-                      {memberName}
+                  {members.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.full_name}
                     </option>
                   ))}
                 </select>
@@ -283,10 +326,16 @@ export default function Tasks() {
 
               <div>
                 <label className="block mb-2 font-medium">Due Date</label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <input
+  type="date"
+  value={dueDate}
+  min={new Date().toISOString().split("T")[0]}
+  onChange={(e) => setDueDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-4 py-2 border rounded-lg">Cancel</button>
                 <button onClick={handleCreateTask} className="bg-slate-900 text-white px-4 py-2 rounded-lg">
                   {editingTaskId ? "Update Task" : "Create Task"}

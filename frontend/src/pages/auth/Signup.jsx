@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import {
   validateEmail,
   validatePassword,
@@ -12,7 +13,18 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [showPasswordRules, setShowPasswordRules] = useState(false);
+
+  const passwordChecks = {
+  length: password.length >= 8,
+  uppercase: /[A-Z]/.test(password),
+  lowercase: /[a-z]/.test(password),
+  number: /\d/.test(password),
+  special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+};
 
   const handleSignup = async (e) => { // <-- We added "async" here!
     e.preventDefault();
@@ -25,10 +37,12 @@ export default function Signup() {
       return;
     }
     const passwordError = validatePassword(password);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
+
+if (passwordError) {
+  setShowPasswordRules(true);
+  setError("");
+  return;
+}
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -36,7 +50,7 @@ export default function Signup() {
     setError("");
     try {
       // 1. Send the data to your backend
-      const response = await fetch("http://127.0.0.1:8000/users/", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -101,21 +115,65 @@ export default function Signup() {
             className="w-full border p-3 rounded-lg"
           />
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+          <div className="relative">
+  <input
+    type={showPassword ? "text" : "password"}
+    placeholder="Password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+  />
 
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+  <button
+    type="button"
+    onClick={() => setShowPassword(!showPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
+
+{showPasswordRules && (
+  <div className="text-sm space-y-1">
+    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.length ? "✓" : "✗"} At least 8 characters
+    </p>
+
+    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
+    </p>
+
+    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
+    </p>
+
+    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.number ? "✓" : "✗"} One number
+    </p>
+
+    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+      {passwordChecks.special ? "✓" : "✗"} One special character
+    </p>
+  </div>
+)}
+
+          <div className="relative">
+  <input
+    type={showConfirmPassword ? "text" : "password"}
+    placeholder="Confirm Password"
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
 
           <button
             type="submit"

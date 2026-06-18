@@ -4,11 +4,11 @@ from datetime import datetime
 from .database import Base
 
 # Association Table for Many-to-Many relationship between Users and Teams
-team_members = Table(
-    "team_members",
+project_members = Table(
+    "project_members",
     Base.metadata,
     Column("user_id", Integer, ForeignKey("users.id")),
-    Column("team_id", Integer, ForeignKey("teams.id"))
+    Column("project_id", Integer, ForeignKey("projects.id"))
 )
 
 class User(Base):
@@ -18,21 +18,13 @@ class User(Base):
     full_name = Column(String, nullable=True)
     hashed_password = Column(String)
     role = Column(String) 
+    department = Column(String, nullable=True) # <--- ADDED THIS!
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     projects = relationship("Project", back_populates="creator")
-    teams = relationship("Team", secondary=team_members, back_populates="members")
+    assigned_projects = relationship("Project", secondary=project_members, back_populates="members")
     notifications = relationship("Notification", back_populates="user")
-    # (The tasks relationship has been safely removed!)
-
-class Team(Base):
-    __tablename__ = "teams"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    members = relationship("User", secondary=team_members, back_populates="teams")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -42,11 +34,26 @@ class Project(Base):
     start_date = Column(String, nullable=True) 
     end_date = Column(String, nullable=True)   
     status = Column(String, default="Planning") 
-    members = Column(String, nullable=True) # <--- ADDED MEMBERS!
-    created_by_id = Column(Integer, ForeignKey("users.id"))
+    created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
 
     creator = relationship("User", back_populates="projects")
     tasks = relationship("Task", back_populates="project")
+    members = relationship("User", secondary=project_members, back_populates="assigned_projects")
+
+    @property
+    def progress(self):
+        if not self.tasks:
+            return 0
+        completed = sum(1 for t in self.tasks if t.status == "Completed")
+        return round((completed / len(self.tasks)) * 100)
+        
+    @property
+    def calculated_status(self):
+        if not self.tasks:
+            return "Planning"
+        if all(t.status == "Completed" for t in self.tasks):
+            return "Completed"
+        return "In Progress"
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -58,10 +65,11 @@ class Task(Base):
     due_date = Column(String, nullable=True) # Changed to String
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    project_id = Column(Integer, ForeignKey("projects.id"))
-    assignee_name = Column(String, nullable=True) # Uses a string name now!
+    project_id = Column(Integer, ForeignKey("projects.id"), index=True)
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     project = relationship("Project", back_populates="tasks")
+    assignee = relationship("User")
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -70,5 +78,26 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     user = relationship("User", back_populates="notifications")
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    token = Column(String, unique=True, index=True)
+    status = Column(String, default="Pending")
+    invited_by_id = Column(Integer, ForeignKey("users.id"), index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Event(Base):
+    __tablename__ = "events"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    description = Column(String, nullable=True)
+    date = Column(String) # e.g., "2026-06-25"
+    type = Column(String, default="Meeting") # Meeting, Reminder, etc.
+    status = Column(String, default="Upcoming") 
+    
+    created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
+    creator = relationship("User")

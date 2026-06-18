@@ -1,36 +1,41 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState } from "react";
-import {
-  CalendarDays,
-  Clock,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "../../context/AppContext";
+import { CalendarDays, Clock, CheckCircle, XCircle } from "lucide-react";
 
 export default function Calendar() {
-  const [events, setEvents] = useState([
-    {
-  id: 1,
-  title: "PM Tool Deadline",
-  date: "2026-06-20",
-  status: "Upcoming",
-  category: "Deadline",
-},
-{
-  id: 2,
-  title: "Website Release",
-  date: "2026-06-25",
-  status: "Upcoming",
-  category: "Release",
-},
-{
-  id: 3,
-  title: "Sprint Review",
-  date: "2026-06-30",
-  status: "Upcoming",
-  category: "Sprint",
-},
-  ]);
+  const { tasks, members } = useContext(AppContext);
+  const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
+  const [manualEvents, setManualEvents] = useState([]); // This stores events from your DB
+
+  // 1. Fetch your events from the database when the page loads!
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setManualEvents(await response.json());
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  // 2. MAGICAL MERGE! Combine manual events and your real tasks into one giant calendar array!
+  const events = [
+    ...manualEvents,
+    ...tasks
+      .filter(task => task.assignee_id === currentUserId)
+      .map(task => ({
+      id: `task-${task.id}`, // Add a prefix so it doesn't conflict with event IDs
+      title: task.name,
+      date: task.due_date,
+      status: task.status === "Completed" ? "Completed" : "Upcoming",
+      category: "Task", // Label it specifically as a task!
+      isTask: true      // Flag it so we know it's not a manual event
+    }))
+  ];
 
   const [showModal, setShowModal] = useState(false);
   const [eventTitle, setEventTitle] = useState("");
@@ -42,7 +47,7 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!eventTitle.trim()) {
       alert("Event Title is required");
       return;
@@ -53,64 +58,100 @@ export default function Calendar() {
       return;
     }
 
+    const selectedEventDate = new Date(eventDate);
+    selectedEventDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!editingEventId && selectedEventDate < today) {
+      alert("Cannot create events for past dates");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const eventData = {
+      title: eventTitle,
+      date: eventDate,
+      type: eventCategory,
+      status: eventStatus
+    };
+
     if (editingEventId) {
-  const updatedEvents = events.map((event) =>
-    event.id === editingEventId
-      ? {
-          ...event,
-          title: eventTitle,
-          date: eventDate,
-          status: eventStatus,
-          category: eventCategory,
-        }
-      : event
-  );
-
-  setEvents(updatedEvents);
-} else {
-  const newEvent = {
-    id: Date.now(),
-    title: eventTitle,
-    date: eventDate,
-    status: eventStatus,
-    category: eventCategory,
-  };
-
-  setEvents([...events, newEvent]);
-}
+      alert("Editing manual events is not yet supported by the backend!");
+    } else {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(eventData)
+      });
+      if (response.ok) {
+        const newEvent = await response.json();
+        setManualEvents([...manualEvents, newEvent]); 
+      }
+    }
 
     setEventTitle("");
-setEventDate("");
-setEventStatus("Upcoming");
-setEventCategory("Meeting");
-setEditingEventId(null);
-setShowModal(false);
+    setEventDate("");
+    setEventStatus("Upcoming");
+    setEventCategory("Meeting");
+    setEditingEventId(null);
+    setShowModal(false);
   };
+    const handleDeleteEvent = async (id) => {
+    // Prevent deleting Tasks from the Calendar screen
+    if (typeof id === 'string' && id.startsWith('task-')) {
+      alert("You can only delete tasks from the Tasks page!");
+      return;
+    }
 
-  const handleDeleteEvent = (id) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this event?"
-  );
+    const confirmDelete = window.confirm("Are you sure you want to delete this event?");
+    if (!confirmDelete) return;
 
-  if (!confirmDelete) {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/events/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (response.ok) {
+      setManualEvents(manualEvents.filter((event) => event.id !== id));
+    }
+  };
+const handleEditEvent = (event) => {
+  if (event.isTask) {
+    alert("Please go to the Tasks page to edit tasks!");
     return;
   }
-
-  const updatedEvents = events.filter(
-    (event) => event.id !== id
-  );
-
-  setEvents(updatedEvents);
-};
-
-const handleEditEvent = (event) => {
   setEventTitle(event.title);
   setEventDate(event.date);
   setEventStatus(event.status);
-  setEventCategory(event.category);
+  setEventCategory(event.category || event.type);
   setEditingEventId(event.id);
   setShowModal(true);
 };
+  const toggleEventStatus = async (id, currentStatus) => {
+    if (typeof id === 'string' && id.startsWith('task-')) {
+      alert("Please change task status from the Tasks page!");
+      return;
+    }
+
+    const newStatus = currentStatus === "Completed" ? "Upcoming" : "Completed";
+    
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/events/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    if (response.ok) {
+      const updatedEvent = await response.json();
+      setManualEvents(manualEvents.map(e => e.id === id ? updatedEvent : e));
+    } else {
+      alert("Failed to update status");
+    }
+  };
 
   const monthNames = [
     "January",
@@ -177,19 +218,47 @@ const goToToday = () => {
   setSelectedDate(today.getDate());
 };
 
-  const totalEvents = events.length;
+  
 
-const upcomingEvents = events.filter(
-  (event) => event.status === "Upcoming"
-).length;
+const pendingTasks = events.filter((event) => {
+  const daysRemaining = Math.ceil(
+    (new Date(event.date).setHours(0, 0, 0, 0) -
+      new Date().setHours(0, 0, 0, 0)) /
+      (1000 * 60 * 60 * 24)
+  );
 
-const completedEvents = events.filter(
+  return (
+    event.status === "Upcoming" &&
+    daysRemaining >= 0
+  );
+}).length;
+
+const completedTasks = events.filter(
   (event) => event.status === "Completed"
 ).length;
 
-const cancelledEvents = events.filter(
+const missedTasks = events.filter((event) => {
+  const daysRemaining = Math.ceil(
+    (new Date(event.date).setHours(0, 0, 0, 0) -
+      new Date().setHours(0, 0, 0, 0)) /
+      (1000 * 60 * 60 * 24)
+  );
+
+  return (
+    daysRemaining < 0 &&
+    event.status !== "Completed" &&
+    event.status !== "Cancelled"
+  );
+}).length;
+
+const cancelledTasks = events.filter(
   (event) => event.status === "Cancelled"
 ).length;
+
+const totalEvents =
+  events.length -
+  missedTasks -
+  cancelledTasks;
 
   const selectedEvents = events.filter((event) => {
   if (!selectedDate) return false;
@@ -208,9 +277,9 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
   <div>
-    <h1 className="text-3xl font-bold">
+    <h1 className="text-2xl md:text-3xl font-bold">
       Calendar
     </h1>
 
@@ -221,15 +290,15 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   <button
     onClick={() => setShowModal(true)}
-    className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+    className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
   >
     + Add Event
   </button>
 </div>
-<div className="grid grid-cols-4 gap-4 mb-6">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
   <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
-  <div className="flex justify-between items-center">
+  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
     <div>
       <p className="text-gray-500 text-base font-medium">
         Total Events
@@ -248,11 +317,11 @@ const filteredEvents = selectedEvents.filter((event) =>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-gray-500 text-base font-medium">
-        Upcoming
+        Pending
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {upcomingEvents}
+        {pendingTasks}
       </p>
     </div>
 
@@ -268,7 +337,7 @@ const filteredEvents = selectedEvents.filter((event) =>
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {completedEvents}
+        {completedTasks}
       </p>
     </div>
 
@@ -280,24 +349,26 @@ const filteredEvents = selectedEvents.filter((event) =>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-gray-500 text-base font-medium">
-        Cancelled
+        Missed
       </p>
 
       <p className="text-3xl font-bold mt-2">
-        {cancelledEvents}
+        {missedTasks}
       </p>
+      
     </div>
+    
 
     <XCircle size={22} />
   </div>
 </div>
 </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Calendar */}
-        <div className="col-span-2 bg-white rounded-xl shadow p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="xl:col-span-2 bg-white rounded-xl shadow p-4 md:p-6 overflow-x-auto">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
   <button
     onClick={prevMonth}
     className="px-4 py-2 bg-slate-100 rounded-lg"
@@ -306,7 +377,7 @@ const filteredEvents = selectedEvents.filter((event) =>
   </button>
 
   <div className="flex items-center gap-4">
-    <h2 className="text-2xl font-bold">
+    <h2 className="text-lg md:text-2xl font-bold text-center">
       {monthNames[currentMonth.getMonth()]}{" "}
       {currentMonth.getFullYear()}
     </h2>
@@ -320,7 +391,7 @@ const filteredEvents = selectedEvents.filter((event) =>
   </button>
 </div>
 
-          <div className="grid grid-cols-7 gap-2 text-center font-semibold mb-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 text-center font-semibold text-xs md:text-base mb-2 min-w-[650px]">
             <div>Sun</div>
             <div>Mon</div>
             <div>Tue</div>
@@ -330,7 +401,7 @@ const filteredEvents = selectedEvents.filter((event) =>
             <div>Sat</div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 min-w-[650px]">
             {[...Array(firstDay)].map((_, index) => (
               <div key={index}></div>
             ))}
@@ -360,16 +431,16 @@ const filteredEvents = selectedEvents.filter((event) =>
   return (
     <div
       key={index}
-      onClick={() => !isPastDate && setSelectedDate(day)}
-      className={`h-25 border rounded-lg p-2 transition-all ${
+      onClick={() => setSelectedDate(day)}
+      className={`min-h-[90px] md:min-h-[110px] border rounded-lg p-1 md:p-2 transition-all ${
   isPastDate
-    ? "bg-gray-100 opacity-60 cursor-not-allowed"
-    : "cursor-pointer hover:bg-blue-50 hover:shadow-md"
+  ? "bg-gray-100 opacity-60 cursor-pointer"
+  : "cursor-pointer hover:bg-blue-50 hover:shadow-md"
 } ${
         selectedDate === day
           ? "bg-blue-100 border-blue-500 shadow-md"
           : isToday
-          ? "border-green-500"
+? "border-blue-500 bg-blue-50"
           : ""
       }`}
     >
@@ -384,27 +455,49 @@ const filteredEvents = selectedEvents.filter((event) =>
           </span>
         )}
 
-        {eventCount > 0 && (
-  <span
-    className={`text-xs px-2 py-1 rounded-full w-fit ${
-      events.some(
-        (event) =>
-          new Date(event.date).getDate() === day &&
-          event.status === "Completed"
-      )
-        ? "bg-green-100 text-green-700"
-        : events.some(
-            (event) =>
-              new Date(event.date).getDate() === day &&
-              event.status === "Cancelled"
-          )
-        ? "bg-red-100 text-red-700"
-        : "bg-blue-100 text-blue-700"
-    }`}
-  >
-    {eventCount} Event{eventCount > 1 ? "s" : ""}
-  </span>
-)}
+        {eventCount > 0 && (() => {
+  const dayEvents = events.filter((event) => {
+    const eventDate = new Date(event.date);
+
+    return (
+      eventDate.getDate() === day &&
+      eventDate.getMonth() === currentMonth.getMonth() &&
+      eventDate.getFullYear() === currentMonth.getFullYear()
+    );
+  });
+
+  const pendingCount = dayEvents.filter(
+  (event) => event.status === "Upcoming"
+).length;
+
+  const isPastDeadline =
+    new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    ).setHours(0, 0, 0, 0) <
+    new Date().setHours(0, 0, 0, 0);
+
+  return (
+    <span
+      className={`text-xs px-2 py-1 rounded-full w-fit ${
+  isPastDeadline && pendingCount > 0
+    ? "bg-red-100 text-red-800"
+    : pendingCount === 0
+    ? "bg-green-100 text-green-700"
+    : pendingCount > 0
+    ? "bg-yellow-100 text-yellow-800"
+    : "bg-blue-100 text-blue-700"
+}`}
+    >
+      {isPastDeadline && pendingCount > 0
+  ? "Missed"
+  : pendingCount === 0
+  ? "Completed"
+  : `${pendingCount} Pending`}
+    </span>
+  );
+})()}
       </div>
     </div>
   );
@@ -413,7 +506,7 @@ const filteredEvents = selectedEvents.filter((event) =>
         </div>
 
         {/* Events Panel */}
-        <div className="bg-white rounded-xl shadow p-6">
+        <div className="bg-white rounded-xl shadow p-4 md:p-6">
           <div className="flex justify-between items-center mb-4">
   <h2 className="text-xl font-bold">
     {selectedDate
@@ -452,7 +545,10 @@ const filteredEvents = selectedEvents.filter((event) =>
     new Date().setHours(0,0,0,0)) /
     (1000 * 60 * 60 * 24)
 );
-
+const isMissed =
+  daysRemaining < 0 &&
+  event.status !== "Completed" &&
+  event.status !== "Cancelled";
   return (
     <div
       key={event.id}
@@ -463,21 +559,40 @@ const filteredEvents = selectedEvents.filter((event) =>
     {event.title}
   </p>
 
+  <div className="flex flex-wrap items-center gap-3">
   <span
-  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-    event.category === "Deadline"
-      ? "bg-red-100 text-red-700"
-      : event.category === "Meeting"
-      ? "bg-blue-100 text-blue-700"
-      : event.category === "Sprint"
-      ? "bg-purple-100 text-purple-700"
-      : event.category === "Release"
-      ? "bg-green-100 text-green-700"
-      : "bg-orange-100 text-orange-700"
-  }`}
->
-  {event.category}
-</span>
+    className={`px-2 py-1 text-xs font-semibold rounded-full ${
+      event.category === "Deadline"
+        ? "bg-red-100 text-red-700"
+        : event.category === "Meeting"
+        ? "bg-blue-100 text-blue-700"
+        : event.category === "Sprint"
+        ? "bg-purple-100 text-purple-700"
+        : event.category === "Release"
+        ? "bg-green-100 text-green-700"
+        : "bg-orange-100 text-orange-700"
+    }`}
+  >
+    {event.category}
+  </span>
+
+  <button
+    onClick={() => toggleEventStatus(event.id, event.status)}
+    className={`relative w-10 h-5 rounded-full transition-all ${
+      event.status === "Completed"
+        ? "bg-green-500"
+        : "bg-gray-300"
+    }`}
+  >
+    <span
+      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+        event.status === "Completed"
+          ? "right-0.5"
+          : "left-0.5"
+      }`}
+    />
+  </button>
+</div>
 
 </div>
 
@@ -496,23 +611,25 @@ const filteredEvents = selectedEvents.filter((event) =>
   </p>
 )}
 
-{daysRemaining < 0 && (
-  <p className="text-sm text-red-600 font-medium mt-1">
-    ⚠️ Overdue by {Math.abs(daysRemaining)} day{Math.abs(daysRemaining) > 1 ? "s" : ""}
+{isMissed && (
+  <p className="text-sm text-orange-600 font-medium mt-1">
+    ⚠️ Missed Deadline • {Math.abs(daysRemaining)} day{Math.abs(daysRemaining) > 1 ? "s" : ""} overdue
   </p>
 )}
 <span
   className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
-    event.status === "Completed"
+    isMissed
+      ? "bg-orange-100 text-orange-700"
+      : event.status === "Completed"
       ? "bg-green-100 text-green-700"
       : event.status === "Cancelled"
       ? "bg-red-100 text-red-700"
       : "bg-blue-100 text-blue-700"
   }`}
 >
-  {event.status}
+  {isMissed ? "Missed" : event.status}
 </span>
-<div className="flex gap-4 mt-2">
+<div className="flex flex-wrap gap-4 mt-2">
   <button
     onClick={() => handleEditEvent(event)}
     className="text-blue-600 text-sm font-medium"
@@ -547,8 +664,8 @@ const filteredEvents = selectedEvents.filter((event) =>
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">
   {editingEventId ? "Update Event" : "Add Event"}
 </h2>
@@ -574,11 +691,12 @@ const filteredEvents = selectedEvents.filter((event) =>
                 </label>
 
                 <input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full border p-3 rounded-lg"
-                />
+  type="date"
+  value={eventDate}
+  min={new Date().toISOString().split("T")[0]}
+  onChange={(e) => setEventDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
               <div>
   <label className="block mb-2 font-medium">
@@ -586,14 +704,14 @@ const filteredEvents = selectedEvents.filter((event) =>
   </label>
 
   <select
-    value={eventStatus}
-    onChange={(e) => setEventStatus(e.target.value)}
-    className="w-full border p-3 rounded-lg"
-  >
-    <option>Upcoming</option>
-    <option>Completed</option>
-    <option>Cancelled</option>
-  </select>
+  value={eventStatus}
+  onChange={(e) => setEventStatus(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+>
+  <option>Upcoming</option>
+  <option>Completed</option>
+  <option>Cancelled</option>
+</select>
 </div>
 <div>
   <label className="block mb-2 font-medium">
@@ -613,7 +731,7 @@ const filteredEvents = selectedEvents.filter((event) =>
   </select>
 </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={() => {
   setShowModal(false);

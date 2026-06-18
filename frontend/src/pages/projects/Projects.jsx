@@ -5,7 +5,7 @@ import { FolderKanban, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 
 export default function Projects() {
   const { projects, setProjects, activities, setActivities, members, tasks } = useContext(AppContext);
-
+  const currentUserId = Number(localStorage.getItem("userId"));
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
@@ -14,19 +14,10 @@ export default function Projects() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
 
-  // DYNAMIC STATUS HELPER!
-  const getDynamicStatus = (project) => {
-    const projectTasks = tasks.filter((task) => task.project_id === project.id);
-    if (projectTasks.length === 0) return "Planning";
-    const completedTasks = projectTasks.filter((task) => task.status === "Completed");
-    if (completedTasks.length === projectTasks.length) return "Completed";
-    return "In Progress";
-  };
-
   const totalProjects = projects.length;
-  const planningProjects = projects.filter((p) => getDynamicStatus(p) === "Planning").length;
-  const inProgressProjects = projects.filter((p) => getDynamicStatus(p) === "In Progress").length;
-  const completedProjects = projects.filter((p) => getDynamicStatus(p) === "Completed").length;
+  const planningProjects = projects.filter((p) => p.calculated_status === "Planning").length;
+  const inProgressProjects = projects.filter((p) => p.calculated_status === "In Progress").length;
+  const completedProjects = projects.filter((p) => p.calculated_status === "Completed").length;
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) { alert("Project Name is required"); return; }
@@ -44,12 +35,12 @@ export default function Projects() {
       start_date: startDate,
       end_date: endDate,
       status: "Planning", 
-      members: selectedMembers.join(",") 
+      member_ids: selectedMembers 
     };
 
     try {
       if (editingProjectId) {
-        const response = await fetch(`http://127.0.0.1:8000/projects/${editingProjectId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${editingProjectId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(projectData)
@@ -59,7 +50,7 @@ export default function Projects() {
           setProjects(projects.map((p) => p.id === editingProjectId ? updatedProject : p));
         }
       } else {
-        const response = await fetch("http://127.0.0.1:8000/projects/", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify(projectData)
@@ -70,7 +61,7 @@ export default function Projects() {
           setActivities([`📁 ${newProject.name} project created`, ...activities]);
         }
       }
-    } catch (err) {
+    } catch {
       alert("Failed to save project to database.");
     }
 
@@ -88,22 +79,22 @@ export default function Projects() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/projects/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       });
       if (response.ok) {
         setProjects(projects.filter((project) => project.id !== id));
       }
-    } catch (err) {
+    } catch {
       alert("Failed to connect to backend.");
     }
   };
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Projects</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Projects</h1>
         <button
           onClick={() => {
             setEditingProjectId(null);
@@ -114,7 +105,7 @@ export default function Projects() {
             setSelectedMembers([]);
             setShowModal(true);
           }}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
         >
           + Create Project
         </button>
@@ -162,19 +153,16 @@ export default function Projects() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {projects.map((project) => {
-          // Dynamic calculation!
-          const dynamicStatus = getDynamicStatus(project);
-          
-          const projectTasks = tasks.filter((task) => task.project_id === project.id);
-          const completedTasks = projectTasks.filter((task) => task.status === "Completed");
-          const progress = projectTasks.length > 0 ? Math.round((completedTasks.length / projectTasks.length) * 100) : 0;
+          // Backend-calculated dynamic properties!
+          const dynamicStatus = project.calculated_status;
+          const progress = project.progress;
 
-          const memberArray = project.members ? project.members.split(",") : [];
+          const memberArray = project.members || [];
 
           return (
-            <div key={project.id} className="bg-white rounded-xl shadow p-6">
+            <div key={project.id} className="bg-white rounded-xl shadow p-4 md:p-6">
               <h2 className="text-xl font-semibold mb-3">{project.name}</h2>
               <p className="text-gray-600 mb-3">{project.description}</p>
 
@@ -196,32 +184,35 @@ export default function Projects() {
               </div>
 
               <p className="text-gray-600">Members: {memberArray.length}</p>
-              <p className="text-sm text-gray-500 mt-1">{project.members || "No members assigned"}</p>
+              <p className="text-sm text-gray-500 mt-1 break-words">{memberArray.map(m => m.full_name).join(", ") || "No members assigned"}</p>
               <p className="text-sm text-gray-500 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-gray-500">End: {project.end_date}</p>
 
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => {
-                    setEditingProjectId(project.id);
-                    setProjectName(project.name);
-                    setProjectDescription(project.description);
-                    setStartDate(project.start_date || "");
-                    setEndDate(project.end_date || "");
-                    setSelectedMembers(memberArray);
-                    setShowModal(true);
-                  }}
-                  className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteProject(project.id)}
-                  className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
-                >
-                  Delete
-                </button>
-              </div>
+              {project.created_by_id === currentUserId && (
+  <div className="flex flex-col sm:flex-row gap-2 mt-4">
+    <button
+      onClick={() => {
+        setEditingProjectId(project.id);
+        setProjectName(project.name);
+        setProjectDescription(project.description);
+        setStartDate(project.start_date || "");
+        setEndDate(project.end_date || "");
+        setSelectedMembers(memberArray.map((m) => m.id));
+        setShowModal(true);
+      }}
+      className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
+    >
+      Edit
+    </button>
+
+    <button
+      onClick={() => handleDeleteProject(project.id)}
+      className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+    >
+      Delete
+    </button>
+  </div>
+)}
             </div>
           );
         })}
@@ -229,7 +220,7 @@ export default function Projects() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
+          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">{editingProjectId ? "Edit Project" : "Create Project"}</h2>
 
             <div className="space-y-4">
@@ -250,16 +241,16 @@ export default function Projects() {
                     <label key={member.id} className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={selectedMembers.includes(member.name)}
+                        checked={selectedMembers.includes(member.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedMembers([...selectedMembers, member.name]);
+                            setSelectedMembers([...selectedMembers, member.id]);
                           } else {
-                            setSelectedMembers(selectedMembers.filter((name) => name !== member.name));
+                            setSelectedMembers(selectedMembers.filter((id) => id !== member.id));
                           }
                         }}
                       />
-                      {member.name}
+                      {member.full_name}
                     </label>
                   ))}
                 </div>
@@ -267,15 +258,27 @@ export default function Projects() {
 
               <div>
                 <label className="block mb-2 font-medium">Start Date</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <input
+  type="date"
+  value={startDate}
+  min={new Date().toISOString().split("T")[0]}
+  onChange={(e) => setStartDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
 
               <div>
                 <label className="block mb-2 font-medium">End Date</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <input
+  type="date"
+  value={endDate}
+  min={startDate || new Date().toISOString().split("T")[0]}
+  onChange={(e) => setEndDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
                 <button onClick={handleCreateProject} className="bg-slate-900 text-white px-4 py-2 rounded-lg">
                   {editingProjectId ? "Update Project" : "Create Project"}
