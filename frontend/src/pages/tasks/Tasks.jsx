@@ -121,8 +121,8 @@ export default function Tasks() {
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Tasks</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">My Tasks</h1>
         <button
           onClick={() => {
             setEditingTaskId(null);
@@ -135,7 +135,7 @@ export default function Tasks() {
             setDueDate("");
             setShowModal(true);
           }}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
         >
           + Create Task
         </button>
@@ -183,13 +183,13 @@ export default function Tasks() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {tasks.map((task) => (
-          <div key={task.id} className="bg-white rounded-xl shadow p-6">
+          <div key={task.id} className="bg-white rounded-xl shadow p-4 md:p-6">
             <h2 className="text-xl font-semibold mb-3">{task.name}</h2>
             <p className="text-gray-600 mb-3">{task.description}</p>
 
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 mb-4">
               <span className={`px-3 py-1 rounded-full text-sm ${
                 task.priority === "High" ? "bg-red-100 text-red-700" :
                 task.priority === "Medium" ? "bg-yellow-100 text-yellow-700" :
@@ -214,7 +214,7 @@ export default function Tasks() {
               Due Date: {task.due_date}
             </p>
             {projects.find((p) => p.id === task.project_id)?.created_by_id === currentUserId ? (
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-col sm:flex-row gap-2 mt-4">
                   <button
                     onClick={() => {
                       setEditingTaskId(task.id);
@@ -239,7 +239,7 @@ export default function Tasks() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-4 flex items-center gap-3">
+                <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
   <span className="text-sm font-medium text-gray-700">
     Update Status:
   </span>
@@ -267,8 +267,8 @@ export default function Tasks() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">{editingTaskId ? "Edit Task" : "Create Task"}</h2>
 
             <div className="space-y-4">
@@ -335,7 +335,7 @@ export default function Tasks() {
 />
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-4 py-2 border rounded-lg">Cancel</button>
                 <button onClick={handleCreateTask} className="bg-slate-900 text-white px-4 py-2 rounded-lg">
                   {editingTaskId ? "Update Task" : "Create Task"}

@@ -124,11 +124,13 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   return (
     <MainLayout>
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+      <h1 className="text-2xl md:text-3xl font-bold mb-6">
+  Settings
+</h1>
 
-      <div className="bg-white rounded-xl shadow p-6 space-y-4">
+      <div className="bg-white rounded-xl shadow p-4 md:p-6 space-y-4">
         {message && (
-  <div className={`p-3 rounded-lg ${message.toLowerCase().includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+  <div className={`p-3 rounded-lg break-words ${message.toLowerCase().includes("success") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
     {message}
   </div>
 )}
@@ -186,7 +188,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
           {!showPasswordSection ? (
             <button
               onClick={() => setShowPasswordSection(true)}
-              className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700"
+              className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 w-full sm:w-auto"
             >
               Change Password
             </button>
@@ -269,7 +271,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   </button>
 </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handlePasswordChange}
                   className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700"
@@ -288,11 +290,11 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
         </div>
 
         {/* Save/Logout Actions */}
-        <div className="pt-6 flex gap-3">
-          <button onClick={handleSave} className="bg-slate-900 text-white px-5 py-3 rounded-lg hover:bg-slate-800">
+        <div className="pt-6 flex flex-col sm:flex-row gap-3">
+          <button onClick={handleSave} className="bg-slate-900 text-white px-5 py-3 rounded-lg hover:bg-slate-800 w-full sm:w-auto">
             Save Changes
           </button>
-          <button onClick={handleLogout} className="border px-5 py-3 rounded-lg hover:bg-gray-50">
+          <button onClick={handleLogout} className="border px-5 py-3 rounded-lg hover:bg-gray-50 w-full sm:w-auto">
             Logout
           </button>
         </div>

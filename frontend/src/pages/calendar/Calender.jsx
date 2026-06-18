@@ -269,9 +269,9 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
   <div>
-    <h1 className="text-3xl font-bold">
+    <h1 className="text-2xl md:text-3xl font-bold">
       Calendar
     </h1>
 
@@ -282,15 +282,15 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   <button
     onClick={() => setShowModal(true)}
-    className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+    className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
   >
     + Add Event
   </button>
 </div>
-<div className="grid grid-cols-4 gap-4 mb-6">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
   <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
-  <div className="flex justify-between items-center">
+  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
     <div>
       <p className="text-gray-500 text-base font-medium">
         Total Events
@@ -356,11 +356,11 @@ const filteredEvents = selectedEvents.filter((event) =>
 </div>
 </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Calendar */}
-        <div className="col-span-2 bg-white rounded-xl shadow p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="xl:col-span-2 bg-white rounded-xl shadow p-4 md:p-6 overflow-x-auto">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
   <button
     onClick={prevMonth}
     className="px-4 py-2 bg-slate-100 rounded-lg"
@@ -369,7 +369,7 @@ const filteredEvents = selectedEvents.filter((event) =>
   </button>
 
   <div className="flex items-center gap-4">
-    <h2 className="text-2xl font-bold">
+    <h2 className="text-lg md:text-2xl font-bold text-center">
       {monthNames[currentMonth.getMonth()]}{" "}
       {currentMonth.getFullYear()}
     </h2>
@@ -383,7 +383,7 @@ const filteredEvents = selectedEvents.filter((event) =>
   </button>
 </div>
 
-          <div className="grid grid-cols-7 gap-2 text-center font-semibold mb-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 text-center font-semibold text-xs md:text-base mb-2 min-w-[650px]">
             <div>Sun</div>
             <div>Mon</div>
             <div>Tue</div>
@@ -393,7 +393,7 @@ const filteredEvents = selectedEvents.filter((event) =>
             <div>Sat</div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 min-w-[650px]">
             {[...Array(firstDay)].map((_, index) => (
               <div key={index}></div>
             ))}
@@ -424,7 +424,7 @@ const filteredEvents = selectedEvents.filter((event) =>
     <div
       key={index}
       onClick={() => setSelectedDate(day)}
-      className={`h-25 border rounded-lg p-2 transition-all ${
+      className={`min-h-[90px] md:min-h-[110px] border rounded-lg p-1 md:p-2 transition-all ${
   isPastDate
   ? "bg-gray-100 opacity-60 cursor-pointer"
   : "cursor-pointer hover:bg-blue-50 hover:shadow-md"
@@ -498,7 +498,7 @@ const filteredEvents = selectedEvents.filter((event) =>
         </div>
 
         {/* Events Panel */}
-        <div className="bg-white rounded-xl shadow p-6">
+        <div className="bg-white rounded-xl shadow p-4 md:p-6">
           <div className="flex justify-between items-center mb-4">
   <h2 className="text-xl font-bold">
     {selectedDate
@@ -551,7 +551,7 @@ const isMissed =
     {event.title}
   </p>
 
-  <div className="flex items-center gap-3">
+  <div className="flex flex-wrap items-center gap-3">
   <span
     className={`px-2 py-1 text-xs font-semibold rounded-full ${
       event.category === "Deadline"
@@ -621,7 +621,7 @@ const isMissed =
 >
   {isMissed ? "Missed" : event.status}
 </span>
-<div className="flex gap-4 mt-2">
+<div className="flex flex-wrap gap-4 mt-2">
   <button
     onClick={() => handleEditEvent(event)}
     className="text-blue-600 text-sm font-medium"
@@ -656,8 +656,8 @@ const isMissed =
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">
   {editingEventId ? "Update Event" : "Add Event"}
 </h2>
@@ -723,7 +723,7 @@ const isMissed =
   </select>
 </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={() => {
   setShowModal(false);

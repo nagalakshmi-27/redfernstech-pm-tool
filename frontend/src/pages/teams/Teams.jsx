@@ -90,12 +90,12 @@ const handleDeleteMember = async (memberId) => {
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Teams</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Teams</h1>
 
         <button
   onClick={() => setShowModal(true)}
-  className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+  className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
 >
   + Add Member
 </button>
@@ -169,16 +169,16 @@ const handleDeleteMember = async (memberId) => {
 </div>
       
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {members.map((member) => (
           <div
             key={member.id}
-            className="bg-white rounded-xl shadow p-6"
+            className="bg-white rounded-xl shadow p-4 md:p-6"
           >
             <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-lg font-bold mb-3">
   {member.name.charAt(0)}
 </div>
-            <h2 className="text-xl font-semibold mb-2">
+            <h2 className="text-lg md:text-xl font-semibold mb-2 break-words">
               {member.name}
             </h2>
 
@@ -186,7 +186,7 @@ const handleDeleteMember = async (memberId) => {
               {member.role}
             </p>
 
-            <p className="text-gray-600">
+            <p className="text-gray-600 break-all">
               {member.email}
             </p>
             <p className="text-sm text-gray-500 mt-2">
@@ -206,8 +206,8 @@ const handleDeleteMember = async (memberId) => {
         ))}
       </div>
       {showModal && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-    <div className="bg-white p-6 rounded-xl w-[500px]">
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px]">
       <h2 className="text-2xl font-bold mb-4">
         Add Team Member
       </h2>
@@ -241,17 +241,17 @@ const handleDeleteMember = async (memberId) => {
         </div>
 
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col sm:flex-row justify-end gap-3">
           <button
             onClick={() => setShowModal(false)}
-            className="px-4 py-2 border rounded-lg"
+            className="px-4 py-2 border rounded-lg w-full sm:w-auto"
           >
             Cancel
           </button>
 
           <button
             onClick={handleAddMember}
-            className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
           >
             Add Member
           </button>

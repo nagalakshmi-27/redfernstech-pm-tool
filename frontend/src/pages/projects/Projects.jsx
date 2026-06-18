@@ -102,8 +102,8 @@ export default function Projects() {
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Projects</h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Projects</h1>
         <button
           onClick={() => {
             setEditingProjectId(null);
@@ -114,7 +114,7 @@ export default function Projects() {
             setSelectedMembers([]);
             setShowModal(true);
           }}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
         >
           + Create Project
         </button>
@@ -162,7 +162,7 @@ export default function Projects() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {projects.map((project) => {
           // Dynamic calculation!
           const dynamicStatus = getDynamicStatus(project);
@@ -173,7 +173,7 @@ export default function Projects() {
           const memberArray = project.members || [];
 
           return (
-            <div key={project.id} className="bg-white rounded-xl shadow p-6">
+            <div key={project.id} className="bg-white rounded-xl shadow p-4 md:p-6">
               <h2 className="text-xl font-semibold mb-3">{project.name}</h2>
               <p className="text-gray-600 mb-3">{project.description}</p>
 
@@ -195,12 +195,12 @@ export default function Projects() {
               </div>
 
               <p className="text-gray-600">Members: {memberArray.length}</p>
-              <p className="text-sm text-gray-500 mt-1">{memberArray.map(m => m.full_name).join(", ") || "No members assigned"}</p>
+              <p className="text-sm text-gray-500 mt-1 break-words">{memberArray.map(m => m.full_name).join(", ") || "No members assigned"}</p>
               <p className="text-sm text-gray-500 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-gray-500">End: {project.end_date}</p>
 
               {project.created_by_id === currentUserId && (
-  <div className="flex gap-2 mt-4">
+  <div className="flex flex-col sm:flex-row gap-2 mt-4">
     <button
       onClick={() => {
         setEditingProjectId(project.id);
@@ -231,7 +231,7 @@ export default function Projects() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-[500px]">
+          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">{editingProjectId ? "Edit Project" : "Create Project"}</h2>
 
             <div className="space-y-4">
@@ -289,7 +289,7 @@ export default function Projects() {
 />
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
                 <button onClick={handleCreateProject} className="bg-slate-900 text-white px-4 py-2 rounded-lg">
                   {editingProjectId ? "Update Project" : "Create Project"}
