@@ -20,7 +20,7 @@ export default function AcceptInvite() {
         } else {
           setError("This invite link is invalid or has already been used.");
         }
-      } catch (err) {
+      } catch {
         setError("Failed to connect to the server.");
       }
     };
@@ -42,7 +42,7 @@ export default function AcceptInvite() {
         const errData = await response.json();
         setError(errData.detail || "Failed to accept invite.");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to connect to server.");
     }
   };

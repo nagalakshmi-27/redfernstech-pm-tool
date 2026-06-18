@@ -67,7 +67,7 @@ export default function Tasks() {
           setActivities([`📝 ${newTask.name} task created`, ...activities]);
         }
       }
-    } catch (err) {
+    } catch{
       alert("Failed to save task to database.");
     }
 
@@ -94,7 +94,7 @@ export default function Tasks() {
       if (response.ok) {
         setTasks(tasks.filter((task) => task.id !== id));
       }
-    } catch (err) {
+    } catch{
       alert("Failed to connect to backend.");
     }
   };
@@ -114,7 +114,7 @@ export default function Tasks() {
       } else {
         alert("Failed to update status");
       }
-    } catch (err) {
+    } catch {
       alert("Error updating status");
     }
   };
@@ -239,18 +239,28 @@ export default function Tasks() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-4">
-                  <label className="text-sm font-medium mr-2">Update Status:</label>
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                    className="border p-1 rounded-lg text-sm"
-                  >
-                    <option value="To Do">To Do</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
+                <div className="mt-4 flex items-center gap-3">
+  <span className="text-sm font-medium text-gray-700">
+    Update Status:
+  </span>
+
+  <select
+    value={task.status}
+    onChange={(e) => handleStatusChange(task.id, e.target.value)}
+    className={`px-3 py-2 rounded-lg text-sm font-medium border cursor-pointer
+      ${
+        task.status === "Completed"
+          ? "bg-green-50 text-green-700 border-green-300"
+          : task.status === "In Progress"
+          ? "bg-blue-50 text-blue-700 border-blue-300"
+          : "bg-gray-50 text-gray-700 border-gray-300"
+      }`}
+  >
+    <option value="To Do">To Do</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Completed">Completed</option>
+  </select>
+</div>
               )}
             </div>
         ))}
@@ -316,7 +326,13 @@ export default function Tasks() {
 
               <div>
                 <label className="block mb-2 font-medium">Due Date</label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <input
+  type="date"
+  value={dueDate}
+  min={new Date().toISOString().split("T")[0]}
+  onChange={(e) => setDueDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
 
               <div className="flex justify-end gap-3">

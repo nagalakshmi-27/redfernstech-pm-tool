@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import MainLayout from "../../layouts/MainLayout";
 
 export default function Settings() {
@@ -14,6 +15,9 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPasswordValidation, setShowPasswordValidation] =
   useState(false);
 
@@ -132,11 +136,12 @@ export default function Settings() {
         <div>
           <label className="block font-medium mb-2">Full Name</label>
           <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+  type="text"
+  placeholder="Enter your full name"
+  value={fullName}
+  onChange={(e) => setFullName(e.target.value)}
+  className="w-full md:w-2/3 border p-3 rounded-lg"
+/>
         </div>
 
         <div>
@@ -145,18 +150,19 @@ export default function Settings() {
             type="email"
             value={email}
             readOnly
-            className="w-full border p-3 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+            className="w-full md:w-2/3 border p-3 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
           />
         </div>
 
         <div>
           <label className="block font-medium mb-2">Role</label>
           <input
-            type="text"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+  type="text"
+  placeholder="Enter your role"
+  value={role}
+  onChange={(e) => setRole(e.target.value)}
+  className="w-full md:w-2/3 border p-3 rounded-lg"
+/>
         </div>
 
         <div>
@@ -165,11 +171,12 @@ export default function Settings() {
   </label>
 
   <input
-    type="text"
-    value={department}
-    onChange={(e) => setDepartment(e.target.value)}
-    className="w-full border p-3 rounded-lg"
-  />
+  type="text"
+  placeholder="Enter your department"
+  value={department}
+  onChange={(e) => setDepartment(e.target.value)}
+  className="w-full md:w-2/3 border p-3 rounded-lg"
+/>
 </div>
 
         {/* Security Section */}
@@ -185,21 +192,41 @@ export default function Settings() {
             </button>
           ) : (
             <div className="space-y-4 bg-gray-50 p-4 rounded-lg border">
-              <input
-                type="password"
-                placeholder="Current Password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full border p-3 rounded-lg"
-              />
+              <div className="relative">
+  <input
+    type={showCurrentPassword ? "text" : "password"}
+    placeholder="Current Password"
+    value={currentPassword}
+    onChange={(e) => setCurrentPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+  />
 
-              <input
-                type="password"
-                placeholder="New Password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full border p-3 rounded-lg"
-              />
+  <button
+    type="button"
+    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
+
+              <div className="relative">
+  <input
+    type={showNewPassword ? "text" : "password"}
+    placeholder="New Password"
+    value={newPassword}
+    onChange={(e) => setNewPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowNewPassword(!showNewPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
               {showPasswordValidation && (
   <div className="text-sm space-y-1">
     <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
@@ -224,13 +251,23 @@ export default function Settings() {
   </div>
 )}
 
-              <input
-                type="password"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full border p-3 rounded-lg"
-              />
+              <div className="relative">
+  <input
+    type={showConfirmPassword ? "text" : "password"}
+    placeholder="Confirm Password"
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
 
               <div className="flex gap-3">
                 <button

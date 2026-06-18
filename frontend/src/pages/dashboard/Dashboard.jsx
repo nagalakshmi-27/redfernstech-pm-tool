@@ -1,10 +1,13 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { FolderKanban, Briefcase, ListTodo, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function Dashboard() {
   const { projects, tasks, activities } = useContext(AppContext);
+  const [showModal, setShowModal] = useState(false);
+const [modalTitle, setModalTitle] = useState("");
+const [modalData, setModalData] = useState([]);
 
   // Helper to dynamically calculate project status based on tasks!
   const getDynamicStatus = (project) => {
@@ -24,6 +27,41 @@ export default function Dashboard() {
   const activeProjectsCount = projects.filter((project) => getDynamicStatus(project) === "In Progress").length;
   const pendingTasksCount = tasks.filter((task) => task.status === "To Do").length;
   const completedTasksCount = tasks.filter((task) => task.status === "Completed").length;
+  const openProjectsModal = () => {
+  setModalTitle("Total Projects");
+  setModalData(projects);
+  setShowModal(true);
+};
+
+const openActiveProjectsModal = () => {
+  const activeProjects = projects.filter(
+    (project) => getDynamicStatus(project) === "In Progress"
+  );
+
+  setModalTitle("Active Projects");
+  setModalData(activeProjects);
+  setShowModal(true);
+};
+
+const openPendingTasksModal = () => {
+  const pendingTasks = tasks.filter(
+    (task) => task.status === "To Do"
+  );
+
+  setModalTitle("Pending Tasks");
+  setModalData(pendingTasks);
+  setShowModal(true);
+};
+
+const openCompletedTasksModal = () => {
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed"
+  );
+
+  setModalTitle("Completed Tasks");
+  setModalData(completedTasks);
+  setShowModal(true);
+};
 
   return (
     <MainLayout>
@@ -31,7 +69,10 @@ export default function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+        <div
+  onClick={openProjectsModal}
+  className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500 cursor-pointer hover:shadow-lg"
+>
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-base font-medium">Total Projects</p>
@@ -41,7 +82,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
+        <div
+  onClick={openActiveProjectsModal}
+  className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500 cursor-pointer hover:shadow-lg"
+>
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-base font-medium">Active Projects</p>
@@ -51,7 +95,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
+        <div
+  onClick={openPendingTasksModal}
+  className="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500 cursor-pointer hover:shadow-lg"
+>
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-base font-medium">Pending Tasks</p>
@@ -61,7 +108,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-purple-500">
+        <div
+  onClick={openCompletedTasksModal}
+  className="bg-white p-4 rounded-xl shadow border-l-4 border-purple-500 cursor-pointer hover:shadow-lg"
+>
           <div className="flex justify-between items-center">
             <div>
               <p className="text-gray-500 text-base font-medium">Completed Tasks</p>
@@ -98,6 +148,59 @@ export default function Dashboard() {
           </ul>
         </div>
       </div>
+      {showModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-[700px] max-h-[80vh] overflow-y-auto">
+      <h2 className="text-2xl font-bold mb-4">
+        {modalTitle}
+      </h2>
+
+      {modalData.length > 0 ? (
+        <div className="space-y-4">
+          {modalData.map((item) => (
+            <div
+              key={item.id}
+              className="border rounded-lg p-4"
+            >
+              <h3 className="font-semibold text-lg">
+                {item.name}
+              </h3>
+
+              {item.description && (
+                <p className="text-gray-600 mt-1">
+                  {item.description}
+                </p>
+              )}
+
+              {item.status && (
+                <p className="text-sm text-blue-600 mt-2">
+                  Status: {item.status}
+                </p>
+              )}
+
+              {item.due_date && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Due: {item.due_date}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>No records found.</p>
+      )}
+
+      <div className="mt-6 text-right">
+        <button
+          onClick={() => setShowModal(false)}
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </MainLayout>
   );
 }

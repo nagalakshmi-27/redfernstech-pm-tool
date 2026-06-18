@@ -1,11 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [showPasswordRules, setShowPasswordRules] =
   useState(false);
 
@@ -49,12 +51,13 @@ if (!isPasswordValid) {
       }
       // 3. Get the JWT token from the backend
       const data = await response.json();
+      console.log(data);
       
       // 4. Save the real token securely!
       localStorage.setItem("token", data.access_token);
-      localStorage.setItem("isLoggedIn", "true");
-
-      localStorage.setItem("userEmail", data.user.email);
+localStorage.setItem("isLoggedIn", "true");
+localStorage.setItem("userEmail", data.user.email);
+localStorage.setItem("userId", data.user.id);
       // 5. Go to the dashboard
       navigate("/dashboard");
       
@@ -102,13 +105,23 @@ if (!isPasswordValid) {
               Password
             </label>
 
-            <input
-  type="password"
-  placeholder="Enter your password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  className="w-full border p-3 rounded-lg"
-/>
+            <div className="relative">
+  <input
+    type={showPassword ? "text" : "password"}
+    placeholder="Enter your password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    className="w-full border p-3 rounded-lg pr-12"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowPassword(!showPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+  >
+    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
 
 {showPasswordRules && (
   <div className="mt-2 text-sm space-y-1">

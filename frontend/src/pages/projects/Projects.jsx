@@ -5,7 +5,7 @@ import { FolderKanban, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 
 export default function Projects() {
   const { projects, setProjects, activities, setActivities, members, tasks } = useContext(AppContext);
-
+  const currentUserId = Number(localStorage.getItem("userId"));
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
@@ -70,7 +70,7 @@ export default function Projects() {
           setActivities([`📁 ${newProject.name} project created`, ...activities]);
         }
       }
-    } catch (err) {
+    } catch {
       alert("Failed to save project to database.");
     }
 
@@ -95,7 +95,7 @@ export default function Projects() {
       if (response.ok) {
         setProjects(projects.filter((project) => project.id !== id));
       }
-    } catch (err) {
+    } catch {
       alert("Failed to connect to backend.");
     }
   };
@@ -166,7 +166,6 @@ export default function Projects() {
         {projects.map((project) => {
           // Dynamic calculation!
           const dynamicStatus = getDynamicStatus(project);
-          
           const projectTasks = tasks.filter((task) => task.project_id === project.id);
           const completedTasks = projectTasks.filter((task) => task.status === "Completed");
           const progress = projectTasks.length > 0 ? Math.round((completedTasks.length / projectTasks.length) * 100) : 0;
@@ -200,28 +199,31 @@ export default function Projects() {
               <p className="text-sm text-gray-500 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-gray-500">End: {project.end_date}</p>
 
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => {
-                    setEditingProjectId(project.id);
-                    setProjectName(project.name);
-                    setProjectDescription(project.description);
-                    setStartDate(project.start_date || "");
-                    setEndDate(project.end_date || "");
-                    setSelectedMembers(memberArray.map(m => m.id));
-                    setShowModal(true);
-                  }}
-                  className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteProject(project.id)}
-                  className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
-                >
-                  Delete
-                </button>
-              </div>
+              {project.created_by_id === currentUserId && (
+  <div className="flex gap-2 mt-4">
+    <button
+      onClick={() => {
+        setEditingProjectId(project.id);
+        setProjectName(project.name);
+        setProjectDescription(project.description);
+        setStartDate(project.start_date || "");
+        setEndDate(project.end_date || "");
+        setSelectedMembers(memberArray.map((m) => m.id));
+        setShowModal(true);
+      }}
+      className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
+    >
+      Edit
+    </button>
+
+    <button
+      onClick={() => handleDeleteProject(project.id)}
+      className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+    >
+      Delete
+    </button>
+  </div>
+)}
             </div>
           );
         })}
@@ -267,12 +269,24 @@ export default function Projects() {
 
               <div>
                 <label className="block mb-2 font-medium">Start Date</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <input
+  type="date"
+  value={startDate}
+  min={new Date().toISOString().split("T")[0]}
+  onChange={(e) => setStartDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
 
               <div>
                 <label className="block mb-2 font-medium">End Date</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <input
+  type="date"
+  value={endDate}
+  min={startDate || new Date().toISOString().split("T")[0]}
+  onChange={(e) => setEndDate(e.target.value)}
+  className="w-full border p-3 rounded-lg"
+/>
               </div>
 
               <div className="flex justify-end gap-3">
