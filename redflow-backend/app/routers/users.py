@@ -97,8 +97,9 @@ def send_reset_email(to_email: str, token: str):
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")
     
-    # This is the React page we will build in Phase 2!
-    reset_link = f"http://localhost:5173/reset-password?token={token}"
+    # Parse FRONTEND_URL to ensure it works in production
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
+    reset_link = f"{frontend_url}/reset-password?token={token}"
     
     msg = MIMEText(f"Click the link to reset your RedFlow password:\n\n{reset_link}\n\nThis link expires in 15 minutes.")
     msg["Subject"] = "RedFlow Password Reset"
@@ -154,7 +155,8 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
     
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")
-    invite_link = f"http://localhost:5173/accept-invite?token={token}"
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
+    invite_link = f"{frontend_url}/accept-invite?token={token}"
     msg = MIMEText(f"You have been invited to join a team on RedFlow!\n\nClick here to accept:\n{invite_link}") # <--- Removed role
     msg["Subject"] = "You're invited to a RedFlow Team!"
     msg["From"] = sender_email
