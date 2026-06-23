@@ -205,15 +205,15 @@ def get_teammates(db: Session, user_id: int):
             teammates.append({
                 "id": user.id,
                 "email": user.email,
-                "full_name": user.full_name,
-                "role": user.role,               # <--- PULLS FROM USER PROFILE
-                "department": user.department    # <--- PULLS FROM USER PROFILE
+                "full_name": user.full_name or "Pending...",
+                "role": user.role or "Teammate",
+                "department": user.department or "Member"
             })
     return teammates
 
-def create_invitation(db: Session, email: str, token: str, user_id: int): 
+def create_invitation(db: Session, email: str, token: str, user_id: int, role: str = "Teammate"): 
     db.query(models.Invitation).filter(models.Invitation.email == email, models.Invitation.invited_by_id == user_id).delete()
-    db_invite = models.Invitation(email=email, token=token, invited_by_id=user_id)
+    db_invite = models.Invitation(email=email, token=token, invited_by_id=user_id, role=role)
     db.add(db_invite)
     db.commit()
     db.refresh(db_invite)

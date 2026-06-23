@@ -58,6 +58,7 @@ if (!isPasswordValid) {
 localStorage.setItem("isLoggedIn", "true");
 localStorage.setItem("userEmail", data.user.email);
 localStorage.setItem("userId", data.user.id);
+localStorage.setItem("userRole", data.user.role);
       // 5. Go to the dashboard
       navigate("/dashboard");
       

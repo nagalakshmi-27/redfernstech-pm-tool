@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 export default function Sidebar() {
+  const currentUserRole = localStorage.getItem("userRole");
   return (
     <div className="w-64 min-h-screen bg-slate-900 text-white">
       {/* Logo / App Name */}
@@ -31,23 +32,27 @@ export default function Sidebar() {
             </Link>
           </li>
 
-          <li>
-            <Link
-              to="/tasks"
-              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
-            >
-              My Tasks
-            </Link>
-          </li>
+          {currentUserRole !== "Client" && (
+            <>
+              <li>
+                <Link
+                  to="/tasks"
+                  className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
+                >
+                  My Tasks
+                </Link>
+              </li>
 
-          <li>
-            <Link
-              to="/teams"
-              className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
-            >
-              Teams
-            </Link>
-          </li>
+              <li>
+                <Link
+                  to="/teams"
+                  className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition"
+                >
+                  Teams
+                </Link>
+              </li>
+            </>
+          )}
 
           <li>
             <Link

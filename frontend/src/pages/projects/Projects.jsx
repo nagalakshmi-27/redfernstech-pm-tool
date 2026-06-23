@@ -6,6 +6,7 @@ import { FolderKanban, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 export default function Projects() {
   const { projects, setProjects, activities, setActivities, members, tasks } = useContext(AppContext);
   const currentUserId = Number(localStorage.getItem("userId"));
+  const currentUserRole = localStorage.getItem("userRole");
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
@@ -95,6 +96,7 @@ export default function Projects() {
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Projects</h1>
+        {currentUserRole !== "Client" && (
         <button
           onClick={() => {
             setEditingProjectId(null);
@@ -109,6 +111,7 @@ export default function Projects() {
         >
           + Create Project
         </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

@@ -86,6 +86,7 @@ class TaskResponse(TaskBase):
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
     email: EmailStr
+    role: str = "Teammate"
 class InviteAccept(BaseModel):
     token: str
 class TeammateResponse(BaseModel):

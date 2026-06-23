@@ -85,6 +85,7 @@ class Invitation(Base):
     __tablename__ = "invitations"
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, index=True)
+    role = Column(String, default="Teammate")
     token = Column(String, unique=True, index=True)
     status = Column(String, default="Pending")
     invited_by_id = Column(Integer, ForeignKey("users.id"), index=True)

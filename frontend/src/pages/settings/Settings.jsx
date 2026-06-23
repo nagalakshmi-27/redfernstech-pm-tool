@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import MainLayout from "../../layouts/MainLayout";
 
 export default function Settings() {
+  const currentUserRole = localStorage.getItem("userRole");
   // Profile States
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -159,14 +160,16 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
         <div>
           <label className="block font-medium mb-2">Role</label>
           <input
-  type="text"
-  placeholder="Enter your role"
-  value={role}
-  onChange={(e) => setRole(e.target.value)}
-  className="w-full md:w-2/3 border p-3 rounded-lg"
-/>
+            type="text"
+            placeholder="Enter your role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className={`w-full md:w-2/3 border p-3 rounded-lg ${currentUserRole === "Client" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+            readOnly={currentUserRole === "Client"}
+          />
         </div>
 
+        {currentUserRole !== "Client" && (
         <div>
   <label className="block font-medium mb-2">
     Department
@@ -180,6 +183,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   className="w-full md:w-2/3 border p-3 rounded-lg"
 />
 </div>
+        )}
 
         {/* Security Section */}
         <div className="mt-8">

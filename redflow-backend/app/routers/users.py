@@ -24,6 +24,16 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+        
+    invitation = db.query(models.Invitation).filter(
+        models.Invitation.email == user.email
+    ).order_by(models.Invitation.id.desc()).first()
+    
+    if invitation:
+        user.role = invitation.role 
+    else:
+        user.role = "Teammate"
+        
     return crud.create_user(db=db, user=user)
 
 # Sign In (Login) Route
@@ -143,15 +153,14 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 # --- TEAMS & INVITATIONS LOGIC ---
 @router.post("/invite")
 def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    target_user = crud.get_user_by_email(db, email=invite.email)
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found! They must register an account first.")
-    
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients cannot send invitations.")
+        
     if invite.email == current_user.email:
         raise HTTPException(status_code=400, detail="You cannot invite yourself.")
         
     token = auth.create_reset_token(invite.email) 
-    crud.create_invitation(db, invite.email, token, current_user.id) # <--- Removed role/dept
+    crud.create_invitation(db, invite.email, token, current_user.id, invite.role)
     
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")

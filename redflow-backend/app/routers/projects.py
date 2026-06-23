@@ -12,10 +12,14 @@ def read_projects(db: Session = Depends(get_db), current_user: models.User = Dep
 
 @router.post("/", response_model=schemas.ProjectResponse)
 def create_project(project: schemas.ProjectCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     return crud.create_project(db=db, project=project, user_id=current_user.id)
 
 @router.put("/{project_id}", response_model=schemas.ProjectResponse)
 def update_project(project_id: int, project: schemas.ProjectUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     updated_project = crud.update_project(db=db, project_id=project_id, project_update=project, user_id=current_user.id)
     if not updated_project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -23,6 +27,8 @@ def update_project(project_id: int, project: schemas.ProjectUpdate, db: Session 
 
 @router.delete("/{project_id}")
 def delete_project(project_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     success = crud.delete_project(db=db, project_id=project_id, user_id=current_user.id)
     if not success:
         raise HTTPException(status_code=403, detail="Forbidden")

@@ -8,13 +8,20 @@ import {
 } from "lucide-react";
 import { validateEmail } from "../../utils/validation";
 import { useContext } from "react";
+import { Navigate } from "react-router-dom";
 import AppContext from "../../context/AppContext";
 
 export default function Teams() {
   const { members} = useContext(AppContext);
+  const currentUserRole = localStorage.getItem("userRole");
+
+  if (currentUserRole === "Client") {
+    return <Navigate to="/dashboard" replace />;
+  }
   const [showModal, setShowModal] = useState(false);
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState("Teammate");
   const handleAddMember = async () => {
     if (!memberEmail.trim()) { alert("Email is required"); return; }
     if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
@@ -26,13 +33,15 @@ export default function Teams() {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
         body: JSON.stringify({
-  email: memberEmail
-})
+          email: memberEmail,
+          role: memberRole
+        })
       });
       if (response.ok) {
         alert("Invitation sent successfully to " + memberEmail + "!");
         setMemberName("");
         setMemberEmail("");
+        setMemberRole("Teammate");
         setShowModal(false);
       } else {
         const errData = await response.json();
@@ -189,9 +198,11 @@ const handleDeleteMember = async (memberId) => {
             <p className="text-gray-600 break-all">
               {member.email}
             </p>
+            {member.role !== "Client" && (
             <p className="text-sm text-gray-500 mt-2">
-  Department: {member.department}
-</p>
+              Department: {member.department}
+            </p>
+            )}
 {member.email !== localStorage.getItem("userEmail") && (
   <div className="mt-4">
     <button
@@ -240,6 +251,17 @@ const handleDeleteMember = async (memberId) => {
           />
         </div>
 
+        <div>
+          <label className="block mb-2 font-medium">Role</label>
+          <select
+            value={memberRole}
+            onChange={(e) => setMemberRole(e.target.value)}
+            className="w-full border p-3 rounded-lg bg-white"
+          >
+            <option value="Teammate">Teammate</option>
+            <option value="Client">Client</option>
+          </select>
+        </div>
 
         <div className="flex flex-col sm:flex-row justify-end gap-3">
           <button

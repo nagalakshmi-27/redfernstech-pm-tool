@@ -12,6 +12,8 @@ def read_tasks(db: Session = Depends(get_db), current_user: models.User = Depend
 
 @router.post("/", response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     new_task = crud.create_task(db=db, task=task, user_id=current_user.id)
     if not new_task:
         raise HTTPException(status_code=403, detail="Not authorized! Only the project creator can add tasks.")
@@ -19,6 +21,8 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current
 
 @router.put("/{task_id}", response_model=schemas.TaskResponse)
 def update_task(task_id: int, task: schemas.TaskUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     updated_task = crud.update_task(db=db, task_id=task_id, task_update=task, user_id=current_user.id)
     if not updated_task:
         raise HTTPException(status_code=403, detail="Not authorized to edit this task.")
@@ -26,6 +30,8 @@ def update_task(task_id: int, task: schemas.TaskUpdate, db: Session = Depends(ge
 
 @router.delete("/{task_id}")
 def delete_task(task_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     success = crud.delete_task(db=db, task_id=task_id, user_id=current_user.id)
     if not success:
         raise HTTPException(status_code=403, detail="Not authorized! Only the project creator can delete this task.")

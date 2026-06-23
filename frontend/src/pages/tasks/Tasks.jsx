@@ -1,12 +1,17 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useContext } from "react";
+import { Navigate } from "react-router-dom";
 import { ListTodo, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function Tasks() {
   const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
-  
+  const currentUserRole = localStorage.getItem("userRole");
+
+  if (currentUserRole === "Client") {
+    return <Navigate to="/dashboard" replace />;
+  }
   const [showModal, setShowModal] = useState(false);
   const [taskName, setTaskName] = useState("");
   const [priority, setPriority] = useState("Medium");
@@ -123,6 +128,7 @@ export default function Tasks() {
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">My Tasks</h1>
+        {currentUserRole !== "Client" && (
         <button
           onClick={() => {
             setEditingTaskId(null);
@@ -139,6 +145,7 @@ export default function Tasks() {
         >
           + Create Task
         </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -241,9 +248,21 @@ export default function Tasks() {
               ) : (
                 <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
   <span className="text-sm font-medium text-gray-700">
-    Update Status:
+    Status:
   </span>
-
+  {currentUserRole === "Client" ? (
+    <span className={`px-3 py-2 rounded-lg text-sm font-medium border
+      ${
+        task.status === "Completed"
+          ? "bg-green-50 text-green-700 border-green-300"
+          : task.status === "In Progress"
+          ? "bg-blue-50 text-blue-700 border-blue-300"
+          : "bg-gray-50 text-gray-700 border-gray-300"
+      }`}
+    >
+      {task.status}
+    </span>
+  ) : (
   <select
     value={task.status}
     onChange={(e) => handleStatusChange(task.id, e.target.value)}
@@ -260,6 +279,7 @@ export default function Tasks() {
     <option value="In Progress">In Progress</option>
     <option value="Completed">Completed</option>
   </select>
+  )}
 </div>
               )}
             </div>
