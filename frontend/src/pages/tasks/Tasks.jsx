@@ -1,8 +1,9 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useContext } from "react";
 import { Navigate } from "react-router-dom";
-import { ListTodo, Clock3, PlayCircle, CheckCircle } from "lucide-react";
+import { Bug, CheckSquare, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
+import CreateIssueModal from "../../components/CreateIssueModal";
 
 export default function Tasks() {
   const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
@@ -12,33 +13,72 @@ export default function Tasks() {
   if (currentUserRole === "Client") {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // STEP 1: Filter to ONLY show tasks assigned to the logged-in user
+  const myTasks = tasks.filter(t => t.assignee_id === currentUserId);
+
   const [showModal, setShowModal] = useState(false);
   const [taskName, setTaskName] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("To Do");
+  const [issueType, setIssueType] = useState("Task");
+  const [severity, setSeverity] = useState("Medium");
   const [assigneeId, setAssigneeId] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
-  const [taskDescription, setTaskDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
 
-  const totalTasks = tasks.length;
-  const todoTasks = tasks.filter((task) => task.status === "To Do").length;
-  const inProgressTasks = tasks.filter((task) => task.status === "In Progress").length;
-  const completedTasks = tasks.filter((task) => task.status === "Completed").length;
+  const handleDragStart = (e, taskId) => {
+    e.dataTransfer.setData("taskId", taskId);
+  };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
 
+  const handleDrop = async (e, newStatus) => {
+    e.preventDefault();
+    if (currentUserRole === "Client") return; 
 
-  const handleCreateTask = async () => {
-    if (!taskName.trim()) { alert("Task Name is required"); return; }
-    if (!taskDescription.trim()) { alert("Task Description is required"); return; }
+    const taskId = e.dataTransfer.getData("taskId");
+    if (!taskId) return;
+
+    setTasks(prev => prev.map(t => t.id === parseInt(taskId) ? { ...t, status: newStatus } : t));
+
+    const token = localStorage.getItem("token");
+    try {
+      const taskToUpdate = tasks.find(t => t.id === parseInt(taskId));
+      if (!taskToUpdate) return;
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({
+          ...taskToUpdate,
+          status: newStatus
+        })
+      });
+
+      if (!response.ok) {
+        setTasks(prev => prev.map(t => t.id === parseInt(taskId) ? { ...t, status: taskToUpdate.status } : t));
+        alert("Not authorized to move this task.");
+      }
+    } catch {
+      setTasks(prev => prev.map(t => t.id === parseInt(taskId) ? { ...t, status: taskToUpdate.status } : t));
+      alert("Error updating status.");
+    }
+  };
+
+  const handleUpdateTask = async () => {
+    if (!taskName.trim()) { alert("Name is required"); return; }
+    if (!taskDescription.trim()) { alert("Description is required"); return; }
     if (!assigneeId) { alert("Assignee is required"); return; }
     if (!dueDate) { alert("Due Date is required"); return; }
     if (!selectedProject) { alert("Please select a project"); return; }
 
     const token = localStorage.getItem("token");
     
-    // We perfectly match the Python schema here!
     const taskData = {
       name: taskName,
       description: taskDescription,
@@ -46,7 +86,9 @@ export default function Tasks() {
       status: status,
       due_date: dueDate,
       assignee_id: parseInt(assigneeId), 
-      project_id: parseInt(selectedProject)
+      project_id: parseInt(selectedProject),
+      issue_type: issueType,
+      severity: issueType === "Bug" ? severity : null
     };
 
     try {
@@ -60,26 +102,17 @@ export default function Tasks() {
           const updatedTask = await response.json();
           setTasks(tasks.map((t) => t.id === editingTaskId ? updatedTask : t));
         }
-      } else {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify(taskData)
-        });
-        if (response.ok) {
-          const newTask = await response.json();
-          setTasks([...tasks, newTask]);
-          setActivities([`📝 ${newTask.name} task created`, ...activities]);
-        }
       }
-    } catch{
-      alert("Failed to save task to database.");
+    } catch {
+      alert("Failed to save to database.");
     }
 
     setTaskName("");
     setTaskDescription("");
     setPriority("Medium");
     setStatus("To Do");
+    setIssueType("Task");
+    setSeverity("Medium");
     setAssigneeId("");
     setSelectedProject("");
     setDueDate("");
@@ -88,7 +121,7 @@ export default function Tasks() {
   };
 
   const handleDeleteTask = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
+    const confirmDelete = window.confirm("Are you sure you want to delete this ticket?");
     if (!confirmDelete) return;
 
     try {
@@ -98,267 +131,201 @@ export default function Tasks() {
       });
       if (response.ok) {
         setTasks(tasks.filter((task) => task.id !== id));
+      } else {
+        alert("Not authorized to delete this task.");
       }
-    } catch{
-      alert("Failed to connect to backend.");
+    } catch {
+      alert("Error deleting task.");
     }
   };
 
-  const handleStatusChange = async (taskId, newStatus) => {
-    const token = localStorage.getItem("token");
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (response.ok) {
-        const updatedTask = await response.json();
-        setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
-        setActivities([`🔄 Task status updated to ${newStatus}`, ...activities]);
-      } else {
-        alert("Failed to update status");
-      }
-    } catch {
-      alert("Error updating status");
-    }
-  };
+  const COLUMNS = [
+    { title: "To Do", icon: <Clock3 size={20} className="text-yellow-600" />, border: "border-yellow-400" },
+    { title: "In Progress", icon: <PlayCircle size={20} className="text-blue-600" />, border: "border-blue-400" },
+    { title: "Completed", icon: <CheckCircle size={20} className="text-green-600" />, border: "border-green-400" }
+  ];
 
   return (
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">My Tasks</h1>
-        {currentUserRole !== "Client" && (
-        <button
-          onClick={() => {
-            setEditingTaskId(null);
-            setTaskName("");
-            setTaskDescription("");
-            setPriority("Medium");
-            setStatus("To Do");
-            setAssigneeId("");
-            setSelectedProject("");
-            setDueDate("");
-            setShowModal(true);
-          }}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
-        >
-          + Create Task
-        </button>
-        )}
+        <CreateIssueModal />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-500 text-base font-medium">Total Tasks</p>
-              <p className="text-3xl font-bold mt-2">{totalTasks}</p>
-            </div>
-            <ListTodo size={22} />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-500 text-base font-medium">To Do</p>
-              <p className="text-3xl font-bold mt-2">{todoTasks}</p>
-            </div>
-            <Clock3 size={22} />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-500 text-base font-medium">In Progress</p>
-              <p className="text-3xl font-bold mt-2">{inProgressTasks}</p>
-            </div>
-            <PlayCircle size={22} />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow border-l-4 border-purple-500">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-500 text-base font-medium">Completed</p>
-              <p className="text-3xl font-bold mt-2">{completedTasks}</p>
-            </div>
-            <CheckCircle size={22} />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {tasks.map((task) => (
-          <div key={task.id} className="bg-white rounded-xl shadow p-4 md:p-6">
-            <h2 className="text-xl font-semibold mb-3">{task.name}</h2>
-            <p className="text-gray-600 mb-3">{task.description}</p>
-
-            <div className="flex flex-wrap gap-3 mb-4">
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                task.priority === "High" ? "bg-red-100 text-red-700" :
-                task.priority === "Medium" ? "bg-yellow-100 text-yellow-700" :
-                "bg-green-100 text-green-700"
-              }`}>
-                {task.priority}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                task.status === "Completed" ? "bg-blue-100 text-blue-700" :
-                task.status === "In Progress" ? "bg-green-100 text-green-700" :
-                "bg-gray-100 text-gray-700"
-              }`}>
-                {task.status}
+      <div className="flex flex-col md:flex-row gap-6 mt-6 overflow-x-auto pb-6">
+        {COLUMNS.map((col) => (
+          <div 
+            key={col.title} 
+            className="flex-1 min-w-[320px] bg-slate-100 rounded-2xl p-4 shadow-inner"
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, col.title)}
+          >
+            <div className="flex items-center gap-2 mb-4 px-2">
+              {col.icon}
+              <h2 className="text-lg font-bold text-slate-800">{col.title}</h2>
+              <span className="ml-auto bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                {myTasks.filter(t => t.status === col.title).length}
               </span>
             </div>
-            
-            <p className="text-sm text-gray-500">
-              Project: {projects.find(p => p.id === task.project_id)?.name || "Unknown"}
-            </p>
-            <p>Assignee: {members.find(m => m.id === task.assignee_id)?.full_name || "Unknown"}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Due Date: {task.due_date}
-            </p>
-            {projects.find((p) => p.id === task.project_id)?.created_by_id === currentUserId ? (
-                <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                  <button
-                    onClick={() => {
-                      setEditingTaskId(task.id);
-                      setTaskName(task.name);
-                      setTaskDescription(task.description);
-                      setPriority(task.priority);
-                      setStatus(task.status);
-                      setAssigneeId(task.assignee_id || "");
-                      setSelectedProject(task.project_id);
-                      setDueDate(task.due_date || "");
-                      setShowModal(true);
-                    }}
-                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-  <span className="text-sm font-medium text-gray-700">
-    Status:
-  </span>
-  {currentUserRole === "Client" ? (
-    <span className={`px-3 py-2 rounded-lg text-sm font-medium border
-      ${
-        task.status === "Completed"
-          ? "bg-green-50 text-green-700 border-green-300"
-          : task.status === "In Progress"
-          ? "bg-blue-50 text-blue-700 border-blue-300"
-          : "bg-gray-50 text-gray-700 border-gray-300"
-      }`}
-    >
-      {task.status}
-    </span>
-  ) : (
-  <select
-    value={task.status}
-    onChange={(e) => handleStatusChange(task.id, e.target.value)}
-    className={`px-3 py-2 rounded-lg text-sm font-medium border cursor-pointer
-      ${
-        task.status === "Completed"
-          ? "bg-green-50 text-green-700 border-green-300"
-          : task.status === "In Progress"
-          ? "bg-blue-50 text-blue-700 border-blue-300"
-          : "bg-gray-50 text-gray-700 border-gray-300"
-      }`}
-  >
-    <option value="To Do">To Do</option>
-    <option value="In Progress">In Progress</option>
-    <option value="Completed">Completed</option>
-  </select>
-  )}
-</div>
-              )}
+
+            <div className="flex flex-col gap-3 min-h-[500px]">
+              {/* WE USE myTasks HERE TO FILTER THE BOARD! */}
+              {myTasks.filter(t => t.status === col.title).map((task) => (
+                 <div 
+                   key={task.id} 
+                   draggable={currentUserRole !== "Client"}
+                   onDragStart={(e) => handleDragStart(e, task.id)}
+                   onClick={() => {
+                     // STEP 2: Make the entire card click to open Details / Edit Modal
+                     setEditingTaskId(task.id);
+                     setTaskName(task.name);
+                     setTaskDescription(task.description);
+                     setPriority(task.priority);
+                     setStatus(task.status);
+                     setIssueType(task.issue_type || "Task");
+                     setSeverity(task.severity || "Medium");
+                     setAssigneeId(task.assignee_id || "");
+                     setSelectedProject(task.project_id);
+                     setDueDate(task.due_date || "");
+                     setShowModal(true);
+                   }}
+                   className={`bg-white rounded-xl shadow-sm border-l-4 ${col.border} p-4 cursor-pointer hover:shadow-md transition-shadow relative group`}
+                 >
+                   <div className="flex justify-between items-start mb-2">
+                     <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                       {task.ticket_id || `TSK-${task.id}`}
+                     </span>
+                     
+                     <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+                       task.issue_type === "Bug" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                     }`}>
+                       {task.issue_type === "Bug" ? <Bug size={12}/> : <CheckSquare size={12}/>}
+                       {task.issue_type || "Task"}
+                     </span>
+                   </div>
+
+                   <h3 className="text-md font-semibold text-slate-900 mb-1 leading-snug">{task.name}</h3>
+                   
+                   {task.issue_type === "Bug" && task.severity && (
+                     <p className="text-xs text-red-600 font-medium mb-2">Severity: {task.severity}</p>
+                   )}
+
+                   <div className="flex justify-between items-end mt-4">
+                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                        task.priority === "High" ? "bg-red-50 text-red-600" :
+                        task.priority === "Medium" ? "bg-yellow-50 text-yellow-600" :
+                        "bg-green-50 text-green-600"
+                      }`}>
+                        {task.priority}
+                      </span>
+                     
+                     <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold" title={members.find(m => m.id === task.assignee_id)?.full_name || "Unassigned"}>
+                       {(members.find(m => m.id === task.assignee_id)?.full_name || "U")[0].toUpperCase()}
+                     </div>
+                   </div>
+
+                   {/* Delete button (stop click propagation) */}
+                   {projects.find((p) => p.id === task.project_id)?.created_by_id === currentUserId && (
+                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} 
+                         className="text-red-500 hover:text-red-700 p-1 bg-white rounded-full shadow-sm"
+                       >
+                         ×
+                       </button>
+                     </div>
+                   )}
+                 </div>
+              ))}
             </div>
+          </div>
         ))}
       </div>
 
+      {/* Edit Details Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">{editingTaskId ? "Edit Task" : "Create Task"}</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => { setShowModal(false); setEditingTaskId(null); }}>
+          <div className="bg-white p-6 rounded-2xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6 text-slate-800">Ticket Details</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block mb-2 font-medium">Task Name</label>
-                <input type="text" placeholder="Enter Task Name" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <label className="block mb-2 font-medium text-slate-700">Issue Type</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="Task" checked={issueType === "Task"} onChange={(e) => setIssueType(e.target.value)} className="w-4 h-4 text-slate-900" />
+                    <span className="font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">Task</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" value="Bug" checked={issueType === "Bug"} onChange={(e) => setIssueType(e.target.value)} className="w-4 h-4 text-red-600" />
+                    <span className="font-medium text-red-700 bg-red-50 px-2 py-1 rounded">Bug</span>
+                  </label>
+                </div>
               </div>
 
               <div>
-                <label className="block mb-2 font-medium">Task Description</label>
-                <textarea placeholder="Enter Task Description" value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full border p-3 rounded-lg" />
+                <label className="block mb-2 font-medium text-slate-700">Ticket Title</label>
+                <input type="text" placeholder="e.g. Implement login feature" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" />
               </div>
 
               <div>
-                <label className="block mb-2 font-medium">Priority</label>
-                <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full border p-3 rounded-lg">
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
+                <label className="block mb-2 font-medium text-slate-700">Description</label>
+                <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full border p-3 rounded-lg h-24 focus:ring-2 focus:ring-slate-900 outline-none" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2 font-medium text-slate-700">Priority</label>
+                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                
+                {issueType === "Bug" && (
+                <div>
+                  <label className="block mb-2 font-medium text-slate-700">Severity</label>
+                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
+                    <option>Critical</option>
+                    <option>Major</option>
+                    <option>Medium</option>
+                    <option>Minor</option>
+                  </select>
+                </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2 font-medium text-slate-700">Project</label>
+                  <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
+                    <option value="">Select...</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>{project.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-2 font-medium text-slate-700">Assignee</label>
+                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
+                    <option value="">Select...</option>
+                    {members.map((member) => (
+                      <option key={member.id} value={member.id}>{member.full_name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block mb-2 font-medium">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border p-3 rounded-lg">
-                  <option>To Do</option>
-                  <option>In Progress</option>
-                  <option>Completed</option>
-                </select>
+                <label className="block mb-2 font-medium text-slate-700">Due Date</label>
+                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900" />
               </div>
 
-              <div>
-                <label className="block mb-2 font-medium">Project</label>
-                <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full border p-3 rounded-lg">
-                  <option value="">Select Project</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block mb-2 font-medium">Assignee</label>
-                <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full border p-3 rounded-lg">
-                  <option value="">Select Team Member</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.full_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block mb-2 font-medium">Due Date</label>
-                <input
-  type="date"
-  value={dueDate}
-  min={new Date().toISOString().split("T")[0]}
-  onChange={(e) => setDueDate(e.target.value)}
-  className="w-full border p-3 rounded-lg"
-/>
-              </div>
-
-              <div className="flex flex-col sm:flex-row justify-end gap-3">
-                <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-4 py-2 border rounded-lg">Cancel</button>
-                <button onClick={handleCreateTask} className="bg-slate-900 text-white px-4 py-2 rounded-lg">
-                  {editingTaskId ? "Update Task" : "Create Task"}
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t mt-6">
+                <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-5 py-2.5 font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
+                <button onClick={handleUpdateTask} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg transition">
+                  Save Changes
                 </button>
               </div>
             </div>

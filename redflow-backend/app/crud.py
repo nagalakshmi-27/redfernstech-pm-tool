@@ -108,57 +108,61 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
     return db_project
 
 def delete_project(db: Session, project_id: int, user_id: int):
-    db_project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.created_by_id == user_id).first()
-    if not db_project: return False
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project or not user: return False
+    
+    if user.role != "Admin" and db_project.created_by_id != user_id:
+        return False
+        
     db.delete(db_project)
     db.commit()
     return True
 
+def get_user_tasks(db: Session, user_id: int):
+    return db.query(models.Task).filter(
+        models.Task.project.has(
+            models.Project.members.any(models.User.id == user_id) |
+            (models.Project.created_by_id == user_id)
+        )
+    ).all()
+
 def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
-    # SECURITY CHECK: Make sure the current user created the project!
-    project = db.query(models.Project).filter(models.Project.id == task.project_id, models.Project.created_by_id == user_id).first()
-    if not project:
-        return None # Block it!
-        
+    # Fetch the project to get its name for the ticket ID prefix
+    project = db.query(models.Project).filter(models.Project.id == task.project_id).first()
+    
+    # Security: Ensure only authorized users can add tasks
+    is_creator = project.created_by_id == user_id
+    is_member = any(m.id == user_id for m in project.members)
+    if not is_creator and not is_member:
+        return None
+
+    prefix = project.name[:3].upper() if project else "TSK"
+    task_count = db.query(models.Task).filter(models.Task.project_id == task.project_id).count()
+    ticket_id = f"{prefix}-{task_count + 1}"
+
+    # Create the task with our auto-generated ticket_id
     db_task = models.Task(
-        name=task.name,
-        description=task.description,
-        status=task.status,
-        priority=task.priority,
-        due_date=task.due_date,
-        project_id=task.project_id,
-        assignee_id=task.assignee_id
+        **task.dict(),
+        ticket_id=ticket_id
     )
     db.add(db_task)
-    
-    if task.assignee_id and task.assignee_id != user_id:
-        notif = models.Notification(user_id=task.assignee_id, message=f"You have been assigned a new task: '{task.name}'.")
-        db.add(notif)
-        
     db.commit()
     db.refresh(db_task)
     return db_task
-
-def get_user_tasks(db: Session, user_id: int):
-    # Return tasks if they created the project OR if it is assigned specifically to their ID!
-    return db.query(models.Task).join(models.Project).filter(
-        or_(
-            models.Project.created_by_id == user_id,
-            models.Task.assignee_id == user_id
-        )
-    ).all()
 
 def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user_id: int):
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not db_task: return None
     
     project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
+    user = db.query(models.User).filter(models.User.id == user_id).first()
 
     is_creator = project.created_by_id == user_id
     is_assignee = db_task.assignee_id == user_id
     
-    if not is_creator and not is_assignee:
-        return None 
+    if user.role != "Admin" and not is_creator and not is_assignee:
+        return None
 
     update_data = task_update.model_dump(exclude_unset=True)
     
@@ -182,34 +186,71 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     return db_task
 
 def delete_task(db: Session, task_id: int, user_id: int):
-    db_task = db.query(models.Task).join(models.Project).filter(models.Task.id == task_id, models.Project.created_by_id == user_id).first()
-    if not db_task: return False
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task or not user: return False
+    
+    project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
+    
+    if user.role != "Admin" and project.created_by_id != user_id:
+        return False
+        
     db.delete(db_task)
     db.commit()
     return True
 
 def get_teammates(db: Session, user_id: int):
     me = db.query(models.User).filter(models.User.id == user_id).first()
-    teammates = [{
+    
+    users_dict = {}
+    users_dict[me.id] = {
         "id": me.id,
         "email": me.email,
         "full_name": me.full_name or "Me",
-        "role": me.role or "Admin",
-        "department": me.department or "Management" # <--- Now safely pulls your department!
-    }]
+        "role": me.role or "Member",
+        "department": me.department or "Management",
+        "shared_projects": []
+    }
     
-    invites = db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id, models.Invitation.status == "Accepted").all()
-    for invite in invites:
-        user = get_user_by_email(db, invite.email)
-        if user:
-            teammates.append({
-                "id": user.id,
-                "email": user.email,
-                "full_name": user.full_name or "Pending...",
-                "role": user.role or "Teammate",
-                "department": user.department or "Member"
-            })
-    return teammates
+    all_projects = db.query(models.Project).all()
+    
+    if me.role == "Admin":
+        all_users = db.query(models.User).all()
+        for u in all_users:
+            if u.id not in users_dict:
+                users_dict[u.id] = {
+                    "id": u.id,
+                    "email": u.email,
+                    "full_name": u.full_name or "Pending...",
+                    "role": u.role or "Member",
+                    "department": u.department or "Member",
+                    "shared_projects": []
+                }
+        for proj in all_projects:
+            proj_users = set([proj.created_by_id] + [m.id for m in proj.members])
+            for u_id in proj_users:
+                if u_id in users_dict and proj.name not in users_dict[u_id]["shared_projects"]:
+                    users_dict[u_id]["shared_projects"].append(proj.name)
+    else:
+        for proj in all_projects:
+            proj_users = set([proj.created_by_id] + [m.id for m in proj.members])
+            if me.id in proj_users:
+                for u_id in proj_users:
+                    if u_id not in users_dict:
+                        u = db.query(models.User).filter(models.User.id == u_id).first()
+                        if u:
+                            users_dict[u.id] = {
+                                "id": u.id,
+                                "email": u.email,
+                                "full_name": u.full_name or "Pending...",
+                                "role": u.role or "Member",
+                                "department": u.department or "Member",
+                                "shared_projects": []
+                            }
+                    if u_id in users_dict and proj.name not in users_dict[u_id]["shared_projects"]:
+                        users_dict[u_id]["shared_projects"].append(proj.name)
+
+    return list(users_dict.values())
 
 def create_invitation(db: Session, email: str, token: str, user_id: int, role: str = "Teammate"): 
     db.query(models.Invitation).filter(models.Invitation.email == email, models.Invitation.invited_by_id == user_id).delete()

@@ -21,7 +21,7 @@ export default function Teams() {
   const [showModal, setShowModal] = useState(false);
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState("Teammate");
+  const [memberRole, setMemberRole] = useState("Member");
   const handleAddMember = async () => {
     if (!memberEmail.trim()) { alert("Email is required"); return; }
     if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
@@ -102,12 +102,14 @@ const handleDeleteMember = async (memberId) => {
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">Teams</h1>
 
-        <button
-  onClick={() => setShowModal(true)}
-  className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
->
-  + Add Member
-</button>
+        {currentUserRole === "Admin" && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
+          >
+            + Add Member
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
@@ -178,41 +180,58 @@ const handleDeleteMember = async (memberId) => {
 </div>
       
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {members.map((member) => (
-          <div
-            key={member.id}
-            className="bg-white rounded-xl shadow p-4 md:p-6"
-          >
-            <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-lg font-bold mb-3">
-  {member.name.charAt(0)}
-</div>
-            <h2 className="text-lg md:text-xl font-semibold mb-2 break-words">
-              {member.name}
+      <div>
+        {Object.entries(
+          members.reduce((acc, member) => {
+            if (!member.shared_projects || member.shared_projects.length === 0) {
+              if (!acc["No Shared Projects"]) acc["No Shared Projects"] = [];
+              acc["No Shared Projects"].push(member);
+            } else {
+              member.shared_projects.forEach(proj => {
+                if (!acc[proj]) acc[proj] = [];
+                acc[proj].push(member);
+              });
+            }
+            return acc;
+          }, {})
+        ).map(([projectName, projectMembers]) => (
+          <div key={projectName} className="mb-10">
+            <h2 className="text-xl font-bold mb-4 border-b pb-2 flex items-center gap-2">
+              <Briefcase className="text-blue-500" size={24} /> {projectName}
             </h2>
-
-            <p className="text-blue-600 mb-2">
-              {member.role}
-            </p>
-
-            <p className="text-gray-600 break-all">
-              {member.email}
-            </p>
-            {member.role !== "Client" && (
-            <p className="text-sm text-gray-500 mt-2">
-              Department: {member.department}
-            </p>
-            )}
-{member.email !== localStorage.getItem("userEmail") && (
-  <div className="mt-4">
-    <button
-      onClick={() => handleDeleteMember(member.id)}
-      className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600"
-    >
-      Delete
-    </button>
-  </div>
-)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {projectMembers.map((member) => (
+                <div key={`${projectName}-${member.id}`} className="bg-white rounded-xl shadow p-4 md:p-6">
+                  <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-lg font-bold mb-3 uppercase">
+                    {member.full_name ? member.full_name.charAt(0) : (member.name ? member.name.charAt(0) : "U")}
+                  </div>
+                  <h2 className="text-lg md:text-xl font-semibold mb-2 break-words">
+                    {member.full_name || member.name || "Unknown"}
+                  </h2>
+                  <p className="text-blue-600 mb-2">
+                    {member.role}
+                  </p>
+                  <p className="text-gray-600 break-all">
+                    {member.email}
+                  </p>
+                  {member.role !== "Client" && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Department: {member.department}
+                    </p>
+                  )}
+                  {currentUserRole === "Admin" && member.email !== localStorage.getItem("userEmail") && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => handleDeleteMember(member.id)}
+                        className="bg-red-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -258,7 +277,8 @@ const handleDeleteMember = async (memberId) => {
             onChange={(e) => setMemberRole(e.target.value)}
             className="w-full border p-3 rounded-lg bg-white"
           >
-            <option value="Teammate">Teammate</option>
+            <option value="Admin">Admin</option>
+            <option value="Member">Member</option>
             <option value="Client">Client</option>
           </select>
         </div>

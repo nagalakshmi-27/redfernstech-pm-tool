@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 export default function Sidebar() {
   const currentUserRole = localStorage.getItem("userRole");
   return (
-    <div className="w-64 min-h-screen bg-slate-900 text-white">
+    <div className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
       {/* Logo / App Name */}
       <div className="p-5 border-b border-slate-700 flex items-center">
         <h1 className="text-2xl font-bold">

@@ -64,6 +64,8 @@ class TaskBase(BaseModel):
     due_date: Optional[str] = None
     project_id: int
     assignee_id: Optional[int] = None
+    issue_type: Optional[str] = "Task"
+    severity: Optional[str] = None
 
 class TaskCreate(TaskBase):
     pass
@@ -82,11 +84,12 @@ class TaskResponse(TaskBase):
     created_at: datetime
     class Config:
         from_attributes = True
+    ticket_id: Optional[str] = None
     
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
     email: EmailStr
-    role: str = "Teammate"
+    role: str = "Standard"
 class InviteAccept(BaseModel):
     token: str
 class TeammateResponse(BaseModel):
@@ -95,6 +98,7 @@ class TeammateResponse(BaseModel):
     full_name: Optional[str] = None
     role: str
     department: str
+    shared_projects: list[str] = []
 
 # --- EVENTS ---
 class EventBase(BaseModel):

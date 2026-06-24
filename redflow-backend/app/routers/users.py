@@ -32,7 +32,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if invitation:
         user.role = invitation.role 
     else:
-        user.role = "Teammate"
+        user.role = "Member"
         
     return crud.create_user(db=db, user=user)
 
@@ -153,6 +153,8 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 # --- TEAMS & INVITATIONS LOGIC ---
 @router.post("/invite")
 def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only Admins can invite new users.")
     if current_user.role == "Client":
         raise HTTPException(status_code=403, detail="Clients cannot send invitations.")
         
