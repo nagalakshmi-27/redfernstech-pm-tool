@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import AppContext from "../context/AppContext";
 
-export default function CreateIssueModal() {
+export default function CreateIssueModal({ defaultProjectId = "" }) {
   const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
   const currentUserRole = localStorage.getItem("userRole");
   
@@ -12,7 +12,7 @@ export default function CreateIssueModal() {
   const [issueType, setIssueType] = useState("Task");
   const [severity, setSeverity] = useState("Medium");
   const [assigneeId, setAssigneeId] = useState("");
-  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedProject, setSelectedProject] = useState(defaultProjectId);
   const [dueDate, setDueDate] = useState("");
 
   if (currentUserRole === "Client") return null;

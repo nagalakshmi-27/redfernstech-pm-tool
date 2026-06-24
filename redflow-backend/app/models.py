@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Table, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -67,6 +67,7 @@ class Task(Base):
     issue_type = Column(String, default="Task") # "Task" or "Bug"
     severity = Column(String, nullable=True)    # "Critical", "High", "Medium", "Low"
     ticket_id = Column(String, unique=True, index=True, nullable=True) # e.g. RED-1
+    position = Column(Float, default=0.0)
     
     project_id = Column(Integer, ForeignKey("projects.id"), index=True)
     assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)

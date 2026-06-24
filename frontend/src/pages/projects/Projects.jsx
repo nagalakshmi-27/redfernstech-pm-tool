@@ -1,10 +1,12 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import AppContext from "../../context/AppContext";
 import { FolderKanban, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 
 export default function Projects() {
   const { projects, setProjects, activities, setActivities, members, tasks } = useContext(AppContext);
+  const navigate = useNavigate();
   const currentUserId = Number(localStorage.getItem("userId"));
   const currentUserRole = localStorage.getItem("userRole");
   const [showModal, setShowModal] = useState(false);
@@ -165,8 +167,12 @@ export default function Projects() {
           const memberArray = project.members || [];
 
           return (
-            <div key={project.id} className="bg-white rounded-xl shadow p-4 md:p-6">
-              <h2 className="text-xl font-semibold mb-3">{project.name}</h2>
+            <div 
+              key={project.id} 
+              className="bg-white rounded-xl shadow p-4 md:p-6 cursor-pointer hover:shadow-lg transition group relative border hover:border-blue-300"
+              onClick={() => navigate(`/projects/${project.id}`)}
+            >
+              <h2 className="text-xl font-semibold mb-3 group-hover:text-blue-600 transition">{project.name}</h2>
               <p className="text-gray-600 mb-3">{project.description}</p>
 
               <span className={`inline-block px-3 py-1 rounded-full text-sm mb-4 ${
@@ -191,10 +197,11 @@ export default function Projects() {
               <p className="text-sm text-gray-500 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-gray-500">End: {project.end_date}</p>
 
-              {project.created_by_id === currentUserId && (
-  <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              {(currentUserRole === "Admin" || project.created_by_id === currentUserId) && (
+  <div className="flex flex-col sm:flex-row gap-2 mt-4 relative z-10">
     <button
-      onClick={() => {
+      onClick={(e) => {
+        e.stopPropagation();
         setEditingProjectId(project.id);
         setProjectName(project.name);
         setProjectDescription(project.description);
@@ -203,14 +210,17 @@ export default function Projects() {
         setSelectedMembers(memberArray.map((m) => m.id));
         setShowModal(true);
       }}
-      className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
+      className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition"
     >
       Edit
     </button>
 
     <button
-      onClick={() => handleDeleteProject(project.id)}
-      className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDeleteProject(project.id);
+      }}
+      className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition"
     >
       Delete
     </button>

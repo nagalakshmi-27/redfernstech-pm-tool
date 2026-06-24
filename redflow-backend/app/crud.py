@@ -83,8 +83,13 @@ def get_user_projects(db: Session, user_id: int):
     ).all()
 
 def update_project(db: Session, project_id: int, project_update: schemas.ProjectUpdate, user_id: int):
-    db_project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.created_by_id == user_id).first()
-    if not db_project: return None
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    
+    if not db_project or not user: return None
+    
+    if user.role != "Admin" and db_project.created_by_id != user_id:
+        return None
     
     update_data = project_update.model_dump(exclude_unset=True) # or .dict() for older pydantic
     
@@ -166,7 +171,7 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
 
     update_data = task_update.model_dump(exclude_unset=True)
     
-    if is_assignee and not is_creator:
+    if is_assignee and not is_creator and user.role != "Admin":
         if "status" in update_data:
             db_task.status = update_data["status"]
             db_notification = models.Notification(
@@ -174,6 +179,8 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
                 message=f"Task '{db_task.name}' status updated to '{db_task.status}'"
             )
             db.add(db_notification)
+        if "position" in update_data:
+            db_task.position = update_data["position"]
     else:
         for key, value in update_data.items():
             if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:

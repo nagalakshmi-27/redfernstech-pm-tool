@@ -37,18 +37,12 @@ export default function Tasks() {
     e.preventDefault();
   };
 
-  const handleDrop = async (e, newStatus) => {
-    e.preventDefault();
-    if (currentUserRole === "Client") return; 
-
-    const taskId = e.dataTransfer.getData("taskId");
-    if (!taskId) return;
-
-    setTasks(prev => prev.map(t => t.id === parseInt(taskId) ? { ...t, status: newStatus } : t));
-
+  const updateTaskPosition = async (taskId, newStatus, newPosition) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t));
+    
     const token = localStorage.getItem("token");
     try {
-      const taskToUpdate = tasks.find(t => t.id === parseInt(taskId));
+      const taskToUpdate = tasks.find(t => t.id === taskId);
       if (!taskToUpdate) return;
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
@@ -56,18 +50,69 @@ export default function Tasks() {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({
           ...taskToUpdate,
-          status: newStatus
+          status: newStatus,
+          position: newPosition
         })
       });
-
       if (!response.ok) {
-        setTasks(prev => prev.map(t => t.id === parseInt(taskId) ? { ...t, status: taskToUpdate.status } : t));
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: taskToUpdate.status, position: taskToUpdate.position } : t));
         alert("Not authorized to move this task.");
       }
     } catch {
-      setTasks(prev => prev.map(t => t.id === parseInt(taskId) ? { ...t, status: taskToUpdate.status } : t));
       alert("Error updating status.");
     }
+  };
+
+  const handleDropOnCard = (e, targetTask, columnTitle) => {
+     e.preventDefault();
+     e.stopPropagation();
+     if (currentUserRole === "Client") return; 
+
+     const draggedTaskId = parseInt(e.dataTransfer.getData("taskId"));
+     if (!draggedTaskId || draggedTaskId === targetTask.id) return;
+     
+     const rect = e.currentTarget.getBoundingClientRect();
+     const dropY = e.clientY - rect.top;
+     const isBottomHalf = dropY > rect.height / 2;
+
+     const filteredTasks = myTasks.filter(t => t.status === columnTitle && t.id !== draggedTaskId).sort((a, b) => (a.position || 0) - (b.position || 0));
+     const targetIndex = filteredTasks.findIndex(t => t.id === targetTask.id);
+     
+     let newPosition = 0;
+     
+     if (isBottomHalf) {
+        if (targetIndex === filteredTasks.length - 1) {
+           newPosition = (targetTask.position || 0) + 1000;
+        } else {
+           const nextTask = filteredTasks[targetIndex + 1];
+           newPosition = ((targetTask.position || 0) + (nextTask.position || 0)) / 2;
+        }
+     } else {
+        if (targetIndex === 0) {
+           newPosition = (targetTask.position || 0) - 1000;
+        } else {
+           const prevTask = filteredTasks[targetIndex - 1];
+           newPosition = ((prevTask.position || 0) + (targetTask.position || 0)) / 2;
+        }
+     }
+
+     updateTaskPosition(draggedTaskId, columnTitle, newPosition);
+  };
+
+  const handleDropOnColumn = (e, columnTitle) => {
+     e.preventDefault();
+     if (currentUserRole === "Client") return; 
+
+     const draggedTaskId = parseInt(e.dataTransfer.getData("taskId"));
+     if (!draggedTaskId) return;
+     
+     const columnTasks = myTasks.filter(t => t.status === columnTitle).sort((a, b) => (a.position || 0) - (b.position || 0));
+     let newPosition = 0;
+     if (columnTasks.length > 0) {
+       newPosition = (columnTasks[columnTasks.length - 1].position || 0) + 1000;
+     }
+     
+     updateTaskPosition(draggedTaskId, columnTitle, newPosition);
   };
 
   const handleUpdateTask = async () => {
@@ -158,7 +203,7 @@ export default function Tasks() {
             key={col.title} 
             className="flex-1 min-w-[320px] bg-slate-100 rounded-2xl p-4 shadow-inner"
             onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, col.title)}
+            onDrop={(e) => handleDropOnColumn(e, col.title)}
           >
             <div className="flex items-center gap-2 mb-4 px-2">
               {col.icon}
@@ -170,11 +215,13 @@ export default function Tasks() {
 
             <div className="flex flex-col gap-3 min-h-[500px]">
               {/* WE USE myTasks HERE TO FILTER THE BOARD! */}
-              {myTasks.filter(t => t.status === col.title).map((task) => (
+              {myTasks.filter(t => t.status === col.title).sort((a, b) => (a.position || 0) - (b.position || 0)).map((task) => (
                  <div 
                    key={task.id} 
                    draggable={currentUserRole !== "Client"}
                    onDragStart={(e) => handleDragStart(e, task.id)}
+                   onDragOver={handleDragOver}
+                   onDrop={(e) => handleDropOnCard(e, task, col.title)}
                    onClick={() => {
                      // STEP 2: Make the entire card click to open Details / Edit Modal
                      setEditingTaskId(task.id);

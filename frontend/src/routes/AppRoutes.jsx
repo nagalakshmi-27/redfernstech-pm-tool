@@ -8,6 +8,7 @@ import AcceptInvite from "../pages/auth/AcceptInvite";
 
 import Dashboard from "../pages/dashboard/Dashboard";
 import Projects from "../pages/projects/Projects";
+import ProjectWorkspace from "../pages/projects/ProjectWorkspace";
 import Tasks from "../pages/tasks/Tasks";
 import Teams from "../pages/teams/Teams";
 import Calendar from "../pages/calendar/Calender";
@@ -27,6 +28,7 @@ export default function AppRoutes() {
         <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:id" element={<ProjectWorkspace />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/teams" element={<Teams />} />
         <Route path="/calendar" element={<Calendar />} />
