@@ -13,7 +13,14 @@ def get_user_by_email(db: Session, email: str):
 
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = get_password_hash(user.password)
-    db_user = models.User(email=user.email, hashed_password=hashed_password, role=user.role)
+    db_user = models.User(
+        email=user.email, 
+        hashed_password=hashed_password, 
+        role=user.role,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        full_name=f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else user.full_name
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -34,11 +41,19 @@ def authenticate_user(db: Session, email: str, password: str):
     return user
 
 def update_user(db: Session, user: models.User, user_update: schemas.UserUpdate):
-    if user_update.full_name is not None:
+    if user_update.first_name is not None:
+        user.first_name = user_update.first_name
+    if user_update.last_name is not None:
+        user.last_name = user_update.last_name
+    if user_update.first_name or user_update.last_name:
+        user.full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+    elif user_update.full_name is not None:
         user.full_name = user_update.full_name
     if user_update.role is not None:
         user.role = user_update.role
-    if user_update.department is not None: # <--- ADDED THIS!
+    if user_update.company_role is not None:
+        user.company_role = user_update.company_role
+    if user_update.department is not None:
         user.department = user_update.department
     db.commit()
     db.refresh(user)
@@ -215,6 +230,7 @@ def get_teammates(db: Session, user_id: int):
         "email": me.email,
         "full_name": me.full_name or "Me",
         "role": me.role or "Member",
+        "company_role": me.company_role,
         "department": me.department or "Management",
         "shared_projects": []
     }
@@ -230,6 +246,7 @@ def get_teammates(db: Session, user_id: int):
                     "email": u.email,
                     "full_name": u.full_name or "Pending...",
                     "role": u.role or "Member",
+                    "company_role": u.company_role,
                     "department": u.department or "Member",
                     "shared_projects": []
                 }
@@ -251,6 +268,7 @@ def get_teammates(db: Session, user_id: int):
                                 "email": u.email,
                                 "full_name": u.full_name or "Pending...",
                                 "role": u.role or "Member",
+                                "company_role": u.company_role,
                                 "department": u.department or "Member",
                                 "shared_projects": []
                             }

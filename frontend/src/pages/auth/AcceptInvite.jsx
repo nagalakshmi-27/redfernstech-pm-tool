@@ -48,23 +48,23 @@ export default function AcceptInvite() {
   };
 
   if (error) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="bg-white p-8 rounded-xl shadow-lg text-center text-red-600">{error}</div></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950"><div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] text-center text-red-400">{error}</div></div>;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-96 text-center">
-        <h2 className="text-2xl font-bold mb-4">Team Invitation</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200">
+      <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] w-[450px] text-center">
+        <h2 className="text-3xl font-bold mb-4 text-white">Team Invitation</h2>
         {message ? (
-          <p className="text-green-600 font-medium">{message}</p>
+          <p className="text-green-400 font-medium">{message}</p>
         ) : inviteDetails ? (
           <div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-slate-400 mb-6">
               You have been invited to join the team as a <strong>{inviteDetails.role}</strong> in the <strong>{inviteDetails.department}</strong> department.
             </p>
             <button 
               onClick={handleAccept}
-              className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700"
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] text-white p-3 rounded-lg font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
             >
               Accept Invitation
             </button>

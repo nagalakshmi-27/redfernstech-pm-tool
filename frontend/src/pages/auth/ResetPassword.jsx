@@ -70,24 +70,24 @@ if (newPassword !== confirmPassword) {
   // If someone tries to visit the page without a token from an email, block them!
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-10 rounded-xl shadow-lg">
-          <h2 className="text-red-500 font-bold mb-4 text-center text-2xl">Invalid Link</h2>
-          <p className="text-gray-600">No secure reset token found. Please use the exact link sent to your email.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950">
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] text-slate-200">
+          <h2 className="text-red-400 font-bold mb-4 text-center text-2xl">Invalid Link</h2>
+          <p className="text-slate-400">No secure reset token found. Please use the exact link sent to your email.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-      <div className="bg-white p-10 rounded-xl shadow-lg w-[500px]">
-        <h1 className="text-4xl font-bold text-center mb-2">Reset Password</h1>
-        <p className="text-center text-gray-500 mb-8">Enter your new secure password below</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200">
+      <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] w-[500px]">
+        <h1 className="text-4xl font-bold text-center mb-2 text-white">Reset Password</h1>
+        <p className="text-center text-slate-400 mb-8">Enter your new secure password below</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <div className="bg-red-100 border border-red-300 text-red-700 p-3 rounded-lg">{error}</div>}
-          {message && <div className="bg-green-100 border border-green-300 text-green-700 p-3 rounded-lg">{message}</div>}
+          {error && <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg">{error}</div>}
+          {message && <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-lg">{message}</div>}
 
           <div className="relative">
   <input
@@ -95,14 +95,14 @@ if (newPassword !== confirmPassword) {
     placeholder="New Password"
     value={newPassword}
     onChange={(e) => setNewPassword(e.target.value)}
-    className="w-full border p-3 rounded-lg pr-12"
+    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
     required
   />
 
   <button
     type="button"
     onClick={() => setShowNewPassword(!showNewPassword)}
-    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
   >
     {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
   </button>
@@ -110,23 +110,23 @@ if (newPassword !== confirmPassword) {
 
           {showPasswordRules && (
   <div className="text-sm space-y-1">
-    <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
+    <p className={passwordChecks.length ? "text-green-400" : "text-red-400"}>
       {passwordChecks.length ? "✓" : "✗"} At least 8 characters
     </p>
 
-    <p className={passwordChecks.uppercase ? "text-green-600" : "text-red-600"}>
+    <p className={passwordChecks.uppercase ? "text-green-400" : "text-red-400"}>
       {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
     </p>
 
-    <p className={passwordChecks.lowercase ? "text-green-600" : "text-red-600"}>
+    <p className={passwordChecks.lowercase ? "text-green-400" : "text-red-400"}>
       {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
     </p>
 
-    <p className={passwordChecks.number ? "text-green-600" : "text-red-600"}>
+    <p className={passwordChecks.number ? "text-green-400" : "text-red-400"}>
       {passwordChecks.number ? "✓" : "✗"} One number
     </p>
 
-    <p className={passwordChecks.special ? "text-green-600" : "text-red-600"}>
+    <p className={passwordChecks.special ? "text-green-400" : "text-red-400"}>
       {passwordChecks.special ? "✓" : "✗"} One special character
     </p>
   </div>
@@ -138,26 +138,26 @@ if (newPassword !== confirmPassword) {
     placeholder="Confirm New Password"
     value={confirmPassword}
     onChange={(e) => setConfirmPassword(e.target.value)}
-    className="w-full border p-3 rounded-lg pr-12"
+    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
     required
   />
 
   <button
     type="button"
     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
   >
     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
   </button>
 </div>
 
-          <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-300">
+          <button type="submit" className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] text-white font-semibold py-3 rounded-lg transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
             Update Password
           </button>
         </form>
 
         <p className="text-center mt-6">
-          <Link to="/" className="text-blue-600 font-semibold hover:underline">Back to Login</Link>
+          <Link to="/" className="text-cyan-400 font-semibold hover:text-cyan-300 transition">Back to Login</Link>
         </p>
       </div>
     </div>

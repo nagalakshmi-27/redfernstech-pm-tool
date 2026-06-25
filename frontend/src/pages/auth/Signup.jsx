@@ -55,7 +55,9 @@ if (passwordError) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           email: email, 
-          password: password, 
+          password: password,
+          first_name: firstName,
+          last_name: lastName,
           role: "team_mate" 
         })
       });
@@ -73,19 +75,19 @@ if (passwordError) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-      <div className="bg-white p-10 rounded-xl shadow-lg w-[500px]">
-        <h1 className="text-4xl font-bold text-center mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200">
+      <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] w-[500px]">
+        <h1 className="text-4xl font-bold text-center mb-2 text-white">
           Create Account
         </h1>
 
-        <p className="text-center text-gray-500 mb-8">
+        <p className="text-center text-slate-400 mb-8">
           Sign up to get started
         </p>
 
         <form onSubmit={handleSignup} className="space-y-5">
           {error && (
-  <div className="bg-red-100 border border-red-300 text-red-700 p-3 rounded-lg">
+  <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg">
     {error}
   </div>
 )}
@@ -95,7 +97,7 @@ if (passwordError) {
               placeholder="First Name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />
 
             <input
@@ -103,7 +105,7 @@ if (passwordError) {
               placeholder="Last Name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />
           </div>
 
@@ -112,7 +114,7 @@ if (passwordError) {
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border p-3 rounded-lg"
+            className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
           />
 
           <div className="relative">
@@ -121,13 +123,13 @@ if (passwordError) {
     placeholder="Password"
     value={password}
     onChange={(e) => setPassword(e.target.value)}
-    className="w-full border p-3 rounded-lg pr-12"
+    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
   />
 
   <button
     type="button"
     onClick={() => setShowPassword(!showPassword)}
-    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
   >
     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
   </button>
@@ -163,13 +165,13 @@ if (passwordError) {
     placeholder="Confirm Password"
     value={confirmPassword}
     onChange={(e) => setConfirmPassword(e.target.value)}
-    className="w-full border p-3 rounded-lg pr-12"
+    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
   />
 
   <button
     type="button"
     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
   >
     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
   </button>
@@ -177,17 +179,17 @@ if (passwordError) {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg font-semibold shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
           >
             Sign Up
           </button>
         </form>
 
-        <p className="text-center mt-6">
+        <p className="text-center mt-6 text-slate-400">
           Already have an account?{" "}
           <Link
             to="/"
-            className="text-blue-600 font-semibold"
+            className="text-cyan-400 font-semibold hover:text-cyan-300 transition"
           >
             Sign In
           </Link>

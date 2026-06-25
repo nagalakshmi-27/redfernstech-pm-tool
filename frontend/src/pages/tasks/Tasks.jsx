@@ -185,15 +185,15 @@ export default function Tasks() {
   };
 
   const COLUMNS = [
-    { title: "To Do", icon: <Clock3 size={20} className="text-yellow-600" />, border: "border-yellow-400" },
-    { title: "In Progress", icon: <PlayCircle size={20} className="text-blue-600" />, border: "border-blue-400" },
-    { title: "Completed", icon: <CheckCircle size={20} className="text-green-600" />, border: "border-green-400" }
+    { title: "To Do", icon: <Clock3 size={20} className="text-yellow-400" />, border: "border-yellow-400" },
+    { title: "In Progress", icon: <PlayCircle size={20} className="text-cyan-400" />, border: "border-cyan-400" },
+    { title: "Completed", icon: <CheckCircle size={20} className="text-green-400" />, border: "border-green-400" }
   ];
 
   return (
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold">My Tasks</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white">My Tasks</h1>
         <CreateIssueModal />
       </div>
 
@@ -201,14 +201,14 @@ export default function Tasks() {
         {COLUMNS.map((col) => (
           <div 
             key={col.title} 
-            className="flex-1 min-w-[320px] bg-slate-100 rounded-2xl p-4 shadow-inner"
+            className="flex-1 min-w-[320px] bg-white/5 backdrop-blur-md rounded-2xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDropOnColumn(e, col.title)}
           >
             <div className="flex items-center gap-2 mb-4 px-2">
               {col.icon}
-              <h2 className="text-lg font-bold text-slate-800">{col.title}</h2>
-              <span className="ml-auto bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+              <h2 className="text-lg font-bold text-white">{col.title}</h2>
+              <span className="ml-auto bg-white/10 text-slate-300 px-2 py-0.5 rounded-full text-xs font-bold border border-white/10">
                 {myTasks.filter(t => t.status === col.title).length}
               </span>
             </div>
@@ -236,37 +236,37 @@ export default function Tasks() {
                      setDueDate(task.due_date || "");
                      setShowModal(true);
                    }}
-                   className={`bg-white rounded-xl shadow-sm border-l-4 ${col.border} p-4 cursor-pointer hover:shadow-md transition-shadow relative group`}
+                   className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${col.border} p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
                  >
                    <div className="flex justify-between items-start mb-2">
-                     <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                     <span className="text-xs font-bold text-slate-300 bg-black/30 px-2 py-1 rounded border border-white/5">
                        {task.ticket_id || `TSK-${task.id}`}
                      </span>
                      
-                     <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-                       task.issue_type === "Bug" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                     <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)] ${
+                       task.issue_type === "Bug" ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
                      }`}>
                        {task.issue_type === "Bug" ? <Bug size={12}/> : <CheckSquare size={12}/>}
                        {task.issue_type || "Task"}
                      </span>
                    </div>
 
-                   <h3 className="text-md font-semibold text-slate-900 mb-1 leading-snug">{task.name}</h3>
+                   <h3 className="text-md font-semibold text-white mb-1 leading-snug">{task.name}</h3>
                    
                    {task.issue_type === "Bug" && task.severity && (
-                     <p className="text-xs text-red-600 font-medium mb-2">Severity: {task.severity}</p>
+                     <p className="text-xs text-red-400 font-medium mb-2">Severity: {task.severity}</p>
                    )}
 
                    <div className="flex justify-between items-end mt-4">
-                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        task.priority === "High" ? "bg-red-50 text-red-600" :
-                        task.priority === "Medium" ? "bg-yellow-50 text-yellow-600" :
-                        "bg-green-50 text-green-600"
+                     <span className={`text-xs font-bold px-2 py-1 rounded-full border ${
+                        task.priority === "High" ? "bg-red-500/20 text-red-300 border-red-500/30" :
+                        task.priority === "Medium" ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" :
+                        "bg-green-500/20 text-green-300 border-green-500/30"
                       }`}>
                         {task.priority}
                       </span>
                      
-                     <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold" title={members.find(m => m.id === task.assignee_id)?.full_name || "Unassigned"}>
+                     <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={members.find(m => m.id === task.assignee_id)?.full_name || "Unassigned"}>
                        {(members.find(m => m.id === task.assignee_id)?.full_name || "U")[0].toUpperCase()}
                      </div>
                    </div>
@@ -276,7 +276,7 @@ export default function Tasks() {
                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                        <button 
                          onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} 
-                         className="text-red-500 hover:text-red-700 p-1 bg-white rounded-full shadow-sm"
+                         className="text-red-400 hover:text-red-300 p-1 bg-black/40 rounded-full shadow-sm border border-red-400/20 backdrop-blur-md"
                        >
                          ×
                        </button>
@@ -291,53 +291,53 @@ export default function Tasks() {
 
       {/* Edit Details Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => { setShowModal(false); setEditingTaskId(null); }}>
-          <div className="bg-white p-6 rounded-2xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold mb-6 text-slate-800">Ticket Details</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => { setShowModal(false); setEditingTaskId(null); }}>
+          <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 rounded-2xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.5)]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6 text-white">Ticket Details</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block mb-2 font-medium text-slate-700">Issue Type</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" value="Task" checked={issueType === "Task"} onChange={(e) => setIssueType(e.target.value)} className="w-4 h-4 text-slate-900" />
-                    <span className="font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded">Task</span>
+                <label className="block mb-2 font-medium text-slate-300">Issue Type</label>
+                <div className="flex gap-4 p-1 bg-black/30 border border-white/10 rounded-lg w-fit">
+                  <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md transition ${issueType === "Task" ? "bg-white/20 shadow-sm font-bold text-white" : "text-slate-400 hover:bg-white/10"}`}>
+                    <input type="radio" value="Task" checked={issueType === "Task"} onChange={(e) => setIssueType(e.target.value)} className="hidden" />
+                    Task
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" value="Bug" checked={issueType === "Bug"} onChange={(e) => setIssueType(e.target.value)} className="w-4 h-4 text-red-600" />
-                    <span className="font-medium text-red-700 bg-red-50 px-2 py-1 rounded">Bug</span>
+                  <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md transition ${issueType === "Bug" ? "bg-white/20 shadow-sm font-bold text-red-400" : "text-slate-400 hover:bg-white/10"}`}>
+                    <input type="radio" value="Bug" checked={issueType === "Bug"} onChange={(e) => setIssueType(e.target.value)} className="hidden" />
+                    Bug
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="block mb-2 font-medium text-slate-700">Ticket Title</label>
-                <input type="text" placeholder="e.g. Implement login feature" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" />
+                <label className="block mb-2 font-medium text-slate-300">Ticket Title</label>
+                <input type="text" placeholder="e.g. Implement login feature" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:ring-1 focus:ring-cyan-500 outline-none" />
               </div>
 
               <div>
-                <label className="block mb-2 font-medium text-slate-700">Description</label>
-                <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full border p-3 rounded-lg h-24 focus:ring-2 focus:ring-slate-900 outline-none" />
+                <label className="block mb-2 font-medium text-slate-300">Description</label>
+                <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg h-24 focus:ring-1 focus:ring-cyan-500 outline-none" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-2 font-medium text-slate-700">Priority</label>
-                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
+                  <label className="block mb-2 font-medium text-slate-300">Priority</label>
+                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option className="bg-slate-900">High</option>
+                    <option className="bg-slate-900">Medium</option>
+                    <option className="bg-slate-900">Low</option>
                   </select>
                 </div>
                 
                 {issueType === "Bug" && (
                 <div>
-                  <label className="block mb-2 font-medium text-slate-700">Severity</label>
-                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
-                    <option>Critical</option>
-                    <option>Major</option>
-                    <option>Medium</option>
-                    <option>Minor</option>
+                  <label className="block mb-2 font-medium text-slate-300">Severity</label>
+                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option className="bg-slate-900">Critical</option>
+                    <option className="bg-slate-900">Major</option>
+                    <option className="bg-slate-900">Medium</option>
+                    <option className="bg-slate-900">Minor</option>
                   </select>
                 </div>
                 )}
@@ -345,33 +345,33 @@ export default function Tasks() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-2 font-medium text-slate-700">Project</label>
-                  <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
-                    <option value="">Select...</option>
+                  <label className="block mb-2 font-medium text-slate-300">Project</label>
+                  <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option value="" className="bg-slate-900">Select...</option>
                     {projects.map((project) => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                      <option key={project.id} value={project.id} className="bg-slate-900">{project.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block mb-2 font-medium text-slate-700">Assignee</label>
-                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900">
-                    <option value="">Select...</option>
+                  <label className="block mb-2 font-medium text-slate-300">Assignee</label>
+                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option value="" className="bg-slate-900">Select...</option>
                     {members.map((member) => (
-                      <option key={member.id} value={member.id}>{member.full_name}</option>
+                      <option key={member.id} value={member.id} className="bg-slate-900">{member.full_name}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block mb-2 font-medium text-slate-700">Due Date</label>
-                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-slate-900" />
+                <label className="block mb-2 font-medium text-slate-300">Due Date</label>
+                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500" />
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t mt-6">
-                <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-5 py-2.5 font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
-                <button onClick={handleUpdateTask} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg transition">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-white/10 mt-6">
+                <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition">Cancel</button>
+                <button onClick={handleUpdateTask} className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all">
                   Save Changes
                 </button>
               </div>

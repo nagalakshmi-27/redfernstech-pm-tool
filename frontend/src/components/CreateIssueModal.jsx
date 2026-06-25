@@ -70,27 +70,27 @@ export default function CreateIssueModal({ defaultProjectId = "" }) {
     <>
       <button 
         onClick={() => setShowModal(true)}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 transition shadow-lg w-full sm:w-auto"
+        className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 transition shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto"
       >
         <span className="text-xl leading-none">+</span> Create Issue
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 text-left" onClick={() => setShowModal(false)}>
-          <div className="bg-white p-6 md:p-8 rounded-2xl w-[95%] max-w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl text-slate-800" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-              <span className="text-blue-600">+</span> Create New Issue
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 text-left" onClick={() => setShowModal(false)}>
+          <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 md:p-8 rounded-2xl w-[95%] max-w-[600px] max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.5)] text-slate-200" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
+              <span className="text-cyan-400">+</span> Create New Issue
             </h2>
 
             <div className="space-y-5">
               <div>
-                <label className="block mb-2 font-semibold text-slate-700">Issue Type</label>
-                <div className="flex gap-4 p-1 bg-slate-100 rounded-lg w-fit">
-                  <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md transition ${issueType === "Task" ? "bg-white shadow-sm font-bold text-blue-700" : "text-slate-600 hover:bg-slate-200"}`}>
+                <label className="block mb-2 font-semibold text-slate-300">Issue Type</label>
+                <div className="flex gap-4 p-1 bg-black/30 border border-white/10 rounded-lg w-fit">
+                  <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md transition ${issueType === "Task" ? "bg-white/10 shadow-sm font-bold text-cyan-400 border border-cyan-400/30" : "text-slate-400 hover:bg-white/5"}`}>
                     <input type="radio" value="Task" checked={issueType === "Task"} onChange={(e) => setIssueType(e.target.value)} className="hidden" />
                     Task
                   </label>
-                  <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md transition ${issueType === "Bug" ? "bg-white shadow-sm font-bold text-red-600" : "text-slate-600 hover:bg-slate-200"}`}>
+                  <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md transition ${issueType === "Bug" ? "bg-white/10 shadow-sm font-bold text-red-400 border border-red-400/30" : "text-slate-400 hover:bg-white/5"}`}>
                     <input type="radio" value="Bug" checked={issueType === "Bug"} onChange={(e) => setIssueType(e.target.value)} className="hidden" />
                     Bug
                   </label>
@@ -98,33 +98,33 @@ export default function CreateIssueModal({ defaultProjectId = "" }) {
               </div>
 
               <div>
-                <label className="block mb-2 font-semibold text-slate-700">Ticket Title</label>
-                <input type="text" placeholder="e.g. Implement login feature" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+                <label className="block mb-2 font-semibold text-slate-300">Ticket Title</label>
+                <input type="text" placeholder="e.g. Implement login feature" value={taskName} onChange={(e) => setTaskName(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition" />
               </div>
 
               <div>
-                <label className="block mb-2 font-semibold text-slate-700">Description</label>
-                <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg h-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+                <label className="block mb-2 font-semibold text-slate-300">Description</label>
+                <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg h-28 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block mb-2 font-semibold text-slate-700">Priority</label>
-                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
+                  <label className="block mb-2 font-semibold text-slate-300">Priority</label>
+                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
+                    <option className="bg-slate-900">High</option>
+                    <option className="bg-slate-900">Medium</option>
+                    <option className="bg-slate-900">Low</option>
                   </select>
                 </div>
                 
                 {issueType === "Bug" && (
                 <div>
-                  <label className="block mb-2 font-semibold text-slate-700">Severity</label>
-                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    <option>Critical</option>
-                    <option>Major</option>
-                    <option>Medium</option>
-                    <option>Minor</option>
+                  <label className="block mb-2 font-semibold text-slate-300">Severity</label>
+                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
+                    <option className="bg-slate-900">Critical</option>
+                    <option className="bg-slate-900">Major</option>
+                    <option className="bg-slate-900">Medium</option>
+                    <option className="bg-slate-900">Minor</option>
                   </select>
                 </div>
                 )}
@@ -132,33 +132,33 @@ export default function CreateIssueModal({ defaultProjectId = "" }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block mb-2 font-semibold text-slate-700">Project</label>
-                  <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    <option value="">Select a project...</option>
+                  <label className="block mb-2 font-semibold text-slate-300">Project</label>
+                  <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
+                    <option className="bg-slate-900" value="">Select a project...</option>
                     {projects.map((project) => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                      <option className="bg-slate-900" key={project.id} value={project.id}>{project.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block mb-2 font-semibold text-slate-700">Assignee</label>
-                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    <option value="">Select assignee...</option>
+                  <label className="block mb-2 font-semibold text-slate-300">Assignee</label>
+                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
+                    <option className="bg-slate-900" value="">Select assignee...</option>
                     {members.map((member) => (
-                      <option key={member.id} value={member.id}>{member.full_name || member.name || member.email}</option>
+                      <option className="bg-slate-900" key={member.id} value={member.id}>{member.full_name || member.name || member.email}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block mb-2 font-semibold text-slate-700">Due Date</label>
-                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full border border-slate-300 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" />
+                <label className="block mb-2 font-semibold text-slate-300">Due Date</label>
+                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition" />
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t mt-8">
-                <button onClick={() => setShowModal(false)} className="px-5 py-2.5 font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
-                <button onClick={handleCreateTask} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold shadow-lg transition">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-white/10 mt-8">
+                <button onClick={() => setShowModal(false)} className="px-5 py-2.5 font-bold text-slate-300 border border-white/20 hover:bg-white/5 rounded-lg transition">Cancel</button>
+                <button onClick={handleCreateTask} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-2.5 rounded-lg font-bold shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all">
                   Create Issue
                 </button>
               </div>

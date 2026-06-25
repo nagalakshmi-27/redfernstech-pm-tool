@@ -24,7 +24,7 @@ export default function Notifications() {
 
   return (
     <MainLayout>
-      <h1 className="text-2xl md:text-3xl font-bold mb-6">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">
         Notifications
       </h1>
 
@@ -33,15 +33,15 @@ export default function Notifications() {
   dbNotifications.slice(0, 10).map((activity, index) => (
     <div
       key={activity.id || index}
-      className="bg-white rounded-xl shadow p-4 md:p-5"
+      className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-5"
     >
-      <h3 className="font-semibold break-words text-sm md:text-base">
+      <h3 className="font-semibold break-words text-sm md:text-base text-white">
         🔔 {activity.message}
       </h3>
     </div>
   ))
 ) : (
-  <div className="bg-white rounded-xl shadow p-4 md:p-5">
+  <div className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-5 text-slate-300">
     No Notifications Yet
   </div>
 )}

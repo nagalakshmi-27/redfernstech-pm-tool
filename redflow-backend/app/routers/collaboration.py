@@ -1,0 +1,231 @@
+import os
+import shutil
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
+from typing import List, Dict
+from .. import schemas, models
+from .users import get_current_user, get_db
+
+router = APIRouter(tags=["Collaboration"])
+
+# --- COMMENTS ---
+@router.get("/tasks/{task_id}/comments", response_model=List[schemas.CommentResponse])
+def get_comments(task_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Comment).filter(models.Comment.task_id == task_id).all()
+
+@router.post("/tasks/{task_id}/comments", response_model=schemas.CommentResponse)
+def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_comment = models.Comment(**comment.model_dump(), task_id=task_id, user_id=current_user.id)
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    import re
+    mentions = re.findall(r'@(\w+)', comment.content)
+    if mentions:
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        for m in mentions:
+            mentioned_user = db.query(models.User).filter(func.replace(models.User.full_name, ' ', '').ilike(f"{m}%")).first()
+            if mentioned_user and mentioned_user.id != current_user.id:
+                notif = models.Notification(
+                    user_id=mentioned_user.id,
+                    message=f"{current_user.full_name or current_user.email} mentioned you in a comment on {task.ticket_id if task and task.ticket_id else f'Task #{task_id}'}: '{comment.content[:30]}...'",
+                    type="Mention",
+                    link=f"/projects/{task.project_id}" if task else "/projects"
+                )
+                db.add(notif)
+        db.commit()
+    
+    return db_comment
+
+# --- WIKI ---
+@router.get("/projects/{project_id}/wikis", response_model=List[schemas.WikiResponse])
+def get_wikis(project_id: int, db: Session = Depends(get_db)):
+    return db.query(models.WikiPage).filter(models.WikiPage.project_id == project_id).all()
+
+@router.post("/projects/{project_id}/wikis/upload", response_model=schemas.WikiResponse)
+def upload_wiki_file(
+    project_id: int, 
+    file: UploadFile = File(...), 
+    title: str = Form(...),
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    os.makedirs("uploads/docs", exist_ok=True)
+    file_path = f"uploads/docs/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    db_wiki = models.WikiPage(
+        title=title, 
+        doc_type="file",
+        file_url=f"/uploads/docs/{file.filename}",
+        project_id=project_id, 
+        author_id=current_user.id
+    )
+    db.add(db_wiki)
+    db.commit()
+    db.refresh(db_wiki)
+    return db_wiki
+
+@router.post("/projects/{project_id}/wikis", response_model=schemas.WikiResponse)
+def create_wiki(project_id: int, wiki: schemas.WikiCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_wiki = models.WikiPage(**wiki.model_dump(), project_id=project_id, author_id=current_user.id)
+    db.add(db_wiki)
+    db.commit()
+    db.refresh(db_wiki)
+    return db_wiki
+
+@router.put("/projects/{project_id}/wikis/{wiki_id}", response_model=schemas.WikiResponse)
+def update_wiki(project_id: int, wiki_id: int, wiki_update: schemas.WikiUpdate, db: Session = Depends(get_db)):
+    db_wiki = db.query(models.WikiPage).filter(models.WikiPage.id == wiki_id, models.WikiPage.project_id == project_id).first()
+    if not db_wiki:
+        raise HTTPException(status_code=404, detail="Wiki not found")
+    
+    if wiki_update.title is not None:
+        db_wiki.title = wiki_update.title
+    if wiki_update.content is not None:
+        db_wiki.content = wiki_update.content
+    if wiki_update.doc_type is not None:
+        db_wiki.doc_type = wiki_update.doc_type
+    if wiki_update.file_url is not None:
+        db_wiki.file_url = wiki_update.file_url
+        
+    db.commit()
+    db.refresh(db_wiki)
+    return db_wiki
+
+@router.delete("/projects/{project_id}/wikis/{wiki_id}")
+def delete_wiki(project_id: int, wiki_id: int, db: Session = Depends(get_db)):
+    db_wiki = db.query(models.WikiPage).filter(models.WikiPage.id == wiki_id, models.WikiPage.project_id == project_id).first()
+    if not db_wiki:
+        raise HTTPException(status_code=404, detail="Wiki not found")
+    
+    if db_wiki.doc_type == "file" and db_wiki.file_url:
+        file_path = db_wiki.file_url.lstrip("/")
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Error deleting file {file_path}: {e}")
+                
+    db.delete(db_wiki)
+    db.commit()
+    return {"message": "Wiki deleted successfully"}
+
+# --- CHAT MESSAGES HISTORY ---
+@router.get("/projects/{project_id}/messages", response_model=List[schemas.MessageResponse])
+def get_project_messages(project_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Message).filter(models.Message.project_id == project_id).order_by(models.Message.created_at.asc()).all()
+
+# --- WEBSOCKET CHAT MANAGER ---
+class ConnectionManager:
+    def __init__(self):
+        # Maps project_id to a list of active WebSocket connections
+        self.active_connections: Dict[int, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, project_id: int):
+        await websocket.accept()
+        if project_id not in self.active_connections:
+            self.active_connections[project_id] = []
+        self.active_connections[project_id].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, project_id: int):
+        if project_id in self.active_connections:
+            self.active_connections[project_id].remove(websocket)
+
+    async def broadcast_to_project(self, message: str, project_id: int):
+        if project_id in self.active_connections:
+            for connection in self.active_connections[project_id]:
+                await connection.send_text(message)
+
+manager = ConnectionManager()
+
+@router.websocket("/ws/projects/{project_id}/chat")
+async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Session = Depends(get_db)):
+    await manager.connect(websocket, project_id)
+    try:
+        while True:
+            # Wait for a message from the client
+            data = await websocket.receive_text()
+            
+            # The client will send JSON with user_id and content. 
+            # In a production app, we'd authenticate the WebSocket using a token here!
+            import json
+            try:
+                payload = json.loads(data)
+                user_id = payload.get("user_id")
+                content = payload.get("content")
+                
+                # Save to Database
+                if user_id and content:
+                    db_message = models.Message(content=content, project_id=project_id, user_id=user_id)
+                    db.add(db_message)
+                    db.commit()
+                    db.refresh(db_message)
+                    
+                    user = db.query(models.User).filter(models.User.id == user_id).first()
+                    
+                    import re
+                    mentions = re.findall(r'@(\w+)', content)
+                    if mentions:
+                        for m in mentions:
+                            mentioned_user = db.query(models.User).filter(func.replace(models.User.full_name, ' ', '').ilike(f"{m}%")).first()
+                            if mentioned_user and mentioned_user.id != user_id:
+                                notif = models.Notification(
+                                    user_id=mentioned_user.id,
+                                    message=f"{user.full_name or user.email} mentioned you in Project #{project_id} Chat: '{content[:30]}...'",
+                                    type="Mention",
+                                    link=f"/projects/{project_id}"
+                                )
+                                db.add(notif)
+                        db.commit()
+                    
+                    # Broadcast to everyone else in this project's room
+                    broadcast_msg = json.dumps({
+                        "id": db_message.id,
+                        "content": db_message.content,
+                        "user_id": user.id,
+                        "user": {"id": user.id, "full_name": user.full_name},
+                        "created_at": db_message.created_at.isoformat()
+                    })
+                    await manager.broadcast_to_project(broadcast_msg, project_id)
+            except Exception as e:
+                pass
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, project_id)
+
+@router.get("/projects/{project_id}/all-comments", response_model=List[schemas.CommentResponse])
+def get_all_project_comments(project_id: int, db: Session = Depends(get_db)):
+    comments = db.query(models.Comment).outerjoin(models.Task, models.Comment.task_id == models.Task.id).filter(
+        or_(
+            models.Task.project_id == project_id,
+            models.Comment.project_id == project_id
+        )
+    ).order_by(models.Comment.created_at.desc()).all()
+    return comments
+
+@router.post("/projects/{project_id}/comments", response_model=schemas.CommentResponse)
+def create_project_comment(project_id: int, comment: schemas.CommentCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_comment = models.Comment(**comment.model_dump(), project_id=project_id, user_id=current_user.id)
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    
+    import re
+    mentions = re.findall(r'@(\w+)', comment.content)
+    if mentions:
+        for m in mentions:
+            mentioned_user = db.query(models.User).filter(func.replace(models.User.full_name, ' ', '').ilike(f"{m}%")).first()
+            if mentioned_user and mentioned_user.id != current_user.id:
+                notif = models.Notification(
+                    user_id=mentioned_user.id,
+                    message=f"{current_user.full_name or current_user.email} mentioned you in a project comment: '{comment.content[:30]}...'",
+                    type="Mention",
+                    link=f"/projects/{project_id}"
+                )
+                db.add(notif)
+        db.commit()
+    
+    return db_comment

@@ -279,87 +279,87 @@ const filteredEvents = selectedEvents.filter((event) =>
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
   <div>
-    <h1 className="text-2xl md:text-3xl font-bold">
+    <h1 className="text-2xl md:text-3xl font-bold text-white">
       Calendar
     </h1>
 
-    <p className="text-gray-500 mt-1">
+    <p className="text-slate-400 mt-1">
       View project schedules and task deadlines
     </p>
   </div>
 
   <button
     onClick={() => setShowModal(true)}
-    className="bg-slate-900 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
+    className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto transition-all"
   >
     + Add Event
   </button>
 </div>
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-cyan-500">
   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
     <div>
-      <p className="text-gray-500 text-base font-medium">
+      <p className="text-slate-400 text-base font-medium">
         Total Events
       </p>
 
-      <p className="text-3xl font-bold mt-2">
+      <p className="text-3xl font-bold mt-2 text-white">
         {totalEvents}
       </p>
     </div>
 
-    <CalendarDays size={22} />
+    <CalendarDays size={22} className="text-cyan-400" />
   </div>
 </div>
 
-  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
+  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-yellow-400">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-base font-medium">
+      <p className="text-slate-400 text-base font-medium">
         Pending
       </p>
 
-      <p className="text-3xl font-bold mt-2">
+      <p className="text-3xl font-bold mt-2 text-white">
         {pendingTasks}
       </p>
     </div>
 
-    <Clock size={22} />
+    <Clock size={22} className="text-yellow-400" />
   </div>
 </div>
 
-  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
+  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-green-400">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-base font-medium">
+      <p className="text-slate-400 text-base font-medium">
         Completed
       </p>
 
-      <p className="text-3xl font-bold mt-2">
+      <p className="text-3xl font-bold mt-2 text-white">
         {completedTasks}
       </p>
     </div>
 
-    <CheckCircle size={22} />
+    <CheckCircle size={22} className="text-green-400" />
   </div>
 </div>
 
-  <div className="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
+  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-red-400">
   <div className="flex justify-between items-center">
     <div>
-      <p className="text-gray-500 text-base font-medium">
+      <p className="text-slate-400 text-base font-medium">
         Missed
       </p>
 
-      <p className="text-3xl font-bold mt-2">
+      <p className="text-3xl font-bold mt-2 text-white">
         {missedTasks}
       </p>
       
     </div>
     
 
-    <XCircle size={22} />
+    <XCircle size={22} className="text-red-400" />
   </div>
 </div>
 </div>
@@ -367,17 +367,17 @@ const filteredEvents = selectedEvents.filter((event) =>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Calendar */}
-        <div className="xl:col-span-2 bg-white rounded-xl shadow p-4 md:p-6 overflow-x-auto">
+        <div className="xl:col-span-2 bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-6 overflow-x-auto">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
   <button
     onClick={prevMonth}
-    className="px-4 py-2 bg-slate-100 rounded-lg"
+    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
   >
     ←
   </button>
 
   <div className="flex items-center gap-4">
-    <h2 className="text-lg md:text-2xl font-bold text-center">
+    <h2 className="text-lg md:text-2xl font-bold text-center text-white">
       {monthNames[currentMonth.getMonth()]}{" "}
       {currentMonth.getFullYear()}
     </h2>
@@ -385,13 +385,13 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   <button
     onClick={nextMonth}
-    className="px-4 py-2 bg-slate-100 rounded-lg"
+    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
   >
     →
   </button>
 </div>
 
-          <div className="grid grid-cols-7 gap-1 md:gap-2 text-center font-semibold text-xs md:text-base mb-2 min-w-[650px]">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 text-center font-semibold text-xs md:text-base mb-2 min-w-[650px] text-slate-300">
             <div>Sun</div>
             <div>Mon</div>
             <div>Tue</div>
@@ -434,23 +434,23 @@ const filteredEvents = selectedEvents.filter((event) =>
       onClick={() => setSelectedDate(day)}
       className={`min-h-[90px] md:min-h-[110px] border rounded-lg p-1 md:p-2 transition-all ${
   isPastDate
-  ? "bg-gray-100 opacity-60 cursor-pointer"
-  : "cursor-pointer hover:bg-blue-50 hover:shadow-md"
+  ? "bg-white/5 border-white/5 opacity-50 cursor-pointer text-slate-400"
+  : "bg-white/5 border-white/10 cursor-pointer hover:bg-white/10 hover:border-cyan-400/50"
 } ${
         selectedDate === day
-          ? "bg-blue-100 border-blue-500 shadow-md"
+          ? "bg-white/20 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
           : isToday
-? "border-blue-500 bg-blue-50"
+? "border-cyan-400 bg-white/10"
           : ""
       }`}
     >
-      <div className="font-semibold text-gray-700">
+      <div className="font-semibold text-slate-200">
   {day}
 </div>
 
       <div className="flex flex-col gap-1 mt-2">
         {isToday && (
-          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 w-fit">
+          <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-300 border border-green-500/30 w-fit">
             Today
           </span>
         )}
@@ -480,14 +480,14 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   return (
     <span
-      className={`text-xs px-2 py-1 rounded-full w-fit ${
+      className={`text-xs px-2 py-1 rounded-full w-fit border ${
   isPastDeadline && pendingCount > 0
-    ? "bg-red-100 text-red-800"
+    ? "bg-red-500/20 text-red-300 border-red-500/30"
     : pendingCount === 0
-    ? "bg-green-100 text-green-700"
+    ? "bg-green-500/20 text-green-300 border-green-500/30"
     : pendingCount > 0
-    ? "bg-yellow-100 text-yellow-800"
-    : "bg-blue-100 text-blue-700"
+    ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+    : "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
 }`}
     >
       {isPastDeadline && pendingCount > 0
@@ -506,9 +506,9 @@ const filteredEvents = selectedEvents.filter((event) =>
         </div>
 
         {/* Events Panel */}
-        <div className="bg-white rounded-xl shadow p-4 md:p-6">
+        <div className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-6 text-white">
           <div className="flex justify-between items-center mb-4">
-  <h2 className="text-xl font-bold">
+  <h2 className="text-xl font-bold text-white">
     {selectedDate
       ? `${monthNames[currentMonth.getMonth()]} ${selectedDate}, ${currentMonth.getFullYear()}`
       : "Select a Date"}
@@ -516,7 +516,7 @@ const filteredEvents = selectedEvents.filter((event) =>
 
   <button
     onClick={goToToday}
-    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200"
+    className="px-3 py-1 bg-white/10 text-cyan-400 rounded-lg text-sm font-medium hover:bg-white/20 border border-white/10 transition"
   >
     Today
   </button>
@@ -524,7 +524,7 @@ const filteredEvents = selectedEvents.filter((event) =>
 
           {selectedDate ? (
             <>
-              <h3 className="font-semibold mb-3">
+              <h3 className="font-semibold mb-3 text-slate-200">
                 Events
               </h3>
               <input
@@ -532,7 +532,7 @@ const filteredEvents = selectedEvents.filter((event) =>
   placeholder="Search events..."
   value={searchTerm}
   onChange={(e) => setSearchTerm(e.target.value)}
-  className="w-full border rounded-lg px-3 py-2 mb-3"
+  className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 px-3 py-2 mb-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
 />
 
               {filteredEvents.length > 0 ? (
@@ -552,25 +552,25 @@ const isMissed =
   return (
     <div
       key={event.id}
-      className="bg-slate-100 p-3 rounded-lg"
+      className="bg-white/5 border border-white/10 p-3 rounded-xl"
     >
                       <div className="flex justify-between items-center">
-  <p className="font-semibold">
+  <p className="font-semibold text-white">
     {event.title}
   </p>
 
   <div className="flex flex-wrap items-center gap-3">
   <span
-    className={`px-2 py-1 text-xs font-semibold rounded-full ${
+    className={`px-2 py-1 text-xs font-bold rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)] border ${
       event.category === "Deadline"
-        ? "bg-red-100 text-red-700"
+        ? "bg-red-500/20 text-red-300 border-red-500/30"
         : event.category === "Meeting"
-        ? "bg-blue-100 text-blue-700"
+        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
         : event.category === "Sprint"
-        ? "bg-purple-100 text-purple-700"
+        ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
         : event.category === "Release"
-        ? "bg-green-100 text-green-700"
-        : "bg-orange-100 text-orange-700"
+        ? "bg-green-500/20 text-green-300 border-green-500/30"
+        : "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
     }`}
   >
     {event.category}
@@ -581,7 +581,7 @@ const isMissed =
     className={`relative w-10 h-5 rounded-full transition-all ${
       event.status === "Completed"
         ? "bg-green-500"
-        : "bg-gray-300"
+        : "bg-white/20"
     }`}
   >
     <span
@@ -596,35 +596,35 @@ const isMissed =
 
 </div>
 
-<p className="text-sm text-gray-500">
+<p className="text-sm text-slate-400">
   Date: {event.date}
 </p>
 {daysRemaining > 0 && (
-  <p className="text-sm text-orange-600 font-medium mt-1">
+  <p className="text-sm text-yellow-400 font-medium mt-1">
     ⏳ {daysRemaining} day{daysRemaining > 1 ? "s" : ""} remaining
   </p>
 )}
 
 {daysRemaining === 0 && (
-  <p className="text-sm text-red-600 font-medium mt-1">
+  <p className="text-sm text-red-400 font-medium mt-1">
     🔥 Deadline Today
   </p>
 )}
 
 {isMissed && (
-  <p className="text-sm text-orange-600 font-medium mt-1">
+  <p className="text-sm text-yellow-400 font-medium mt-1">
     ⚠️ Missed Deadline • {Math.abs(daysRemaining)} day{Math.abs(daysRemaining) > 1 ? "s" : ""} overdue
   </p>
 )}
 <span
-  className={`inline-block px-2 py-1 text-xs rounded-full mt-2 ${
+  className={`inline-block px-2 py-1 text-xs rounded-full mt-2 font-bold border ${
     isMissed
-      ? "bg-orange-100 text-orange-700"
+      ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
       : event.status === "Completed"
-      ? "bg-green-100 text-green-700"
+      ? "bg-green-500/20 text-green-300 border-green-500/30"
       : event.status === "Cancelled"
-      ? "bg-red-100 text-red-700"
-      : "bg-blue-100 text-blue-700"
+      ? "bg-red-500/20 text-red-300 border-red-500/30"
+      : "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
   }`}
 >
   {isMissed ? "Missed" : event.status}
@@ -632,14 +632,14 @@ const isMissed =
 <div className="flex flex-wrap gap-4 mt-2">
   <button
     onClick={() => handleEditEvent(event)}
-    className="text-blue-600 text-sm font-medium"
+    className="text-cyan-400 hover:text-cyan-300 text-sm font-medium transition"
   >
     Edit
   </button>
 
   <button
     onClick={() => handleDeleteEvent(event.id)}
-    className="text-red-600 text-sm font-medium"
+    className="text-red-400 hover:text-red-300 text-sm font-medium transition"
   >
     Delete
   </button>
@@ -649,13 +649,13 @@ const isMissed =
                                     })}
                 </div>
               ) : (
-                <p className="text-gray-500">
+                <p className="text-slate-400">
                   No events for this date.
                 </p>
               )}
             </>
           ) : (
-            <p className="text-gray-500">
+            <p className="text-slate-400">
               Click a date to view events.
             </p>
           )}
@@ -664,15 +664,15 @@ const isMissed =
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-4 md:p-6 rounded-xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-4 md:p-6 rounded-2xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+            <h2 className="text-2xl font-bold mb-4 text-white">
   {editingEventId ? "Update Event" : "Add Event"}
 </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block mb-2 font-medium">
+                <label className="block mb-2 font-medium text-slate-300">
                   Event Title
                 </label>
 
@@ -681,12 +681,12 @@ const isMissed =
                   placeholder="Enter Event Title"
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
-                  className="w-full border p-3 rounded-lg"
+                  className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="block mb-2 font-medium">
+                <label className="block mb-2 font-medium text-slate-300">
                   Event Date
                 </label>
 
@@ -695,43 +695,43 @@ const isMissed =
   value={eventDate}
   min={new Date().toISOString().split("T")[0]}
   onChange={(e) => setEventDate(e.target.value)}
-  className="w-full border p-3 rounded-lg"
+  className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
 />
               </div>
               <div>
-  <label className="block mb-2 font-medium">
+  <label className="block mb-2 font-medium text-slate-300">
     Status
   </label>
 
   <select
   value={eventStatus}
   onChange={(e) => setEventStatus(e.target.value)}
-  className="w-full border p-3 rounded-lg"
+  className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
 >
-  <option>Upcoming</option>
-  <option>Completed</option>
-  <option>Cancelled</option>
+  <option className="bg-slate-900">Upcoming</option>
+  <option className="bg-slate-900">Completed</option>
+  <option className="bg-slate-900">Cancelled</option>
 </select>
 </div>
 <div>
-  <label className="block mb-2 font-medium">
+  <label className="block mb-2 font-medium text-slate-300">
     Category
   </label>
 
   <select
     value={eventCategory}
     onChange={(e) => setEventCategory(e.target.value)}
-    className="w-full border p-3 rounded-lg"
+    className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
   >
-    <option>Meeting</option>
-    <option>Deadline</option>
-    <option>Sprint</option>
-    <option>Release</option>
-    <option>Review</option>
+    <option className="bg-slate-900">Meeting</option>
+    <option className="bg-slate-900">Deadline</option>
+    <option className="bg-slate-900">Sprint</option>
+    <option className="bg-slate-900">Release</option>
+    <option className="bg-slate-900">Review</option>
   </select>
 </div>
 
-              <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
                 <button
                   onClick={() => {
   setShowModal(false);
@@ -741,14 +741,14 @@ const isMissed =
   setEventStatus("Upcoming");
   setEventCategory("Meeting");
 }}
-                  className="px-4 py-2 border rounded-lg"
+                  className="px-4 py-2 border border-white/20 text-slate-300 rounded-lg hover:bg-white/5 transition w-full sm:w-auto"
                 >
                   Cancel
                 </button>
 
                 <button
                   onClick={handleAddEvent}
-                  className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto transition-all"
                 >
                   {editingEventId ? "Update Event" : "Add Event"}
                 </button>

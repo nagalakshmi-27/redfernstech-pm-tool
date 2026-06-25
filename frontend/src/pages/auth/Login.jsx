@@ -76,19 +76,19 @@ localStorage.setItem("userRole", data.user.role);
 };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-      <div className="bg-white p-10 rounded-xl shadow-lg w-[450px]">
-        <h1 className="text-4xl font-bold text-center mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200">
+      <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] w-[450px]">
+        <h1 className="text-4xl font-bold text-center mb-2 text-white">
           Welcome Back
         </h1>
 
-        <p className="text-center text-gray-500 mb-8">
+        <p className="text-center text-slate-400 mb-8">
           Sign in to your account to continue
         </p>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="block mb-2 font-medium text-slate-300">
               Email Address
             </label>
 
@@ -97,12 +97,12 @@ localStorage.setItem("userRole", data.user.role);
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border p-3 rounded-lg"
+              className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />
           </div>
 
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="block mb-2 font-medium text-slate-300">
               Password
             </label>
 
@@ -112,13 +112,13 @@ localStorage.setItem("userRole", data.user.role);
     placeholder="Enter your password"
     value={password}
     onChange={(e) => setPassword(e.target.value)}
-    className="w-full border p-3 rounded-lg pr-12"
+    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
   />
 
   <button
     type="button"
     onClick={() => setShowPassword(!showPassword)}
-    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
   >
     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
   </button>
@@ -152,7 +152,7 @@ localStorage.setItem("userRole", data.user.role);
           <div className="text-right">
             <Link
               to="/forgot-password"
-              className="text-blue-600"
+              className="text-cyan-400 hover:text-cyan-300 transition"
             >
               Forgot Password?
             </Link>
@@ -160,17 +160,17 @@ localStorage.setItem("userRole", data.user.role);
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg font-semibold shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
           >
             Sign In
           </button>
         </form>
 
-        <p className="text-center mt-6">
+        <p className="text-center mt-6 text-slate-400">
           Don't have an account?{" "}
           <Link
             to="/signup"
-            className="text-blue-600 font-semibold"
+            className="text-cyan-400 font-semibold hover:text-cyan-300 transition"
           >
             Sign Up
           </Link>

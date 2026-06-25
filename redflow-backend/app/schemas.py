@@ -7,6 +7,9 @@ class UserBase(BaseModel):
     email: EmailStr
     role: str
     full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    company_role: Optional[str] = None
     department: Optional[str] = None
 
 class UserCreate(UserBase):
@@ -14,7 +17,10 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     role: Optional[str] = None
+    company_role: Optional[str] = None
     department: Optional[str] = None
 
 class UserResponse(UserBase):
@@ -99,7 +105,8 @@ class TeammateResponse(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     role: str
-    department: str
+    company_role: Optional[str] = None
+    department: Optional[str] = None
     shared_projects: list[str] = []
 
 # --- EVENTS ---
@@ -133,5 +140,63 @@ class NotificationResponse(BaseModel):
     is_read: bool
     created_at: datetime
     user_id: int
+    class Config:
+        from_attributes = True
+
+# --- COLLABORATION ---
+class CommentBase(BaseModel):
+    content: str
+
+class CommentCreate(CommentBase):
+    pass
+
+class CommentResponse(CommentBase):
+    id: int
+    task_id: Optional[int] = None
+    project_id: Optional[int] = None
+    user_id: int
+    created_at: datetime
+    user: "UserResponse"  # Allows us to show the avatar/name of the commenter
+    task: Optional[TaskResponse] = None
+
+    class Config:
+        from_attributes = True
+
+class MessageBase(BaseModel):
+    content: str
+
+class MessageResponse(MessageBase):
+    id: int
+    project_id: int
+    user_id: int
+    created_at: datetime
+    user: "UserResponse"
+
+    class Config:
+        from_attributes = True
+
+class WikiBase(BaseModel):
+    title: str
+    content: Optional[str] = None
+    doc_type: Optional[str] = "text"
+    file_url: Optional[str] = None
+
+class WikiCreate(WikiBase):
+    pass
+
+class WikiUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    doc_type: Optional[str] = None
+    file_url: Optional[str] = None
+
+class WikiResponse(WikiBase):
+    id: int
+    project_id: int
+    author_id: int
+    created_at: datetime
+    updated_at: datetime
+    author: "UserResponse"
+
     class Config:
         from_attributes = True

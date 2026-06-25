@@ -15,10 +15,13 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
-    full_name = Column(String, nullable=True)
+    full_name = Column(String, nullable=True) # Keeping for backwards compatibility
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
     hashed_password = Column(String)
-    role = Column(String) 
-    department = Column(String, nullable=True) # <--- ADDED THIS!
+    role = Column(String) # Admin, Member, Client
+    company_role = Column(String, nullable=True) # Developer, Designer, etc
+    department = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -39,7 +42,8 @@ class Project(Base):
     creator = relationship("User", back_populates="projects")
     tasks = relationship("Task", back_populates="project")
     members = relationship("User", secondary=project_members, back_populates="assigned_projects")
-
+    messages = relationship("Message", back_populates="project", cascade="all, delete-orphan")
+    wiki_pages = relationship("WikiPage", back_populates="project", cascade="all, delete-orphan")
     @property
     def progress(self):
         if not self.tasks:
@@ -75,10 +79,14 @@ class Task(Base):
     project = relationship("Project", back_populates="tasks")
     assignee = relationship("User")
 
+    comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")
+
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
     message = Column(String)
+    type = Column(String, nullable=True)
+    link = Column(String, nullable=True)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -106,3 +114,43 @@ class Event(Base):
     
     created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
     creator = relationship("User")
+
+class Comment(Base):
+    __tablename__ = "comments"
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    task_id = Column(Integer, ForeignKey("tasks.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    
+    task = relationship("Task", back_populates="comments")
+    user = relationship("User")
+
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+class Message(Base):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    project_id = Column(Integer, ForeignKey("projects.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    
+    project = relationship("Project", back_populates="messages")
+    user = relationship("User")
+class WikiPage(Base):
+    __tablename__ = "wiki_pages"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    content = Column(String, nullable=True) # Will store HTML from rich text editor
+    doc_type = Column(String, default="text") # "text", "file", "link"
+    file_url = Column(String, nullable=True) # URL or path to file
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    project_id = Column(Integer, ForeignKey("projects.id"), index=True)
+    author_id = Column(Integer, ForeignKey("users.id"))
+    
+    project = relationship("Project", back_populates="wiki_pages")
+    author = relationship("User")
