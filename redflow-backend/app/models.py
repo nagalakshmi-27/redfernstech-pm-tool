@@ -80,6 +80,20 @@ class Task(Base):
     assignee = relationship("User")
 
     comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")
+    attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
+
+class TaskAttachment(Base):
+    __tablename__ = "task_attachments"
+    id = Column(Integer, primary_key=True, index=True)
+    file_name = Column(String)
+    file_url = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    task_id = Column(Integer, ForeignKey("tasks.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    
+    task = relationship("Task", back_populates="attachments")
+    user = relationship("User")
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -132,6 +146,8 @@ class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String)
+    file_url = Column(String, nullable=True)
+    file_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     project_id = Column(Integer, ForeignKey("projects.id"), index=True)

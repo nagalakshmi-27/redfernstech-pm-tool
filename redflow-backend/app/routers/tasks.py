@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+import os
+import shutil
 from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, schemas, database, models
@@ -36,3 +38,53 @@ def delete_task(task_id: int, db: Session = Depends(get_db), current_user: model
     if not success:
         raise HTTPException(status_code=403, detail="Not authorized! Only the project creator can delete this task.")
     return {"message": "Task deleted successfully"}
+
+@router.post("/{task_id}/attachments", response_model=schemas.TaskAttachmentResponse)
+def upload_task_attachment(task_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    os.makedirs("uploads/tasks", exist_ok=True)
+    file_path = f"uploads/tasks/{file.filename}"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # Create TaskAttachment
+    attachment = models.TaskAttachment(
+        file_name=file.filename,
+        file_url=f"/uploads/tasks/{file.filename}",
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    db.add(attachment)
+    
+    # Also add to Wiki as requested
+    wiki_page = models.WikiPage(
+        title=f"{file.filename} (Task: {task.name})",
+        doc_type="file",
+        file_url=f"/uploads/tasks/{file.filename}",
+        project_id=task.project_id,
+        author_id=current_user.id
+    )
+    db.add(wiki_page)
+    
+    db.commit()
+    db.refresh(attachment)
+    return attachment
+
+@router.get("/{task_id}/attachments", response_model=List[schemas.TaskAttachmentResponse])
+def get_task_attachments(task_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    attachments = db.query(models.TaskAttachment).filter(models.TaskAttachment.task_id == task_id).all()
+    return attachments
+
+@router.delete("/{task_id}/attachments/{attachment_id}")
+def delete_task_attachment(task_id: int, attachment_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    attachment = db.query(models.TaskAttachment).filter(models.TaskAttachment.id == attachment_id, models.TaskAttachment.task_id == task_id).first()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    
+    db.delete(attachment)
+    db.commit()
+    return {"message": "Attachment deleted successfully"}

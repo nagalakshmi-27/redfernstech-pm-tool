@@ -141,6 +141,55 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+@router.post("/projects/{project_id}/messages/upload", response_model=schemas.MessageResponse)
+async def upload_chat_file(
+    project_id: int, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    os.makedirs("uploads/chat", exist_ok=True)
+    file_path = f"uploads/chat/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    db_message = models.Message(
+        content="[Shared a file]", 
+        file_url=f"/uploads/chat/{file.filename}",
+        file_name=file.filename,
+        project_id=project_id, 
+        user_id=current_user.id
+    )
+    db.add(db_message)
+    
+    # Add to wiki as well
+    wiki_page = models.WikiPage(
+        title=f"{file.filename} (Shared in Chat)",
+        doc_type="file",
+        file_url=f"/uploads/chat/{file.filename}",
+        project_id=project_id,
+        author_id=current_user.id
+    )
+    db.add(wiki_page)
+    
+    db.commit()
+    db.refresh(db_message)
+    
+    # Broadcast
+    import json
+    broadcast_msg = json.dumps({
+        "id": db_message.id,
+        "content": db_message.content,
+        "file_url": db_message.file_url,
+        "file_name": db_message.file_name,
+        "user_id": current_user.id,
+        "user": {"id": current_user.id, "full_name": current_user.full_name},
+        "created_at": db_message.created_at.isoformat()
+    })
+    await manager.broadcast_to_project(broadcast_msg, project_id)
+    
+    return db_message
+
 @router.websocket("/ws/projects/{project_id}/chat")
 async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Session = Depends(get_db)):
     await manager.connect(websocket, project_id)

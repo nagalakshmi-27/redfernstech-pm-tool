@@ -8,6 +8,7 @@ import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
 import ProjectComments from "./ProjectComments";
 import TaskComments from "../../components/TaskComments";
+import TaskAttachments from "../../components/TaskAttachments";
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
@@ -412,6 +413,9 @@ export default function ProjectWorkspace() {
                   Save Changes
                 </button>
               </div>
+
+              {/* Attachments Section */}
+              <TaskAttachments taskId={editingTaskId} />
 
               {/* Comments Section */}
               <TaskComments taskId={editingTaskId} />

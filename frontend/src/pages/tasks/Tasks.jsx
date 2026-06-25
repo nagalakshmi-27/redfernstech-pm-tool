@@ -4,7 +4,8 @@ import { Navigate } from "react-router-dom";
 import { Bug, CheckSquare, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-
+import TaskComments from "../../components/TaskComments";
+import TaskAttachments from "../../components/TaskAttachments";
 export default function Tasks() {
   const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
@@ -375,6 +376,12 @@ export default function Tasks() {
                   Save Changes
                 </button>
               </div>
+
+              {/* Attachments Section */}
+              <TaskAttachments taskId={editingTaskId} />
+
+              {/* Comments Section */}
+              <TaskComments taskId={editingTaskId} />
             </div>
           </div>
         </div>

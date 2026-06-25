@@ -87,12 +87,25 @@ class TaskUpdate(BaseModel):
     assignee_id: Optional[int] = None
     position: Optional[float] = None
 
+class TaskAttachmentResponse(BaseModel):
+    id: int
+    file_name: str
+    file_url: str
+    created_at: datetime
+    task_id: int
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
 class TaskResponse(TaskBase):
     id: int
     created_at: datetime
+    ticket_id: Optional[str] = None
+    attachments: List[TaskAttachmentResponse] = []
+    
     class Config:
         from_attributes = True
-    ticket_id: Optional[str] = None
     
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
@@ -164,6 +177,8 @@ class CommentResponse(CommentBase):
 
 class MessageBase(BaseModel):
     content: str
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
 
 class MessageResponse(MessageBase):
     id: int

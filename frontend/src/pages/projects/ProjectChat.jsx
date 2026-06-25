@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useContext } from "react";
-import { Send, User } from "lucide-react";
+import { Send, User, Paperclip, File as FileIcon, Download } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function ProjectChat({ projectId, projectName, currentUserRole }) {
@@ -13,6 +13,42 @@ export default function ProjectChat({ projectId, projectName, currentUserRole })
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionIndex, setMentionIndex] = useState(-1);
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileSelect = async (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      await handleUpload(file);
+    }
+  };
+
+  const handleUpload = async (file) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/messages/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        alert("Error uploading file");
+      }
+    } catch {
+      alert("Error uploading file");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleInputChange = (e) => {
     const val = e.target.value;
@@ -115,6 +151,25 @@ export default function ProjectChat({ projectId, projectName, currentUserRole })
                     {msg.content.split(/(@\w+)/g).map((part, i) => 
                       part.startsWith("@") ? <span key={i} className={`font-bold px-1.5 py-0.5 rounded-md text-xs mx-0.5 shadow-[0_0_10px_rgba(6,182,212,0.2)] border ${isMe ? "bg-cyan-500 text-white border-cyan-400" : "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"}`}>{part}</span> : part
                     )}
+                    {msg.file_url && (
+                      <div className="mt-2 rounded-xl overflow-hidden border border-white/20 bg-black/30 w-full max-w-[200px] sm:max-w-sm">
+                        {msg.file_name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                          <img src={`${import.meta.env.VITE_API_URL}${msg.file_url}`} alt={msg.file_name} className="w-full h-auto object-cover max-h-48" />
+                        ) : msg.file_name.match(/\.(mp4|webm)$/i) ? (
+                          <video src={`${import.meta.env.VITE_API_URL}${msg.file_url}`} controls className="w-full max-h-48" />
+                        ) : (
+                          <div className="flex items-center gap-3 p-3">
+                            <FileIcon size={24} className={isMe ? "text-cyan-200" : "text-cyan-400"} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate" title={msg.file_name}>{msg.file_name}</p>
+                            </div>
+                            <a href={`${import.meta.env.VITE_API_URL}${msg.file_url}`} download target="_blank" rel="noreferrer" className="p-2 hover:bg-white/10 rounded-full transition">
+                              <Download size={16} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -141,7 +196,17 @@ export default function ProjectChat({ projectId, projectName, currentUserRole })
             ))}
           </div>
         )}
-        <form onSubmit={sendMessage} className="flex gap-2">
+        <form onSubmit={sendMessage} className="flex gap-2 items-center">
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+          <button 
+            type="button" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-10 h-10 flex-shrink-0 rounded-full bg-white/5 hover:bg-white/10 text-cyan-400 border border-white/10 flex items-center justify-center transition disabled:opacity-50"
+            title="Upload File"
+          >
+            <Paperclip size={16} />
+          </button>
           <input
             type="text"
             value={newMessage}

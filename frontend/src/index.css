@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+/* Base styles for Wiki and Chat rich text rendering */
+.prose ul, .custom-quill-editor ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose ol, .custom-quill-editor ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose li, .custom-quill-editor li {
+  margin-bottom: 0.25rem;
+}
+
+.prose h1, .custom-quill-editor h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose h2, .custom-quill-editor h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose h3, .custom-quill-editor h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose a, .custom-quill-editor a {
+  color: #22d3ee;
+  text-decoration: underline;
+}
+
+.prose blockquote, .custom-quill-editor blockquote {
+  border-left: 4px solid #475569;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #94a3b8;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
