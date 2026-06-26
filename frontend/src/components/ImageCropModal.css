@@ -1,0 +1,15 @@
+.profile-cropper .cropper-view-box,
+.profile-cropper .cropper-face {
+  border-radius: 50%;
+}
+
+.profile-cropper .cropper-view-box {
+  outline: 2px solid #06b6d4;
+}
+
+.profile-cropper .cropper-dashed,
+.profile-cropper .cropper-center,
+.profile-cropper .cropper-line,
+.profile-cropper .cropper-point {
+  display: none !important;
+}

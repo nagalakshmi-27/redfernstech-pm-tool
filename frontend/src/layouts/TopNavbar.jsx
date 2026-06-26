@@ -1,13 +1,49 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { Bell, Settings, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import ImageCropModal from "../components/ImageCropModal";
+import {
+  Bell,
+  Settings,
+  LogOut,
+  Upload,
+  Camera,
+  Trash2,
+} from "lucide-react";
 export default function TopNavbar({
   sidebarOpen,
   setSidebarOpen,
 }) {
   const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail") || "";
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+
+const [showCropModal, setShowCropModal] = useState(false);
+
+const [selectedImage, setSelectedImage] = useState(null);
+
+const [profileImage, setProfileImage] = useState(
+  localStorage.getItem("profileImage") || null
+);
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      profileMenuRef.current &&
+      !profileMenuRef.current.contains(event.target)
+    ) {
+      setShowPhotoMenu(false);
+      setShowPhotoOptions(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
   const handleLogout = () => {
   localStorage.removeItem("isLoggedIn");
   localStorage.removeItem("token");
@@ -15,11 +51,78 @@ export default function TopNavbar({
   localStorage.removeItem("userId");
   window.location.href = "/";
 };
+const handleImageSelect = (event) => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  const imageUrl = URL.createObjectURL(file);
+
+  setSelectedImage(imageUrl);
+
+  setShowCropModal(true);
+
+  setShowPhotoOptions(false);
+};
+
+const startCamera = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+    });
+
+    streamRef.current = stream;
+
+    setShowCamera(true);
+
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    }, 100);
+  } catch {
+    alert("Unable to access camera.");
+  }
+};
+
+const stopCamera = () => {
+  if (streamRef.current) {
+    streamRef.current.getTracks().forEach((track) => track.stop());
+  }
+
+  setShowCamera(false);
+};
+const capturePhoto = () => {
+  const canvas = canvasRef.current;
+  const video = videoRef.current;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+
+  const image = canvas.toDataURL("image/png");
+
+  setSelectedImage(image);
+
+stopCamera();
+
+setShowCropModal(true);
+
+setShowPhotoOptions(false);
+};
   const userInitial = userEmail
     ? userEmail.charAt(0).toUpperCase()
     : "U";
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+const canvasRef = useRef(null);
+const streamRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
   return (
+    <>
     <div className="h-16 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-6 relative z-50">
       <div className="flex items-center gap-3">
   <button
@@ -50,42 +153,178 @@ export default function TopNavbar({
   <Bell size={22} />
 </button>
 
-        <div className="relative">
+        <div className="relative" ref={profileMenuRef}>
   <button
-    onClick={() => setShowProfileMenu(!showProfileMenu)}
-    className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold"
-  >
-    {userInitial}
-  </button>
+  onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+  className="w-10 h-10 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center"
+>
+  {profileImage ? (
+    <img
+      src={profileImage}
+      alt="Profile"
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-white font-bold">
+      {userInitial}
+    </span>
+  )}
+</button>
+<input
+  type="file"
+  accept="image/*"
+  ref={fileInputRef}
+  onChange={handleImageSelect}
+  className="hidden"
+/>
 
-  {showProfileMenu && (
-    <div className="absolute right-0 mt-3 w-64 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-xl border border-white/10 overflow-hidden z-50">
-      <div className="px-4 py-4 bg-white/5 border-b border-white/10">
-  <p className="text-sm text-slate-400">Signed in as</p>
-  <p className="font-semibold text-slate-100 break-all">
-    {userEmail}
-  </p>
-</div>
+  {showPhotoMenu && (
+  <div className="absolute right-0 mt-3 w-64 bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-visible z-[9999]">
+
+    <div className="px-5 py-5 flex flex-col items-center border-b border-white/10">
+
+      <div
+  onClick={() => setShowPhotoOptions(!showPhotoOptions)}
+  className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-cyan-500 mb-3 cursor-pointer"
+>
+
+        {profileImage ? (
+          <img
+            src={profileImage}
+            alt="Profile"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-800 text-2xl font-bold text-white">
+            {userInitial}
+          </div>
+        )}
+
+      </div>
+
+      <p className="text-sm text-slate-300 break-all text-center">
+        {userEmail}
+      </p>
+
+    </div>
+    {showPhotoOptions && (
+  <div className="absolute top-28 left-1/2 -translate-x-1/2 w-56 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+
+    <button
+      onClick={() => fileInputRef.current.click()}
+      className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-white/10"
+    >
+      <Upload size={18} className="text-cyan-400" />
+      Upload from Device
+    </button>
+
+    <button
+      onClick={startCamera}
+      className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-white/10"
+    >
+      <Camera size={18} className="text-cyan-400" />
+      Take Photo
+    </button>
+
+    {profileImage && (
+      <button
+        onClick={() => {
+          setProfileImage(null);
+          localStorage.removeItem("profileImage");
+          setShowPhotoOptions(false);
+        }}
+        className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10"
+      >
+        <Trash2 size={18} />
+        Remove Photo
+      </button>
+    )}
+
+  </div>
+)}
+
+    <div className="border-t border-white/10">
 
       <button
   onClick={() => navigate("/settings")}
-  className="w-full flex items-center gap-2 px-4 py-3 text-slate-200 hover:bg-white/10 transition"
+  className="w-full flex items-center gap-3 px-5 py-3 text-slate-200 hover:bg-white/10 transition"
 >
-  <Settings size={16} />
+  <Settings size={18} />
   Settings
 </button>
 
-<button
+      <button
   onClick={handleLogout}
-  className="w-full flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-red-500/10 transition"
+  className="w-full flex items-center gap-3 px-5 py-3 text-red-400 hover:bg-red-500/10 transition"
 >
-  <LogOut size={16} />
+  <LogOut size={18} />
   Logout
 </button>
+
     </div>
-  )}
+
+  </div>
+)}
 </div>
       </div>
     </div>
-  );
+
+        {showCamera && (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[999]">
+        <div className="bg-slate-900 rounded-2xl p-6 border border-white/10 w-[420px]">
+
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full rounded-xl"
+          />
+
+          <canvas
+            ref={canvasRef}
+            className="hidden"
+          />
+
+          <div className="flex justify-between mt-5">
+
+            <button
+              onClick={stopCamera}
+              className="px-5 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={capturePhoto}
+              className="px-5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white"
+            >
+              Capture
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+    )}
+
+    {showCropModal && (
+  <ImageCropModal
+  image={selectedImage}
+  onCancel={() => {
+    setShowCropModal(false);
+    setSelectedImage(null);
+  }}
+  onSave={(croppedImage) => {
+    setProfileImage(croppedImage);
+    localStorage.setItem("profileImage", croppedImage);
+
+    setShowCropModal(false);
+    setShowPhotoMenu(false);
+    setShowPhotoOptions(false);
+    setSelectedImage(null);
+  }}
+/>
+)}
+  </>
+);
 }
