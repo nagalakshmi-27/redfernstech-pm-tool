@@ -161,6 +161,7 @@ class WikiPage(Base):
     title = Column(String)
     content = Column(String, nullable=True) # Will store HTML from rich text editor
     doc_type = Column(String, default="text") # "text", "file", "link"
+    category = Column(String, nullable=True) # E.g., "Design", "Technical", "Notes"
     file_url = Column(String, nullable=True) # URL or path to file
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -169,4 +170,17 @@ class WikiPage(Base):
     author_id = Column(Integer, ForeignKey("users.id"))
     
     project = relationship("Project", back_populates="wiki_pages")
+    author = relationship("User")
+    histories = relationship("WikiPageHistory", back_populates="wiki", cascade="all, delete-orphan")
+
+class WikiPageHistory(Base):
+    __tablename__ = "wiki_page_histories"
+    id = Column(Integer, primary_key=True, index=True)
+    wiki_id = Column(Integer, ForeignKey("wiki_pages.id"), index=True)
+    title = Column(String)
+    content = Column(String, nullable=True)
+    author_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    wiki = relationship("WikiPage", back_populates="histories")
     author = relationship("User")

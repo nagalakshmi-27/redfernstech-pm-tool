@@ -1,19 +1,43 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
+import { createPortal } from "react-dom";
 import AppContext from "../context/AppContext";
 
-export default function CreateIssueModal({ defaultProjectId = "" }) {
+export default function CreateIssueModal({ 
+  defaultProjectId = "", 
+  defaultTaskDescription = "", 
+  defaultTaskName = "",
+  defaultAssigneeId = "",
+  defaultDueDate = "",
+  isOpen = undefined, 
+  onClose = undefined, 
+  hideTrigger = false 
+}) {
   const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
   const currentUserRole = localStorage.getItem("userRole");
   
-  const [showModal, setShowModal] = useState(false);
-  const [taskName, setTaskName] = useState("");
-  const [taskDescription, setTaskDescription] = useState("");
+  const [internalShowModal, setInternalShowModal] = useState(false);
+  const showModal = isOpen !== undefined ? isOpen : internalShowModal;
+
+  const [taskName, setTaskName] = useState(defaultTaskName);
+  const [taskDescription, setTaskDescription] = useState(defaultTaskDescription);
   const [priority, setPriority] = useState("Medium");
   const [issueType, setIssueType] = useState("Task");
   const [severity, setSeverity] = useState("Medium");
-  const [assigneeId, setAssigneeId] = useState("");
+  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
   const [selectedProject, setSelectedProject] = useState(defaultProjectId);
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(defaultDueDate);
+
+  useEffect(() => {
+    if (defaultTaskDescription) setTaskDescription(defaultTaskDescription);
+    if (defaultTaskName) setTaskName(defaultTaskName);
+    if (defaultAssigneeId) setAssigneeId(defaultAssigneeId);
+    if (defaultDueDate) setDueDate(defaultDueDate);
+  }, [defaultTaskDescription, defaultTaskName, defaultAssigneeId, defaultDueDate]);
+
+  const handleClose = () => {
+    if (onClose) onClose();
+    else setInternalShowModal(false);
+  };
 
   if (currentUserRole === "Client") return null;
 
@@ -57,7 +81,8 @@ export default function CreateIssueModal({ defaultProjectId = "" }) {
         setAssigneeId("");
         setSelectedProject("");
         setDueDate("");
-        setShowModal(false);
+        setDueDate("");
+        handleClose();
       } else {
         alert("Failed to create ticket.");
       }
@@ -68,15 +93,17 @@ export default function CreateIssueModal({ defaultProjectId = "" }) {
 
   return (
     <>
-      <button 
-        onClick={() => setShowModal(true)}
-        className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 transition shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto"
-      >
-        <span className="text-xl leading-none">+</span> Create Issue
-      </button>
+      {!hideTrigger && (
+        <button 
+          onClick={() => setInternalShowModal(true)}
+          className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 transition shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto"
+        >
+          <span className="text-xl leading-none">+</span> Create Issue
+        </button>
+      )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 text-left" onClick={() => setShowModal(false)}>
+      {showModal && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 text-left" onClick={handleClose}>
           <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 md:p-8 rounded-2xl w-[95%] max-w-[600px] max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.5)] text-slate-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
               <span className="text-cyan-400">+</span> Create New Issue
@@ -157,14 +184,15 @@ export default function CreateIssueModal({ defaultProjectId = "" }) {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-white/10 mt-8">
-                <button onClick={() => setShowModal(false)} className="px-5 py-2.5 font-bold text-slate-300 border border-white/20 hover:bg-white/5 rounded-lg transition">Cancel</button>
+                <button onClick={handleClose} className="px-5 py-2.5 font-bold text-slate-300 border border-white/20 hover:bg-white/5 rounded-lg transition">Cancel</button>
                 <button onClick={handleCreateTask} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-2.5 rounded-lg font-bold shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all">
                   Create Issue
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

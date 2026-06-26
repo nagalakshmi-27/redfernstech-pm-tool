@@ -56,7 +56,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, role: role, company_role: companyRole, department: department })
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, company_role: companyRole, department: department })
       });
 
       if (response.ok) {

@@ -19,7 +19,6 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    role: Optional[str] = None
     company_role: Optional[str] = None
     department: Optional[str] = None
 
@@ -194,6 +193,7 @@ class WikiBase(BaseModel):
     title: str
     content: Optional[str] = None
     doc_type: Optional[str] = "text"
+    category: Optional[str] = None
     file_url: Optional[str] = None
 
 class WikiCreate(WikiBase):
@@ -203,6 +203,7 @@ class WikiUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     doc_type: Optional[str] = None
+    category: Optional[str] = None
     file_url: Optional[str] = None
 
 class WikiResponse(WikiBase):
@@ -211,6 +212,18 @@ class WikiResponse(WikiBase):
     author_id: int
     created_at: datetime
     updated_at: datetime
+    author: "UserResponse"
+
+    class Config:
+        from_attributes = True
+
+class WikiHistoryResponse(BaseModel):
+    id: int
+    wiki_id: int
+    title: str
+    content: Optional[str] = None
+    author_id: int
+    created_at: datetime
     author: "UserResponse"
 
     class Config:

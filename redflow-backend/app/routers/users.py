@@ -7,7 +7,10 @@ import os
 from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, Header
-from jose import jwt, JWTError # Add this too!
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
+
+security = HTTPBearer()
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -29,10 +32,21 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         models.Invitation.email == user.email
     ).order_by(models.Invitation.id.desc()).first()
     
-    if invitation:
+    user_count = db.query(models.User).count()
+    is_first_user = (user_count == 0)
+
+    if is_first_user:
+        # The very first person to sign up is always the Admin
+        user.role = "Admin"
+    elif invitation:
+        # If they have an invite, strict override
         user.role = invitation.role 
     else:
-        user.role = "Member"
+        # Prevent unauthorized users from choosing Admin from a public dropdown
+        if user.role == "Admin":
+            user.role = "Member"
+        elif not user.role or user.role not in ["Member", "Client"]:
+            user.role = "Member"
         
     return crud.create_user(db=db, user=user)
 
@@ -56,10 +70,8 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
         }
     }
 
-def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid token")
-    token = authorization.split(" ")[1]
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         email = payload.get("sub")

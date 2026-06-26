@@ -3,7 +3,7 @@ import shutil
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from typing import List, Dict
+from typing import List, Dict, Optional
 from .. import schemas, models
 from .users import get_current_user, get_db
 
@@ -40,14 +40,20 @@ def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = D
 
 # --- WIKI ---
 @router.get("/projects/{project_id}/wikis", response_model=List[schemas.WikiResponse])
-def get_wikis(project_id: int, db: Session = Depends(get_db)):
-    return db.query(models.WikiPage).filter(models.WikiPage.project_id == project_id).all()
+def get_wikis(project_id: int, search: Optional[str] = None, category: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(models.WikiPage).filter(models.WikiPage.project_id == project_id)
+    if search:
+        query = query.filter(models.WikiPage.title.ilike(f"%{search}%"))
+    if category:
+        query = query.filter(models.WikiPage.category == category)
+    return query.all()
 
 @router.post("/projects/{project_id}/wikis/upload", response_model=schemas.WikiResponse)
 def upload_wiki_file(
     project_id: int, 
     file: UploadFile = File(...), 
     title: str = Form(...),
+    category: Optional[str] = Form(None),
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
@@ -59,6 +65,7 @@ def upload_wiki_file(
     db_wiki = models.WikiPage(
         title=title, 
         doc_type="file",
+        category=category,
         file_url=f"/uploads/docs/{file.filename}",
         project_id=project_id, 
         author_id=current_user.id
@@ -77,10 +84,19 @@ def create_wiki(project_id: int, wiki: schemas.WikiCreate, db: Session = Depends
     return db_wiki
 
 @router.put("/projects/{project_id}/wikis/{wiki_id}", response_model=schemas.WikiResponse)
-def update_wiki(project_id: int, wiki_id: int, wiki_update: schemas.WikiUpdate, db: Session = Depends(get_db)):
+def update_wiki(project_id: int, wiki_id: int, wiki_update: schemas.WikiUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_wiki = db.query(models.WikiPage).filter(models.WikiPage.id == wiki_id, models.WikiPage.project_id == project_id).first()
     if not db_wiki:
         raise HTTPException(status_code=404, detail="Wiki not found")
+        
+    # Save Snapshot to History before updating
+    snapshot = models.WikiPageHistory(
+        wiki_id=db_wiki.id,
+        title=db_wiki.title,
+        content=db_wiki.content,
+        author_id=current_user.id
+    )
+    db.add(snapshot)
     
     if wiki_update.title is not None:
         db_wiki.title = wiki_update.title
@@ -88,6 +104,8 @@ def update_wiki(project_id: int, wiki_id: int, wiki_update: schemas.WikiUpdate, 
         db_wiki.content = wiki_update.content
     if wiki_update.doc_type is not None:
         db_wiki.doc_type = wiki_update.doc_type
+    if wiki_update.category is not None:
+        db_wiki.category = wiki_update.category
     if wiki_update.file_url is not None:
         db_wiki.file_url = wiki_update.file_url
         
@@ -112,6 +130,53 @@ def delete_wiki(project_id: int, wiki_id: int, db: Session = Depends(get_db)):
     db.delete(db_wiki)
     db.commit()
     return {"message": "Wiki deleted successfully"}
+
+# --- WIKI HISTORY ---
+@router.get("/projects/{project_id}/wikis/{wiki_id}/history", response_model=List[schemas.WikiHistoryResponse])
+def get_wiki_history(project_id: int, wiki_id: int, db: Session = Depends(get_db)):
+    history = db.query(models.WikiPageHistory).join(models.WikiPage).filter(
+        models.WikiPageHistory.wiki_id == wiki_id,
+        models.WikiPage.project_id == project_id
+    ).order_by(models.WikiPageHistory.created_at.desc()).all()
+    return history
+
+@router.get("/projects/{project_id}/wikis/{wiki_id}/history/{version_id}", response_model=schemas.WikiHistoryResponse)
+def get_wiki_history_detail(project_id: int, wiki_id: int, version_id: int, db: Session = Depends(get_db)):
+    version = db.query(models.WikiPageHistory).join(models.WikiPage).filter(
+        models.WikiPageHistory.id == version_id,
+        models.WikiPageHistory.wiki_id == wiki_id,
+        models.WikiPage.project_id == project_id
+    ).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return version
+
+@router.post("/projects/{project_id}/wikis/{wiki_id}/restore/{version_id}", response_model=schemas.WikiResponse)
+def restore_wiki_version(project_id: int, wiki_id: int, version_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_wiki = db.query(models.WikiPage).filter(models.WikiPage.id == wiki_id, models.WikiPage.project_id == project_id).first()
+    if not db_wiki:
+        raise HTTPException(status_code=404, detail="Wiki not found")
+        
+    version = db.query(models.WikiPageHistory).filter(models.WikiPageHistory.id == version_id, models.WikiPageHistory.wiki_id == wiki_id).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+        
+    # Save a snapshot of the current state before we overwrite it with the restored version
+    snapshot = models.WikiPageHistory(
+        wiki_id=db_wiki.id,
+        title=db_wiki.title,
+        content=db_wiki.content,
+        author_id=current_user.id
+    )
+    db.add(snapshot)
+    
+    # Restore
+    db_wiki.title = version.title
+    db_wiki.content = version.content
+    
+    db.commit()
+    db.refresh(db_wiki)
+    return db_wiki
 
 # --- CHAT MESSAGES HISTORY ---
 @router.get("/projects/{project_id}/messages", response_model=List[schemas.MessageResponse])

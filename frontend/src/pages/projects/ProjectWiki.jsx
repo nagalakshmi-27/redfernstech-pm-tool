@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { FileText, Plus, Save, Edit, Link, Upload, File as FileIcon, Download, ExternalLink, Trash2 } from "lucide-react";
+import CreateIssueModal from "../../components/CreateIssueModal";
 
 export default function ProjectWiki({ projectId, currentUserRole }) {
   const [wikis, setWikis] = useState([]);
@@ -20,7 +21,38 @@ const [search, setSearch] = useState("");
 const [filterCategory, setFilterCategory] = useState("");
 const [showHistory, setShowHistory] = useState(false);
 const [versionHistory, setVersionHistory] = useState([]);
-const [setSelectedVersion] = useState(null);
+const [selectedVersion, setSelectedVersion] = useState(null);
+
+  const [highlightedText, setHighlightedText] = useState("");
+  const [tooltipPos, setTooltipPos] = useState(null);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+
+  const handleMouseUp = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setTooltipPos(null);
+      setHighlightedText("");
+      return;
+    }
+    const text = selection.toString().trim();
+    if (text) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      setTooltipPos({ top: rect.top - 45, left: rect.left + (rect.width / 2) });
+      setHighlightedText(text);
+    }
+  };
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        setTooltipPos(null);
+      }
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, []);
 
   const fileInputRef = useRef(null);
 
@@ -38,7 +70,12 @@ const [setSelectedVersion] = useState(null);
 
   const fetchWikis = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/wikis`, {
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      if (filterCategory) params.append("category", filterCategory);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/wikis${queryStr}`, {
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       });
       if (response.ok) {
@@ -52,9 +89,13 @@ const [setSelectedVersion] = useState(null);
       console.error("Failed to load wikis");
     }
   };
+  
   useEffect(() => {
-  fetchWikis();
-}, [projectId]);
+    const delayDebounceFn = setTimeout(() => {
+      fetchWikis();
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [projectId, search, filterCategory]);
 
   const handleCreateNew = () => {
     setActiveWiki(null);
@@ -155,6 +196,31 @@ const [setSelectedVersion] = useState(null);
     alert("Error loading version history");
   }
 };
+
+  const handleRestoreVersion = async (versionId) => {
+    if (!confirm("Are you sure you want to restore this version? Your current document will be overwritten (but a snapshot of it will be saved).")) return;
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/projects/${projectId}/wikis/${activeWiki.id}/restore/${versionId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const restoredWiki = await response.json();
+        setWikis(wikis.map(w => w.id === restoredWiki.id ? restoredWiki : w));
+        selectWiki(restoredWiki);
+        setShowHistory(false);
+      } else {
+        alert("Failed to restore version");
+      }
+    } catch {
+      alert("Error restoring version");
+    }
+  };
 
   const handleDelete = async () => {
     if (!activeWiki) return;
@@ -387,7 +453,11 @@ onChange={(e) => setFilterCategory(e.target.value)}
             </div>
             
             {activeWiki.doc_type === "text" && (
-              <div className="prose prose-invert max-w-none text-slate-300" dangerouslySetInnerHTML={{ __html: activeWiki.content }} />
+              <div 
+                className="prose prose-invert max-w-none text-slate-300 relative" 
+                dangerouslySetInnerHTML={{ __html: activeWiki.content }} 
+                onMouseUp={handleMouseUp}
+              />
             )}
 
             {activeWiki.doc_type === "file" && activeWiki.file_url && (
@@ -459,16 +529,27 @@ onChange={(e) => setFilterCategory(e.target.value)}
               versionHistory.map((version) => (
                 <div
                   key={version.id}
-                  className="border border-white/10 rounded-lg p-3 mb-3 cursor-pointer hover:bg-white/5"
+                  className={`border border-white/10 rounded-lg p-4 mb-3 cursor-pointer transition ${selectedVersion?.id === version.id ? 'bg-white/10 border-cyan-500' : 'hover:bg-white/5'}`}
                   onClick={() => setSelectedVersion(version)}
                 >
-                  <p className="text-white font-semibold">
-                    Version #{version.version}
+                  <p className="text-white font-semibold flex justify-between">
+                    <span>Version #{version.id}</span>
+                    <span className="text-xs text-slate-400">{new Date(version.created_at).toLocaleString()}</span>
                   </p>
-
-                  <p className="text-xs text-slate-400">
-                    {version.created_at}
-                  </p>
+                  
+                  {selectedVersion?.id === version.id && (
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                      <div className="text-sm text-slate-300 mb-4 line-clamp-3 bg-black/30 p-2 rounded">
+                         <div dangerouslySetInnerHTML={{ __html: version.content }} />
+                      </div>
+                      <button 
+                        onClick={() => handleRestoreVersion(version.id)}
+                        className="w-full py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium text-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.4)] transition"
+                      >
+                        Restore this Version
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -476,7 +557,33 @@ onChange={(e) => setFilterCategory(e.target.value)}
           </div>
         </div>
       )}
+      {tooltipPos && highlightedText && !showCreateTaskModal && (
+        <div style={{ top: tooltipPos.top, left: tooltipPos.left, transform: 'translateX(-50%)' }} className="fixed z-50 animate-in fade-in zoom-in duration-200">
+          <button 
+             onClick={() => { setShowCreateTaskModal(true); setTooltipPos(null); }}
+             className="bg-cyan-500 text-white px-3 py-1.5 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.5)] flex items-center gap-2 text-sm hover:bg-cyan-400 border border-cyan-300 font-medium"
+          >
+             <Plus size={14} /> Create Task
+          </button>
+        </div>
+      )}
 
+      {showCreateTaskModal && (() => {
+        const nextDay = new Date();
+        nextDay.setDate(nextDay.getDate() + 1);
+        return (
+          <CreateIssueModal
+             defaultProjectId={projectId}
+             defaultTaskName={activeWiki?.title || ""}
+             defaultTaskDescription={`${highlightedText}\n\n_Created from document: ${activeWiki?.title}_`}
+             defaultAssigneeId={localStorage.getItem("userId")}
+             defaultDueDate={nextDay.toISOString().split("T")[0]}
+             isOpen={true}
+             onClose={() => setShowCreateTaskModal(false)}
+             hideTrigger={true}
+          />
+        );
+      })()}
     </div>
   );
 }

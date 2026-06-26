@@ -49,8 +49,7 @@ def update_user(db: Session, user: models.User, user_update: schemas.UserUpdate)
         user.full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
     elif user_update.full_name is not None:
         user.full_name = user_update.full_name
-    if user_update.role is not None:
-        user.role = user_update.role
+
     if user_update.company_role is not None:
         user.company_role = user_update.company_role
     if user_update.department is not None:
@@ -158,14 +157,15 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
         return None
 
     prefix = project.name[:3].upper() if project else "TSK"
-    task_count = db.query(models.Task).filter(models.Task.project_id == task.project_id).count()
-    ticket_id = f"{prefix}-{task_count + 1}"
+    
+    # First, create the task to get its globally unique auto-incrementing ID
+    db_task = models.Task(**task.dict())
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
 
-    # Create the task with our auto-generated ticket_id
-    db_task = models.Task(
-        **task.dict(),
-        ticket_id=ticket_id
-    )
+    # Now assign a guaranteed unique ticket_id based on its global ID
+    db_task.ticket_id = f"{prefix}-{db_task.id}"
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
