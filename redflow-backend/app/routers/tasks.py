@@ -18,7 +18,7 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current
         raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     new_task = crud.create_task(db=db, task=task, user_id=current_user.id)
     if not new_task:
-        raise HTTPException(status_code=403, detail="Not authorized! Only the project creator can add tasks.")
+        raise HTTPException(status_code=403, detail="Not authorized! Only project members can add tasks.")
     return new_task
 
 @router.put("/{task_id}", response_model=schemas.TaskResponse)

@@ -186,22 +186,18 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
 
     update_data = task_update.model_dump(exclude_unset=True)
     
-    if is_assignee and not is_creator and user.role != "Admin":
-        if "status" in update_data:
-            db_task.status = update_data["status"]
-            db_notification = models.Notification(
-                user_id=project.created_by_id,
-                message=f"Task '{db_task.name}' status updated to '{db_task.status}'"
-            )
-            db.add(db_notification)
-        if "position" in update_data:
-            db_task.position = update_data["position"]
-    else:
-        for key, value in update_data.items():
-            if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
-                notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.")
-                db.add(notif)
-            setattr(db_task, key, value)
+    for key, value in update_data.items():
+        if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
+            notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.")
+            db.add(notif)
+        setattr(db_task, key, value)
+        
+    if "status" in update_data and not is_creator and user.role != "Admin":
+        db_notification = models.Notification(
+            user_id=project.created_by_id,
+            message=f"Task '{db_task.name}' status updated to '{update_data['status']}'"
+        )
+        db.add(db_notification)
             
     db.commit()
     db.refresh(db_task)
