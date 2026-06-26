@@ -7,13 +7,9 @@ import CreateIssueModal from "../../components/CreateIssueModal";
 import TaskComments from "../../components/TaskComments";
 import TaskAttachments from "../../components/TaskAttachments";
 export default function Tasks() {
-  const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
+  const { tasks, setTasks, projects, members } = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
   const currentUserRole = localStorage.getItem("userRole");
-
-  if (currentUserRole === "Client") {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   // STEP 1: Filter to ONLY show tasks assigned to the logged-in user
   const myTasks = tasks.filter(t => t.assignee_id === currentUserId);
@@ -29,6 +25,10 @@ export default function Tasks() {
   const [selectedProject, setSelectedProject] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
+
+  if (currentUserRole === "Client") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleDragStart = (e, taskId) => {
     e.dataTransfer.setData("taskId", taskId);
@@ -79,7 +79,7 @@ export default function Tasks() {
      const filteredTasks = myTasks.filter(t => t.status === columnTitle && t.id !== draggedTaskId).sort((a, b) => (a.position || 0) - (b.position || 0));
      const targetIndex = filteredTasks.findIndex(t => t.id === targetTask.id);
      
-     let newPosition = 0;
+     let newPosition;
      
      if (isBottomHalf) {
         if (targetIndex === filteredTasks.length - 1) {
