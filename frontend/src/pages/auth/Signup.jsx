@@ -75,13 +75,13 @@ if (passwordError) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200">
-      <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] w-[500px]">
-        <h1 className="text-4xl font-bold text-center mb-2 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200 px-4 py-6">
+      <div className="w-full max-w-lg bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8 md:p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+        <h1 className="text-3xl sm:text-4xl font-bold text-center mb-2 text-white">
           Create Account
         </h1>
 
-        <p className="text-center text-slate-400 mb-8">
+        <p className="text-center text-sm sm:text-base text-slate-400 mb-8">
           Sign up to get started
         </p>
 
@@ -91,7 +91,7 @@ if (passwordError) {
     {error}
   </div>
 )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               type="text"
               placeholder="First Name"
@@ -136,7 +136,7 @@ if (passwordError) {
 </div>
 
 {showPasswordRules && (
-  <div className="text-sm space-y-1">
+  <div className="text-xs sm:text-sm space-y-1">
     <p className={passwordChecks.length ? "text-green-600" : "text-red-600"}>
       {passwordChecks.length ? "✓" : "✗"} At least 8 characters
     </p>

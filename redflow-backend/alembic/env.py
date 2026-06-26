@@ -28,7 +28,10 @@ from app.database import Base, SQLALCHEMY_DATABASE_URL
 import app.models  # This ensures Alembic sees all your tables
 
 # Tell Alembic to pull the URL directly from your existing database config
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+config.set_main_option(
+    "sqlalchemy.url",
+    SQLALCHEMY_DATABASE_URL.replace("%", "%%")
+)
 
 # Tell Alembic where the metadata is
 target_metadata = Base.metadata

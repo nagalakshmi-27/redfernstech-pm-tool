@@ -13,13 +13,28 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
   const [content, setContent] = useState("");
   const [docType, setDocType] = useState("text"); // text, file, link
   const [fileUrl, setFileUrl] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
+const [docCategory, setDocCategory] = useState("");
+const [selectedFile, setSelectedFile] = useState(null);
+
+const [search, setSearch] = useState("");
+const [filterCategory, setFilterCategory] = useState("");
+const [showHistory, setShowHistory] = useState(false);
+const [versionHistory, setVersionHistory] = useState([]);
+const [setSelectedVersion] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    fetchWikis();
-  }, [projectId]);
+  const selectWiki = (wiki) => {
+    setActiveWiki(wiki);
+    setTitle(wiki.title);
+    setContent(wiki.content || "");
+    setDocType(wiki.doc_type || "text");
+    setFileUrl(wiki.file_url || "");
+    setDocCategory(wiki.category || "");
+    setSelectedFile(null);
+    setIsEditing(false);
+  };
+
 
   const fetchWikis = async () => {
     try {
@@ -37,16 +52,9 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
       console.error("Failed to load wikis");
     }
   };
-
-  const selectWiki = (wiki) => {
-    setActiveWiki(wiki);
-    setTitle(wiki.title);
-    setContent(wiki.content || "");
-    setDocType(wiki.doc_type || "text");
-    setFileUrl(wiki.file_url || "");
-    setSelectedFile(null);
-    setIsEditing(false);
-  };
+  useEffect(() => {
+  fetchWikis();
+}, [projectId]);
 
   const handleCreateNew = () => {
     setActiveWiki(null);
@@ -54,6 +62,7 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
     setContent("");
     setDocType("text");
     setFileUrl("");
+    setDocCategory("");
     setSelectedFile(null);
     setIsEditing(true);
   };
@@ -82,6 +91,7 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
         const formData = new FormData();
         formData.append("title", title);
         formData.append("file", selectedFile);
+        formData.append("category", docCategory);
         
         response = await fetch(url, {
           method: "POST",
@@ -99,6 +109,7 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
           },
           body: JSON.stringify({ 
             title, 
+            category: docCategory,
             content: docType === "text" ? content : null,
             doc_type: docType,
             file_url: docType === "link" ? fileUrl : (activeWiki ? activeWiki.file_url : null)
@@ -121,6 +132,29 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
       alert("Error saving wiki");
     }
   };
+  const fetchVersionHistory = async () => {
+  if (!activeWiki) return;
+
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/${projectId}/wikis/${activeWiki.id}/history`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      setVersionHistory(data);
+    } else {
+      alert("Failed to load version history");
+    }
+  } catch {
+    alert("Error loading version history");
+  }
+};
 
   const handleDelete = async () => {
     if (!activeWiki) return;
@@ -156,6 +190,37 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
             </button>
           )}
         </div>
+        <div className="p-3 border-b border-white/10 space-y-3">
+  <input
+    type="text"
+    placeholder="Search documents..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500"
+  />
+
+  <select
+    value={filterCategory}
+onChange={(e) => setFilterCategory(e.target.value)}
+    className="w-full bg-slate-900/70 border border-white/10 text-slate-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+  >
+    <option className="bg-slate-900 text-white" value="">
+  All Categories
+</option>
+
+<option className="bg-slate-900 text-white" value="Technical">
+  Technical
+</option>
+
+<option className="bg-slate-900 text-white" value="Meeting Notes">
+  Meeting Notes
+</option>
+
+<option className="bg-slate-900 text-white" value="Design">
+  Design
+</option>
+  </select>
+</div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {wikis.length === 0 ? (
             <p className="text-xs text-slate-400 p-2 text-center mt-4">No docs yet.</p>
@@ -187,6 +252,33 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
               onChange={e => setTitle(e.target.value)}
               className="text-2xl font-bold bg-transparent text-white border-b border-transparent hover:border-white/20 focus:border-cyan-500 focus:outline-none mb-4 pb-2 transition"
             />
+            <div className="mb-4">
+  <label className="block text-sm font-medium text-slate-300 mb-2">
+    Category
+  </label>
+
+  <select
+  value={docCategory}
+  onChange={(e) => setDocCategory(e.target.value)}
+  className="w-full bg-slate-900/70 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none"
+>
+  <option className="bg-slate-900 text-white" value="">
+    Select Category
+  </option>
+
+  <option className="bg-slate-900 text-white" value="Technical">
+    Technical
+  </option>
+
+  <option className="bg-slate-900 text-white" value="Meeting Notes">
+    Meeting Notes
+  </option>
+
+  <option className="bg-slate-900 text-white" value="Design">
+    Design
+  </option>
+</select>
+</div>
             
             {!activeWiki && (
               <div className="flex gap-4 mb-4 text-slate-300">
@@ -267,6 +359,15 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
               </h1>
               {currentUserRole !== "Client" && (
                 <div className="flex gap-2">
+                  <button
+  onClick={() => {
+    fetchVersionHistory();
+    setShowHistory(true);
+  }}
+  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 transition"
+>
+  Version History
+</button>
                   {activeWiki.doc_type === "text" && (
                     <button 
                       onClick={() => setIsEditing(true)} 
@@ -331,7 +432,51 @@ export default function ProjectWiki({ projectId, currentUserRole }) {
             Select a document to view, or click + to create one.
           </div>
         )}
-      </div>
+            </div>
+
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
+          <div className="w-[400px] h-full bg-slate-900 border-l border-white/10 p-6 overflow-y-auto">
+
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">
+                Version History
+              </h2>
+
+              <button
+                onClick={() => setShowHistory(false)}
+                className="text-slate-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {versionHistory.length === 0 ? (
+              <p className="text-slate-400">
+                No version history available.
+              </p>
+            ) : (
+              versionHistory.map((version) => (
+                <div
+                  key={version.id}
+                  className="border border-white/10 rounded-lg p-3 mb-3 cursor-pointer hover:bg-white/5"
+                  onClick={() => setSelectedVersion(version)}
+                >
+                  <p className="text-white font-semibold">
+                    Version #{version.version}
+                  </p>
+
+                  <p className="text-xs text-slate-400">
+                    {version.created_at}
+                  </p>
+                </div>
+              ))
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

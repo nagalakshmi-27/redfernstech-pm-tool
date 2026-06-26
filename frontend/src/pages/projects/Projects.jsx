@@ -5,7 +5,7 @@ import AppContext from "../../context/AppContext";
 import { FolderKanban, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 
 export default function Projects() {
-  const { projects, setProjects, activities, setActivities, members, tasks } = useContext(AppContext);
+  const { projects, setProjects, activities, setActivities, members } = useContext(AppContext);
   const navigate = useNavigate();
   const currentUserId = Number(localStorage.getItem("userId"));
   const currentUserRole = localStorage.getItem("userRole");
