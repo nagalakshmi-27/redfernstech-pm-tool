@@ -99,7 +99,7 @@ const [selectedVersion, setSelectedVersion] = useState(null);
     if (!activeWiki || activeWiki.doc_type !== "text") return null;
     return (
       <div 
-        className="prose prose-invert max-w-none text-slate-300 relative" 
+        className="prose prose-invert !max-w-full w-full min-w-0 text-slate-300 relative !break-words overflow-x-hidden !whitespace-pre-wrap" 
         dangerouslySetInnerHTML={{ __html: activeWiki.content }} 
         onMouseUp={handleMouseUp}
       />
@@ -302,10 +302,10 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 h-[600px] flex overflow-hidden">
+    <div className="bg-white/5 backdrop-blur-md rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 h-[600px] flex overflow-hidden w-full max-w-full">
       
       {/* LEFT SIDEBAR */}
-      <div className="w-64 border-r border-white/10 bg-black/20 flex flex-col">
+      <div className="w-64 flex-shrink-0 border-r border-white/10 bg-black/20 flex flex-col max-w-[256px]">
         <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 text-slate-200">
           <h3 className="font-bold flex items-center gap-2"><FileText size={18}/> Docs</h3>
           {currentUserRole !== "Client" && (
@@ -366,7 +366,7 @@ onChange={(e) => setFilterCategory(e.target.value)}
       </div>
 
       {/* RIGHT SIDE: Editor / Viewer */}
-      <div className="flex-1 flex flex-col bg-transparent text-slate-200">
+      <div className="flex-1 flex flex-col relative min-w-0 max-w-full overflow-hidden bg-transparent text-slate-200">
         {isEditing ? (
           <div className="h-full flex flex-col p-6">
             <input 
@@ -475,9 +475,9 @@ onChange={(e) => setFilterCategory(e.target.value)}
             </div>
           </div>
         ) : activeWiki ? (
-          <div className="p-8 h-full overflow-y-auto flex flex-col">
-            <div className="flex justify-between items-start mb-6">
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+          <div className="p-8 h-full overflow-y-auto overflow-x-hidden flex flex-col min-w-0 max-w-full">
+            <div className="flex flex-wrap justify-between items-start mb-6 shrink-0 gap-4 w-full">
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3 break-all flex-1 min-w-0">
                 {activeWiki.doc_type === "file" ? <FileIcon className="text-cyan-400"/> : activeWiki.doc_type === "link" ? <Link className="text-cyan-400"/> : <FileText className="text-cyan-400"/>}
                 {activeWiki.title}
               </h1>
