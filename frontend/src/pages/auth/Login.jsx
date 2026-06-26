@@ -54,11 +54,19 @@ if (!isPasswordValid) {
       console.log(data);
       
       // 4. Save the real token securely!
-      localStorage.setItem("token", data.access_token);
+localStorage.setItem("token", data.access_token);
 localStorage.setItem("isLoggedIn", "true");
 localStorage.setItem("userEmail", data.user.email);
 localStorage.setItem("userId", data.user.id);
 localStorage.setItem("userRole", data.user.role);
+
+if (data.user.profile_image) {
+  const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
+  localStorage.setItem("profileImage", `${backendHost}${data.user.profile_image}`);
+} else {
+  localStorage.removeItem("profileImage");
+}
+
       // 5. Go to the dashboard
       navigate("/dashboard");
       

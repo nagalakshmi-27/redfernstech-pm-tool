@@ -4,6 +4,8 @@ from .. import crud, schemas, database, auth, models
 import smtplib
 from email.mime.text import MIMEText
 import os
+import base64
+import uuid
 from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, Header
@@ -66,7 +68,8 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
         "user": {
             "id": authenticated_user.id, 
             "email": authenticated_user.email, 
-            "role": authenticated_user.role
+            "role": authenticated_user.role,
+            "profile_image": authenticated_user.profile_image
         }
     }
 
@@ -88,6 +91,39 @@ def get_my_settings(current_user: models.User = Depends(get_current_user)):
 @router.put("/me", response_model=schemas.UserResponse)
 def update_my_settings(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return crud.update_user(db=db, user=current_user, user_update=user_update)
+
+@router.post("/me/avatar")
+def upload_avatar(avatar_update: schemas.UserAvatarUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Create uploads directory if not exists
+    os.makedirs("uploads/users", exist_ok=True)
+    
+    # Process base64 string
+    # Usually looks like: "data:image/png;base64,iVBORw0KGgo..."
+    base64_str = avatar_update.avatar_base64
+    if "," in base64_str:
+        base64_str = base64_str.split(",")[1]
+        
+    try:
+        image_data = base64.b64decode(base64_str)
+        filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.png"
+        file_path = f"uploads/users/{filename}"
+        
+        with open(file_path, "wb") as f:
+            f.write(image_data)
+            
+        current_user.profile_image = f"/uploads/users/{filename}"
+        db.commit()
+        return {"message": "Profile picture updated successfully", "profile_image": current_user.profile_image}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid image data")
+
+@router.delete("/me/avatar")
+def delete_avatar(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.profile_image:
+        # Optional: Delete the physical file here if needed
+        current_user.profile_image = None
+        db.commit()
+    return {"message": "Profile picture removed successfully"}
 
 # --- CHANGE PASSWORD LOGIC ---
 class ChangePasswordRequest(BaseModel):

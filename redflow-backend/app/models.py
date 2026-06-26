@@ -22,6 +22,7 @@ class User(Base):
     role = Column(String) # Admin, Member, Client
     company_role = Column(String, nullable=True) # Developer, Designer, etc
     department = Column(String, nullable=True)
+    profile_image = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

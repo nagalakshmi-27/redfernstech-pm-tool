@@ -11,6 +11,10 @@ class UserBase(BaseModel):
     last_name: Optional[str] = None
     company_role: Optional[str] = None
     department: Optional[str] = None
+    profile_image: Optional[str] = None
+
+class UserAvatarUpdate(BaseModel):
+    avatar_base64: str
 
 class UserCreate(UserBase):
     password: str

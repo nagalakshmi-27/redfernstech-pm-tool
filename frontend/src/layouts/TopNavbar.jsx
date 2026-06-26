@@ -228,10 +228,21 @@ const streamRef = useRef(null);
 
     {profileImage && (
       <button
-        onClick={() => {
-          setProfileImage(null);
-          localStorage.removeItem("profileImage");
-          setShowPhotoOptions(false);
+        onClick={async () => {
+          try {
+            const token = localStorage.getItem("token");
+            await fetch(`${import.meta.env.VITE_API_URL}/users/me/avatar`, {
+              method: "DELETE",
+              headers: {
+                "Authorization": `Bearer ${token}`
+              }
+            });
+            setProfileImage(null);
+            localStorage.removeItem("profileImage");
+            setShowPhotoOptions(false);
+          } catch (err) {
+            console.error("Failed to remove photo", err);
+          }
         }}
         className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10"
       >
@@ -314,7 +325,8 @@ const streamRef = useRef(null);
     setShowCropModal(false);
     setSelectedImage(null);
   }}
-  onSave={(croppedImage) => {
+  onSave={async (croppedImage) => {
+    // Show the cropped image instantly for good UX
     setProfileImage(croppedImage);
     localStorage.setItem("profileImage", croppedImage);
 
@@ -322,6 +334,32 @@ const streamRef = useRef(null);
     setShowPhotoMenu(false);
     setShowPhotoOptions(false);
     setSelectedImage(null);
+
+    // Send it to the backend
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me/avatar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ avatar_base64: croppedImage })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // The backend returns the permanent URL path (e.g. /uploads/users/...)
+        // Prefix it with the API host for absolute URL
+        const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
+        const fullUrl = `${backendHost}${data.profile_image}`;
+        
+        setProfileImage(fullUrl);
+        localStorage.setItem("profileImage", fullUrl);
+      }
+    } catch (err) {
+      console.error("Failed to save profile picture to backend", err);
+    }
   }}
 />
 )}
