@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { FileText, Plus, Save, Edit, Link, Upload, File as FileIcon, Download, ExternalLink, Trash2 } from "lucide-react";
@@ -26,12 +26,14 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   const [highlightedText, setHighlightedText] = useState("");
   const [tooltipPos, setTooltipPos] = useState(null);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [highlightRange, setHighlightRange] = useState(null);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       setTooltipPos(null);
       setHighlightedText("");
+      setHighlightRange(null);
       return;
     }
     const text = selection.toString().trim();
@@ -40,6 +42,43 @@ const [selectedVersion, setSelectedVersion] = useState(null);
       const rect = range.getBoundingClientRect();
       setTooltipPos({ top: rect.top - 45, left: rect.left + (rect.width / 2) });
       setHighlightedText(text);
+      setHighlightRange(range.cloneRange());
+    }
+  }, []);
+
+  const handleTaskCreated = async (newTask) => {
+    if (!highlightRange || !activeWiki) return;
+    
+    try {
+      const a = document.createElement("a");
+      a.href = `?tab=Wiki&wikiId=${activeWiki.id}&taskId=${newTask.id}`;
+      a.className = "bg-yellow-500/30 text-yellow-200 border-b-2 border-yellow-500/50 hover:bg-yellow-500/50 transition-colors cursor-pointer no-underline px-1 rounded-sm";
+      a.title = `Linked Task: ${newTask.name}`;
+      
+      a.appendChild(highlightRange.extractContents());
+      highlightRange.insertNode(a);
+
+      const proseDiv = document.querySelector(".prose");
+      if (proseDiv) {
+        const newContent = proseDiv.innerHTML;
+        
+        await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/wikis/${activeWiki.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+          body: JSON.stringify({ 
+             title: activeWiki.title, 
+             category: activeWiki.category,
+             content: newContent, 
+             doc_type: activeWiki.doc_type, 
+             file_url: activeWiki.file_url 
+          })
+        });
+        
+        setActiveWiki({ ...activeWiki, content: newContent });
+        setContent(newContent);
+      }
+    } catch(err) {
+      console.error("Could not apply ghost highlight:", err);
     }
   };
 
@@ -55,6 +94,17 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   }, []);
 
   const fileInputRef = useRef(null);
+
+  const wikiContentDiv = useMemo(() => {
+    if (!activeWiki || activeWiki.doc_type !== "text") return null;
+    return (
+      <div 
+        className="prose prose-invert max-w-none text-slate-300 relative" 
+        dangerouslySetInnerHTML={{ __html: activeWiki.content }} 
+        onMouseUp={handleMouseUp}
+      />
+    );
+  }, [activeWiki?.content, activeWiki?.doc_type, handleMouseUp]);
 
   const selectWiki = (wiki) => {
     setActiveWiki(wiki);
@@ -82,7 +132,15 @@ const [selectedVersion, setSelectedVersion] = useState(null);
         const data = await response.json();
         setWikis(data);
         if (data.length > 0 && !activeWiki) {
-          selectWiki(data[0]);
+          const urlParams = new URLSearchParams(window.location.search);
+          const wikiId = urlParams.get("wikiId");
+          if (wikiId) {
+             const targetWiki = data.find(w => w.id === parseInt(wikiId));
+             if (targetWiki) selectWiki(targetWiki);
+             else selectWiki(data[0]);
+          } else {
+             selectWiki(data[0]);
+          }
         }
       }
     } catch {
@@ -452,13 +510,7 @@ onChange={(e) => setFilterCategory(e.target.value)}
               )}
             </div>
             
-            {activeWiki.doc_type === "text" && (
-              <div 
-                className="prose prose-invert max-w-none text-slate-300 relative" 
-                dangerouslySetInnerHTML={{ __html: activeWiki.content }} 
-                onMouseUp={handleMouseUp}
-              />
-            )}
+            {activeWiki.doc_type === "text" && wikiContentDiv}
 
             {activeWiki.doc_type === "file" && activeWiki.file_url && (
               <div className="flex-1 flex flex-col items-center justify-center bg-black/20 rounded-xl border border-white/10 p-8">
@@ -560,7 +612,11 @@ onChange={(e) => setFilterCategory(e.target.value)}
       {tooltipPos && highlightedText && !showCreateTaskModal && (
         <div style={{ top: tooltipPos.top, left: tooltipPos.left, transform: 'translateX(-50%)' }} className="fixed z-50 animate-in fade-in zoom-in duration-200">
           <button 
-             onClick={() => { setShowCreateTaskModal(true); setTooltipPos(null); }}
+             onMouseDown={(e) => { 
+                e.preventDefault(); 
+                setShowCreateTaskModal(true); 
+                setTooltipPos(null); 
+             }}
              className="bg-cyan-500 text-white px-3 py-1.5 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.5)] flex items-center gap-2 text-sm hover:bg-cyan-400 border border-cyan-300 font-medium"
           >
              <Plus size={14} /> Create Task
@@ -575,12 +631,14 @@ onChange={(e) => setFilterCategory(e.target.value)}
           <CreateIssueModal
              defaultProjectId={projectId}
              defaultTaskName={activeWiki?.title || ""}
-             defaultTaskDescription={`${highlightedText}\n\n_Created from document: ${activeWiki?.title}_`}
+             defaultTaskDescription={`${highlightedText}\n\nCreated from document: ${activeWiki?.title}`}
+             defaultSourceLink={`${window.location.origin}/projects/${projectId}?tab=Wiki&wikiId=${activeWiki?.id}`}
              defaultAssigneeId={localStorage.getItem("userId")}
              defaultDueDate={nextDay.toISOString().split("T")[0]}
              isOpen={true}
              onClose={() => setShowCreateTaskModal(false)}
              hideTrigger={true}
+             onSuccess={handleTaskCreated}
           />
         );
       })()}

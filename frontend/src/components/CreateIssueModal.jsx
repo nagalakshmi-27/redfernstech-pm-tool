@@ -8,9 +8,11 @@ export default function CreateIssueModal({
   defaultTaskName = "",
   defaultAssigneeId = "",
   defaultDueDate = "",
+  defaultSourceLink = null,
   isOpen = undefined, 
   onClose = undefined, 
-  hideTrigger = false 
+  hideTrigger = false,
+  onSuccess = undefined
 }) {
   const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
   const currentUserRole = localStorage.getItem("userRole");
@@ -58,7 +60,8 @@ export default function CreateIssueModal({
       assignee_id: parseInt(assigneeId), 
       project_id: parseInt(selectedProject),
       issue_type: issueType,
-      severity: issueType === "Bug" ? severity : null
+      severity: issueType === "Bug" ? severity : null,
+      source_link: defaultSourceLink
     };
 
     try {
@@ -83,6 +86,7 @@ export default function CreateIssueModal({
         setDueDate("");
         setDueDate("");
         handleClose();
+        if (onSuccess) onSuccess(newTask);
       } else {
         alert("Failed to create ticket.");
       }

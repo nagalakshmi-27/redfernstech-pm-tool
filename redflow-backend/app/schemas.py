@@ -72,6 +72,7 @@ class TaskBase(BaseModel):
     issue_type: Optional[str] = "Task"
     severity: Optional[str] = None
     position: Optional[float] = 0.0
+    source_link: Optional[str] = None
 
 class TaskCreate(TaskBase):
     pass
@@ -85,6 +86,7 @@ class TaskUpdate(BaseModel):
     project_id: Optional[int] = None
     assignee_id: Optional[int] = None
     position: Optional[float] = None
+    source_link: Optional[str] = None
 
 class TaskAttachmentResponse(BaseModel):
     id: int

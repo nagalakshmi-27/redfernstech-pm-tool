@@ -210,7 +210,7 @@ def delete_task(db: Session, task_id: int, user_id: int):
     
     project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
     
-    if user.role != "Admin" and project.created_by_id != user_id:
+    if user.role == "Client":
         return False
         
     db.delete(db_task)

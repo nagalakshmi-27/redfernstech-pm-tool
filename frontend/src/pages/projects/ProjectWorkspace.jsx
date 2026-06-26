@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-import { Bug, CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft } from "lucide-react";
+import { Bug, CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink } from "lucide-react";
 import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
 import ProjectComments from "./ProjectComments";
@@ -31,11 +31,41 @@ export default function ProjectWorkspace() {
   const [assigneeId, setAssigneeId] = useState("");
   const [selectedProject, setSelectedProject] = useState(id);
   const [dueDate, setDueDate] = useState("");
-  const [activeTab, setActiveTab] = useState(localStorage.getItem(`activeTab_${id}`) || "Board");
+  const [sourceLink, setSourceLink] = useState("");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab") || localStorage.getItem(`activeTab_${id}`) || "Board";
+  });
 
   useEffect(() => {
     localStorage.setItem(`activeTab_${id}`, activeTab);
   }, [activeTab, id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlTaskId = params.get("taskId");
+    if (urlTaskId && projectTasks.length > 0 && !showEditModal) {
+      const task = projectTasks.find(t => t.id === parseInt(urlTaskId));
+      if (task) {
+        setEditingTaskId(task.id);
+        setTaskName(task.name);
+        setTaskDescription(task.description || "");
+        setPriority(task.priority || "Medium");
+        setStatus(task.status || "To Do");
+        setIssueType(task.issue_type || "Task");
+        setSeverity(task.severity || "Medium");
+        setAssigneeId(task.assignee_id || "");
+        setSelectedProject(task.project_id || id);
+        setDueDate(task.due_date || "");
+        setSourceLink(task.source_link || "");
+        setShowEditModal(true);
+        
+        // Clean up URL
+        const newUrl = window.location.pathname + window.location.search.replace(`&taskId=${urlTaskId}`, '').replace(`?taskId=${urlTaskId}`, '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [projectTasks, showEditModal, id]);
 
   if (!project) {
     return (
@@ -136,7 +166,8 @@ export default function ProjectWorkspace() {
     const taskData = {
       name: taskName, description: taskDescription, priority, status, due_date: dueDate,
       assignee_id: parseInt(assigneeId), project_id: parseInt(selectedProject),
-      issue_type: issueType, severity: issueType === "Bug" ? severity : null
+      issue_type: issueType, severity: issueType === "Bug" ? severity : null,
+      source_link: sourceLink
     };
 
     try {
@@ -253,6 +284,7 @@ export default function ProjectWorkspace() {
                          setPriority(task.priority); setStatus(task.status); setIssueType(task.issue_type || "Task");
                          setSeverity(task.severity || "Medium"); setAssigneeId(task.assignee_id || "");
                          setSelectedProject(task.project_id); setDueDate(task.due_date || "");
+                         setSourceLink(task.source_link || "");
                          setShowEditModal(true);
                        }}
                        className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${col.border} p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
@@ -280,7 +312,7 @@ export default function ProjectWorkspace() {
                        </div>
                        
                        {/* Delete button */}
-                       {project.created_by_id === currentUserId && (
+                       {currentUserRole !== "Client" && (
                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                            <button onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-red-400 hover:text-red-300 p-1 bg-black/40 rounded-full shadow-sm border border-red-400/20 backdrop-blur-md">×</button>
                          </div>
@@ -356,6 +388,15 @@ export default function ProjectWorkspace() {
               <div>
                 <label className="block mb-2 font-semibold text-slate-300">Description</label>
                 <textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg h-24 focus:ring-1 focus:ring-cyan-500 outline-none" />
+                
+                {/* Render clickable link from database */}
+                {sourceLink && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a href={sourceLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-bold bg-cyan-500/10 text-cyan-400 px-3 py-1.5 rounded-full border border-cyan-500/20 hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all">
+                      <ExternalLink size={12} /> {sourceLink.includes('tab=Wiki') ? "Open Linked Document" : "Open Link"}
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
