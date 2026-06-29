@@ -1,19 +1,26 @@
-import { useNavigate } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useNavigate} from "react-router-dom";
+import { useState, useRef, useEffect, useContext } from "react";
+import AppContext from "../context/AppContext";
 import ImageCropModal from "../components/ImageCropModal";
+import SearchModal from "../components/SearchModal";
 import {
   Bell,
+  Search,
   Settings,
   LogOut,
   Upload,
   Camera,
   Trash2,
+  FolderKanban,
+  CheckSquare,
+  Users,
 } from "lucide-react";
 export default function TopNavbar({
   sidebarOpen,
   setSidebarOpen,
 }) {
   const navigate = useNavigate();
+  const { projects, tasks, members } = useContext(AppContext);
   const userEmail = localStorage.getItem("userEmail") || "";
 
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
@@ -27,6 +34,9 @@ const [selectedImage, setSelectedImage] = useState(null);
 const [profileImage, setProfileImage] = useState(
   localStorage.getItem("profileImage") || null
 );
+const [searchText, setSearchText] = useState("");
+const [showSearchResults, setShowSearchResults] = useState(false);
+const [showMobileSearch, setShowMobileSearch] = useState(false);
 useEffect(() => {
   function handleClickOutside(event) {
     if (
@@ -44,6 +54,25 @@ useEffect(() => {
     document.removeEventListener("mousedown", handleClickOutside);
   };
 }, []);
+
+useEffect(() => {
+  function handleOutsideClick(event) {
+    if (
+      showMobileSearch &&
+      searchModalRef.current &&
+      !searchModalRef.current.contains(event.target)
+    ) {
+      setShowMobileSearch(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleOutsideClick);
+
+  return () => {
+    document.removeEventListener("mousedown", handleOutsideClick);
+  };
+}, [showMobileSearch]);
+
   const handleLogout = () => {
   localStorage.removeItem("isLoggedIn");
   localStorage.removeItem("token");
@@ -120,11 +149,68 @@ setShowPhotoOptions(false);
 const canvasRef = useRef(null);
 const streamRef = useRef(null);
   const profileMenuRef = useRef(null);
+  const searchModalRef = useRef(null);
+  const filteredResults =
+  searchText.trim() === ""
+    ? []
+    : [
+        ...projects.map(project => ({
+          id: project.id,
+          type: "project",
+          name: project.name,
+        })),
+        ...tasks.map(task => ({
+          id: task.id,
+          type: "task",
+          name: task.name,
+        })),
+        ...members.map(member => ({
+          id: member.id,
+          type: "member",
+          name: member.full_name || member.name || member.email,
+        })),
+      ].filter(item =>
+        item.name?.toLowerCase().includes(searchText.toLowerCase())
+      );
+
+const handleSearchClick = (item) => {
+  setShowSearchResults(false);
+  setShowMobileSearch(false);
+
+  switch (item.type) {
+    case "project":
+  navigate(`/projects/${item.id}`, {
+    state: {
+      highlightProjectId: item.id,
+    },
+  });
+  break;
+
+    case "task":
+  navigate("/tasks", {
+    state: {
+      highlightTaskId: item.id,
+    },
+  });
+  break;
+
+    case "member":
+  navigate("/teams", {
+    state: {
+      highlightMemberId: item.id,
+    },
+  });
+  break;
+
+    default:
+      break;
+  }
+};
 
   return (
     <>
     <div className="h-16 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-6 relative z-50">
-      <div className="flex items-center gap-3">
+      <div className="relative flex items-center gap-3">
   <button
     onClick={() => setSidebarOpen(!sidebarOpen)}
     className="md:hidden text-2xl text-white"
@@ -133,10 +219,61 @@ const streamRef = useRef(null);
   </button>
 
   <input
-    type="text"
-    placeholder="Search..."
-    className="hidden md:block bg-black/20 border border-white/10 text-white placeholder-slate-400 rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-  />
+  type="text"
+  placeholder="Search projects, tasks, members..."
+  value={searchText}
+  onChange={(e) => {
+  const value = e.target.value;
+
+  setSearchText(value);
+
+  setShowSearchResults(value.trim().length > 0);
+}}
+  onFocus={() => {
+  if (searchText.trim()) {
+    setShowSearchResults(true);
+  }
+}}
+  className="hidden md:block bg-black/20 border border-white/10 text-white placeholder-slate-400 rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+/>
+{showSearchResults && (
+  <div className="absolute top-14 left-0 w-full md:w-80 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-[9999]">
+
+    {filteredResults.length === 0 ? (
+      <div className="px-4 py-3 text-slate-400 text-sm">
+        No results found
+      </div>
+    ) : (
+      filteredResults.map((item) => (
+        <button
+          key={`${item.type}-${item.id}`}
+          onClick={() => handleSearchClick(item)}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition text-left"
+        >
+          {item.type === "project" && (
+            <FolderKanban size={18} className="text-cyan-400" />
+          )}
+
+          {item.type === "task" && (
+            <CheckSquare size={18} className="text-green-400" />
+          )}
+
+          {item.type === "member" && (
+            <Users size={18} className="text-purple-400" />
+          )}
+
+          <div>
+            <p className="text-white">{item.name}</p>
+            <p className="text-xs text-slate-400 capitalize">
+              {item.type}
+            </p>
+          </div>
+        </button>
+      ))
+    )}
+
+  </div>
+)}
 </div>
 
       <div className="flex items-center gap-2 md:gap-4">
@@ -145,6 +282,12 @@ const streamRef = useRef(null);
     {userEmail}
   </span>
 )}
+<button
+  onClick={() => setShowMobileSearch((prev) => !prev)}
+  className="md:hidden hover:scale-110 transition text-slate-300 hover:text-white"
+>
+  <Search size={22} />
+</button>
 
         <button
   onClick={() => navigate("/notifications")}
@@ -317,6 +460,15 @@ const streamRef = useRef(null);
         </div>
       </div>
     )}
+    <SearchModal
+  open={showMobileSearch}
+  onClose={() => setShowMobileSearch(false)}
+  searchText={searchText}
+  setSearchText={setSearchText}
+  filteredResults={filteredResults}
+  handleSearchClick={handleSearchClick}
+  modalRef={searchModalRef}
+/>
 
     {showCropModal && (
   <ImageCropModal

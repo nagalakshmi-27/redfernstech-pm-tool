@@ -1,6 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState, useContext } from "react";
-import { Navigate } from "react-router-dom";
+import { useState, useContext, useEffect, useRef } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { Bug, CheckSquare, Clock3, PlayCircle, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
@@ -10,9 +10,33 @@ export default function Tasks() {
   const { tasks, setTasks, projects, members } = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
   const currentUserRole = localStorage.getItem("userRole");
+  const location = useLocation();
 
+const [highlightTaskId, setHighlightTaskId] = useState(null);
+
+const taskRefs = useRef({});
   // STEP 1: Filter to ONLY show tasks assigned to the logged-in user
   const myTasks = tasks.filter(t => t.assignee_id === currentUserId);
+  useEffect(() => {
+    console.log("Highlight Task:", location.state?.highlightTaskId);
+
+  const id = location.state?.highlightTaskId;
+
+  if (!id) return;
+
+  requestAnimationFrame(() => {
+  taskRefs.current[id]?.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
+
+  setHighlightTaskId(id);
+
+  setTimeout(() => {
+    setHighlightTaskId(null);
+  }, 3000);
+});
+}, [location.state]);
 
   const [showModal, setShowModal] = useState(false);
   const [taskName, setTaskName] = useState("");
@@ -217,8 +241,9 @@ export default function Tasks() {
             <div className="flex flex-col gap-3 min-h-[500px]">
               {/* WE USE myTasks HERE TO FILTER THE BOARD! */}
               {myTasks.filter(t => t.status === col.title).sort((a, b) => (a.position || 0) - (b.position || 0)).map((task) => (
-                 <div 
-                   key={task.id} 
+                 <div
+  key={task.id}
+  ref={(el) => (taskRefs.current[task.id] = el)}
                    draggable={currentUserRole !== "Client"}
                    onDragStart={(e) => handleDragStart(e, task.id)}
                    onDragOver={handleDragOver}
@@ -237,7 +262,13 @@ export default function Tasks() {
                      setDueDate(task.due_date || "");
                      setShowModal(true);
                    }}
-                   className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${col.border} p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
+                   className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${
+  col.border
+} p-4 rounded-xl cursor-pointer hover:bg-white/20 transition-all relative group ${
+  highlightTaskId === task.id
+    ? "ring-2 ring-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.8)]"
+    : "shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
+}`}
                  >
                    <div className="flex justify-between items-start mb-2">
                      <span className="text-xs font-bold text-slate-300 bg-black/30 px-2 py-1 rounded border border-white/5">

@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
@@ -12,9 +12,10 @@ import TaskAttachments from "../../components/TaskAttachments";
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
+  const location = useLocation();
   const { projects, tasks, setTasks, members } = useContext(AppContext);
   const currentUserRole = localStorage.getItem("userRole");
-  const currentUserId = Number(localStorage.getItem("userId"));
+  const [highlightProject, setHighlightProject] = useState(false);
 
   const project = projects.find(p => p.id === parseInt(id));
   const projectTasks = tasks.filter(t => t.project_id === parseInt(id));
@@ -66,6 +67,18 @@ export default function ProjectWorkspace() {
       }
     }
   }, [projectTasks, showEditModal, id]);
+
+  useEffect(() => {
+  if (location.state?.highlightProjectId) {
+    setHighlightProject(true);
+
+    const timer = setTimeout(() => {
+      setHighlightProject(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }
+}, [location.state]);
 
   if (!project) {
     return (
@@ -216,7 +229,13 @@ export default function ProjectWorkspace() {
           <ArrowLeft size={16} /> Back to Projects
         </Link>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-white/10 pb-6">
-          <div>
+          <div
+  className={`rounded-xl p-3 transition-all duration-700 ${
+    highlightProject
+      ? "ring-2 ring-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.8)]"
+      : ""
+  }`}
+>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-white">
               {project.name}
               <span className={`text-sm font-bold px-3 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.3)] ${

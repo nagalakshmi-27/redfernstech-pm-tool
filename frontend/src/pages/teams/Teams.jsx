@@ -1,5 +1,5 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Users,
   Code,
@@ -8,16 +8,17 @@ import {
 } from "lucide-react";
 import { validateEmail } from "../../utils/validation";
 import { useContext } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import AppContext from "../../context/AppContext";
 
 export default function Teams() {
   const { members} = useContext(AppContext);
   const currentUserRole = localStorage.getItem("userRole");
+  const location = useLocation();
 
-  if (currentUserRole === "Client") {
-    return <Navigate to="/dashboard" replace />;
-  }
+const [highlightMemberId, setHighlightMemberId] = useState(null);
+
+const memberRefs = useRef({});
   const [showModal, setShowModal] = useState(false);
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
@@ -96,6 +97,32 @@ const handleDeleteMember = async (memberId) => {
     alert("Failed to connect to backend");
   }
 };
+
+useEffect(() => {
+  const id = location.state?.highlightMemberId;
+
+  if (!id) return;
+
+  console.log("Highlight Member:", id);
+
+  requestAnimationFrame(() => {
+    memberRefs.current[id]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    setHighlightMemberId(id);
+
+    setTimeout(() => {
+      setHighlightMemberId(null);
+    }, 3000);
+  });
+
+}, [location.state]);
+
+if (currentUserRole === "Client") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <MainLayout>
@@ -201,7 +228,17 @@ const handleDeleteMember = async (memberId) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {projectMembers.map((member) => (
-                <div key={`${projectName}-${member.id}`} className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-6">
+                <div
+  key={`${projectName}-${member.id}`}
+  ref={(el) => {
+    memberRefs.current[member.id] = el;
+  }}
+  className={`bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border p-4 md:p-6 transition-all duration-500 ${
+    highlightMemberId === member.id
+      ? "border-cyan-400 ring-2 ring-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.8)]"
+      : "border-white/10"
+  }`}
+>
                   <div className="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-lg font-bold mb-3 uppercase shadow-[0_0_10px_rgba(6,182,212,0.5)]">
                     {member.full_name ? member.full_name.charAt(0) : (member.name ? member.name.charAt(0) : "U")}
                   </div>
