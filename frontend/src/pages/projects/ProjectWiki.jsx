@@ -302,10 +302,10 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 h-[600px] flex overflow-hidden w-full max-w-full">
+    <div className="bg-white/5 backdrop-blur-md rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 h-[80vh] md:h-[600px] min-h-[500px] md:min-h-[600px] flex flex-col md:flex-row overflow-hidden w-full max-w-full">
       
       {/* LEFT SIDEBAR */}
-      <div className="w-64 flex-shrink-0 border-r border-white/10 bg-black/20 flex flex-col max-w-[256px]">
+      <div className="w-full md:w-64 flex-shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-black/20 flex flex-col max-w-full md:max-w-[256px] max-h-[35vh] md:max-h-full">
         <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 text-slate-200">
           <h3 className="font-bold flex items-center gap-2"><FileText size={18}/> Docs</h3>
           {currentUserRole !== "Client" && (
@@ -477,7 +477,7 @@ onChange={(e) => setFilterCategory(e.target.value)}
         ) : activeWiki ? (
           <div className="p-8 h-full overflow-y-auto overflow-x-hidden flex flex-col min-w-0 max-w-full">
             <div className="flex flex-wrap justify-between items-start mb-6 shrink-0 gap-4 w-full">
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3 break-all flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 break-words w-full sm:flex-1 min-w-0">
                 {activeWiki.doc_type === "file" ? <FileIcon className="text-cyan-400"/> : activeWiki.doc_type === "link" ? <Link className="text-cyan-400"/> : <FileText className="text-cyan-400"/>}
                 {activeWiki.title}
               </h1>

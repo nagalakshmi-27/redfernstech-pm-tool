@@ -352,6 +352,17 @@ const taskRefs = useRef({});
                 <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg h-24 focus:ring-1 focus:ring-cyan-500 outline-none" />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block mb-2 font-medium text-slate-300">Status</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option className="bg-slate-900" value="To Do">To Do</option>
+                    <option className="bg-slate-900" value="In Progress">In Progress</option>
+                    <option className="bg-slate-900" value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-2 font-medium text-slate-300">Priority</label>

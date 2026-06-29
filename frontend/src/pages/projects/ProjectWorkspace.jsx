@@ -255,7 +255,7 @@ export default function ProjectWorkspace() {
       </div>
 
       {/* TABS MENU */}
-      <div className="flex gap-6 border-b border-white/10 mb-6">
+      <div className="flex gap-6 border-b border-white/10 mb-6 overflow-x-auto whitespace-nowrap pb-2">
         {["Board", "Activity", "Chat", "Wiki"].map(tab => (
           <button
             key={tab}
@@ -416,6 +416,17 @@ export default function ProjectWorkspace() {
                     </a>
                   </div>
                 )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block mb-2 font-semibold text-slate-300">Status</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option className="bg-slate-900" value="To Do">To Do</option>
+                    <option className="bg-slate-900" value="In Progress">In Progress</option>
+                    <option className="bg-slate-900" value="Completed">Completed</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
