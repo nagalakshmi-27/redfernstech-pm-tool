@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 # --- USERS ---
 class UserBase(BaseModel):
@@ -234,3 +234,17 @@ class WikiHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- ACCOUNT DELETION & TRANSFERS ---
+class OwnedProjectMember(BaseModel):
+    id: int
+    name: str
+
+class OwnedProjectResponse(BaseModel):
+    project_id: int
+    project_name: str
+    members: List[OwnedProjectMember]
+
+class TransferProjectsRequest(BaseModel):
+    projects_to_delete: List[int] = []
+    transfers: Dict[int, int] = {}

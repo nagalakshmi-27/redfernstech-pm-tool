@@ -254,6 +254,73 @@ def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(
     db.commit()
     return {"message": "Successfully joined the team!"}
 
+@router.get("/me/owned-projects", response_model=list[schemas.OwnedProjectResponse])
+def get_owned_projects(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    projects = db.query(models.Project).filter(models.Project.created_by_id == current_user.id).all()
+    response = []
+    for p in projects:
+        members = [{"id": m.id, "name": (m.first_name + " " + m.last_name).strip() if m.first_name and m.last_name else m.email} for m in p.members if m.id != current_user.id and m.role != "Client"]
+        response.append({
+            "project_id": p.id,
+            "project_name": p.name,
+            "members": members
+        })
+    return response
+
+@router.put("/me/transfer-projects")
+def transfer_owned_projects(
+    request: schemas.TransferProjectsRequest, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    user_id = current_user.id
+    
+    # Process deletions for empty projects
+    for project_id in request.projects_to_delete:
+        project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.created_by_id == user_id).first()
+        if project:
+            db.delete(project)
+            
+    # Process transfers to new owners
+    for project_id, new_owner_id in request.transfers.items():
+        project = db.query(models.Project).filter(models.Project.id == int(project_id), models.Project.created_by_id == user_id).first()
+        if project:
+            project.created_by_id = new_owner_id
+            db.query(models.Task).filter(models.Task.project_id == int(project_id), models.Task.assignee_id == user_id).update({"assignee_id": new_owner_id})
+            db.query(models.Comment).filter(models.Comment.project_id == int(project_id), models.Comment.user_id == user_id).update({"user_id": new_owner_id})
+            db.query(models.Message).filter(models.Message.project_id == int(project_id), models.Message.user_id == user_id).update({"user_id": new_owner_id})
+            db.query(models.WikiPage).filter(models.WikiPage.project_id == int(project_id), models.WikiPage.author_id == user_id).update({"author_id": new_owner_id})
+            
+    db.commit()
+    return {"message": "Projects transferred and deleted successfully"}
+
+@router.delete("/me")
+def delete_user_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    user_id = current_user.id
+    
+    # Nullify creator/author references to preserve the data but anonymize the user
+    db.query(models.Project).filter(models.Project.created_by_id == user_id).update({"created_by_id": None})
+    db.query(models.Task).filter(models.Task.assignee_id == user_id).update({"assignee_id": None})
+    db.query(models.Comment).filter(models.Comment.user_id == user_id).update({"user_id": None})
+    db.query(models.Message).filter(models.Message.user_id == user_id).update({"user_id": None})
+    db.query(models.TaskAttachment).filter(models.TaskAttachment.user_id == user_id).update({"user_id": None})
+    db.query(models.WikiPage).filter(models.WikiPage.author_id == user_id).update({"author_id": None})
+    db.query(models.WikiPageHistory).filter(models.WikiPageHistory.author_id == user_id).update({"author_id": None})
+    db.query(models.Event).filter(models.Event.created_by_id == user_id).update({"created_by_id": None})
+    db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id).update({"invited_by_id": None})
+    
+    # Delete personal notifications
+    db.query(models.Notification).filter(models.Notification.user_id == user_id).delete()
+    
+    # Clear many-to-many relationship
+    current_user.assigned_projects = []
+    
+    # Finally, delete the user record
+    db.delete(current_user)
+    db.commit()
+    
+    return {"message": "Account deleted successfully"}
+
 @router.get("/teammates", response_model=list[schemas.TeammateResponse])
 def get_my_teammates(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # crud.get_teammates already includes the current_user at the top of the list!

@@ -47,8 +47,19 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
           setCompanyRole(data.company_role || "");
           setDepartment(data.department || "");
         }
+        
+        setLoadingProjects(true);
+        const projectsResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/me/owned-projects`, {
+          headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+        if (projectsResponse.ok) {
+          const projectsData = await projectsResponse.json();
+          setOwnedProjects(projectsData);
+        }
       } catch (err) {
         console.error("Failed to load settings", err);
+      } finally {
+        setLoadingProjects(false);
       }
     };
     fetchMyData();
@@ -119,6 +130,49 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const projectsToDelete = ownedProjects.filter(p => p.members.length === 0).map(p => p.project_id);
+      
+      const transferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-projects`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({
+          projects_to_delete: projectsToDelete,
+          transfers: projectTransfers
+        })
+      });
+
+      if (!transferRes.ok) {
+        setMessage("Failed to transfer projects. Please try again.");
+        resetDeleteFlow();
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+      
+      if (response.ok) {
+        alert("Your account has been successfully deleted.");
+        handleLogout();
+      } else {
+        setMessage("Failed to delete account. Please try again.");
+        resetDeleteFlow();
+      }
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      setMessage("Failed to connect to backend.");
+      resetDeleteFlow();
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("token");
@@ -137,7 +191,7 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
 const allProjectsAssigned =
   ownedProjects.length === 0 ||
   ownedProjects.every(
-    (project) => projectTransfers[project.project_id]
+    (project) => project.members.length === 0 || projectTransfers[project.project_id]
   );
   const resetDeleteFlow = () => {
   setShowDeleteModal(false);
@@ -148,9 +202,6 @@ const allProjectsAssigned =
   setFinalConfirmation(false);
 
   setProjectTransfers({});
-
-  setOwnedProjects([]);
-  setLoadingProjects(false);
 };
   return (
     <MainLayout>
@@ -424,34 +475,43 @@ const allProjectsAssigned =
             {project.project_name}
           </h4>
 
-          <p className="text-sm text-slate-400 mt-1 mb-3">
-            Select a new owner for this project.
-          </p>
+          {project.members.length === 0 ? (
+            <p className="text-sm text-red-400 mt-1">
+              No other members. This project will be permanently deleted.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-slate-400 mt-1 mb-3">
+                Select a new owner for this project.
+              </p>
 
-          <select
-            value={projectTransfers[project.project_id] || ""}
-            onChange={(e) =>
-              setProjectTransfers((prev) => ({
-                ...prev,
-                [project.project_id]: e.target.value,
-              }))
-            }
-            className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
-          >
-            <option value="">Select teammate</option>
-
-            {project.members.map((member) => (
-
-              <option
-                key={member.id}
-                value={member.id}
+              <select
+                value={projectTransfers[project.project_id] || ""}
+                onChange={(e) =>
+                  setProjectTransfers((prev) => ({
+                    ...prev,
+                    [project.project_id]: e.target.value,
+                  }))
+                }
+                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
               >
-                {member.name}
-              </option>
+                <option value="" className="text-slate-900 bg-slate-100">Select teammate</option>
 
-            ))}
+                {project.members.map((member) => (
 
-          </select>
+                  <option
+                    key={member.id}
+                    value={member.id}
+                    className="text-slate-900 bg-slate-100"
+                  >
+                    {member.name}
+                  </option>
+
+                ))}
+
+              </select>
+            </>
+          )}
 
         </div>
 
@@ -553,6 +613,7 @@ const allProjectsAssigned =
         </button>
 
         <button
+          onClick={handleDeleteAccount}
           disabled={
             deleteConfirmation !== "DELETE" ||
             !finalConfirmation
