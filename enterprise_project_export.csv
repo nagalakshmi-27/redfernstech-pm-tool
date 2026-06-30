@@ -1,0 +1,7 @@
+Issue ID,Task Name,Description,Status,Priority,Assignee Email,Reporter,Created Date,Due Date,Estimated Hours,Sprint,Epic Link,Component,Labels
+ENG-101,Setup Database,"Initialize the PostgreSQL database, configure schemas, and ensure RDS backups are enabled.",Completed,High,akansha@redfernstech.com,john.doe@company.com,2026-06-01,2026-06-05,8,Sprint 1,EPIC-10,Backend,Infrastructure
+ENG-102,Design Dashboard,"Create Figma mockups for the main dashboard UI, ensuring WCAG 2.1 AA accessibility compliance.",In Progress,Medium,akansha@redfernstech.com,jane.smith@company.com,2026-06-02,2026-06-10,16,Sprint 1,EPIC-12,Frontend,Design
+ENG-103,Implement API Auth,"Write JWT authentication middleware for the FastAPI backend. Need to handle token rotation.",To Do,High,,john.doe@company.com,2026-06-03,2026-06-12,12,Sprint 2,EPIC-10,Backend,Security
+ENG-104,Write Unit Tests,"Cover all CRUD operations for tasks with pytest. Target 85% code coverage.",To Do,Low,,jane.smith@company.com,2026-06-05,2026-06-20,24,Sprint 2,EPIC-15,QA,Testing
+ENG-105,Fix Navigation Bug,"Fix the mobile sidebar closing issue on iOS Safari devices when the user swipes left.",In Progress,Medium,akansha@redfernstech.com,support@company.com,2026-06-28,2026-07-01,4,Sprint 3,EPIC-12,Frontend,Bugfix
+ENG-106,Optimize Queries,"Refactor the SQLAlchemy queries in crud.py to use joinedload and prevent N+1 issues.",To Do,Medium,akansha@redfernstech.com,john.doe@company.com,2026-06-29,2026-07-05,8,Sprint 3,EPIC-10,Backend,Performance

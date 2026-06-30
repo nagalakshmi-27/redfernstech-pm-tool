@@ -41,7 +41,7 @@ class Project(Base):
     created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
 
     creator = relationship("User", back_populates="projects")
-    tasks = relationship("Task", back_populates="project")
+    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     members = relationship("User", secondary=project_members, back_populates="assigned_projects")
     messages = relationship("Message", back_populates="project", cascade="all, delete-orphan")
     wiki_pages = relationship("WikiPage", back_populates="project", cascade="all, delete-orphan")

@@ -91,7 +91,7 @@ async def import_project_from_excel(
                         project.members.append(assignee_user)
             
             new_task = models.Task(
-                title=title,
+                name=title,
                 description=description,
                 status=status,
                 priority=priority,

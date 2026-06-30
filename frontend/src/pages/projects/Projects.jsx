@@ -136,8 +136,8 @@ const [uploading, setUploading] = useState(false);
     setSelectedFile(null);
     setImportProjectName("");
 
-    // Redirect to imported project
-    navigate(`/projects/${data.project_id}`);
+    // Force a hard reload so AppContext fetches the new project and all its new tasks!
+    window.location.href = `/projects/${data.id}`;
 
   } catch (err) {
     console.error(err);
