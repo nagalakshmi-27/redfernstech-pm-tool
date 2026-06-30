@@ -17,6 +17,7 @@ export default function Teams() {
   const location = useLocation();
 
 const [highlightMemberId, setHighlightMemberId] = useState(null);
+const [selectedImage, setSelectedImage] = useState(null);
 
 const memberRefs = useRef({});
   const [showModal, setShowModal] = useState(false);
@@ -239,9 +240,18 @@ if (currentUserRole === "Client") {
       : "border-white/10"
   }`}
 >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-lg font-bold mb-3 uppercase shadow-[0_0_10px_rgba(6,182,212,0.5)]">
-                    {member.full_name ? member.full_name.charAt(0) : (member.name ? member.name.charAt(0) : "U")}
-                  </div>
+                  {member.profile_image ? (
+                    <img 
+                      src={member.profile_image.startsWith('http') ? member.profile_image : `${import.meta.env.VITE_API_URL}${member.profile_image}`} 
+                      alt="Profile" 
+                      className="w-12 h-12 rounded-full object-cover mb-3 shadow-[0_0_10px_rgba(6,182,212,0.5)] cursor-pointer hover:ring-2 hover:ring-cyan-400 transition"
+                      onClick={() => setSelectedImage(member.profile_image.startsWith('http') ? member.profile_image : `${import.meta.env.VITE_API_URL}${member.profile_image}`)}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-lg font-bold mb-3 uppercase shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                      {member.full_name ? member.full_name.charAt(0) : (member.name ? member.name.charAt(0) : "U")}
+                    </div>
+                  )}
                   <h2 className="text-lg md:text-xl font-semibold mb-2 break-words text-white">
                     {member.full_name || member.name || "Unknown"}
                   </h2>
@@ -337,6 +347,28 @@ if (currentUserRole === "Client") {
         </div>
 
       </div>
+    </div>
+  </div>
+)}
+
+{/* Image Modal */}
+{selectedImage && (
+  <div 
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" 
+    onClick={() => setSelectedImage(null)}
+  >
+    <div className="relative max-w-4xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+      <button 
+        onClick={() => setSelectedImage(null)} 
+        className="absolute -top-12 right-0 text-white hover:text-cyan-400 text-4xl transition font-bold"
+      >
+        &times;
+      </button>
+      <img 
+        src={selectedImage} 
+        alt="Enlarged Profile" 
+        className="max-w-full max-h-[85vh] rounded-lg shadow-[0_0_50px_rgba(6,182,212,0.5)] object-contain" 
+      />
     </div>
   </div>
 )}

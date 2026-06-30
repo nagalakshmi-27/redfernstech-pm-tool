@@ -125,6 +125,7 @@ class TeammateResponse(BaseModel):
     role: str
     company_role: Optional[str] = None
     department: Optional[str] = None
+    profile_image: Optional[str] = None
     shared_projects: list[str] = []
 
 # --- EVENTS ---
@@ -215,10 +216,10 @@ class WikiUpdate(BaseModel):
 class WikiResponse(WikiBase):
     id: int
     project_id: int
-    author_id: int
+    author_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
-    author: "UserResponse"
+    author: Optional["UserResponse"] = None
 
     class Config:
         from_attributes = True
@@ -228,9 +229,9 @@ class WikiHistoryResponse(BaseModel):
     wiki_id: int
     title: str
     content: Optional[str] = None
-    author_id: int
+    author_id: Optional[int] = None
     created_at: datetime
-    author: "UserResponse"
+    author: Optional["UserResponse"] = None
 
     class Config:
         from_attributes = True

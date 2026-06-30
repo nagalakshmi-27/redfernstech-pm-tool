@@ -228,6 +228,7 @@ def get_teammates(db: Session, user_id: int):
         "role": me.role or "Member",
         "company_role": me.company_role,
         "department": me.department or "Management",
+        "profile_image": me.profile_image,
         "shared_projects": []
     }
     
@@ -244,6 +245,7 @@ def get_teammates(db: Session, user_id: int):
                     "role": u.role or "Member",
                     "company_role": u.company_role,
                     "department": u.department or "Member",
+                    "profile_image": u.profile_image,
                     "shared_projects": []
                 }
         for proj in all_projects:
@@ -266,6 +268,7 @@ def get_teammates(db: Session, user_id: int):
                                 "role": u.role or "Member",
                                 "company_role": u.company_role,
                                 "department": u.department or "Member",
+                                "profile_image": u.profile_image,
                                 "shared_projects": []
                             }
                     if u_id in users_dict and proj.name not in users_dict[u_id]["shared_projects"]:

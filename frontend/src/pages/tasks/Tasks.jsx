@@ -48,6 +48,7 @@ const taskRefs = useRef({});
   const [assigneeId, setAssigneeId] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [sourceLink, setSourceLink] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   if (currentUserRole === "Client") {
@@ -158,7 +159,8 @@ const taskRefs = useRef({});
       assignee_id: parseInt(assigneeId), 
       project_id: parseInt(selectedProject),
       issue_type: issueType,
-      severity: issueType === "Bug" ? severity : null
+      severity: issueType === "Bug" ? severity : null,
+      source_link: sourceLink
     };
 
     try {
@@ -186,6 +188,7 @@ const taskRefs = useRef({});
     setAssigneeId("");
     setSelectedProject("");
     setDueDate("");
+    setSourceLink("");
     setEditingTaskId(null);
     setShowModal(false);
   };
@@ -260,6 +263,7 @@ const taskRefs = useRef({});
                      setAssigneeId(task.assignee_id || "");
                      setSelectedProject(task.project_id);
                      setDueDate(task.due_date || "");
+                     setSourceLink(task.source_link || "");
                      setShowModal(true);
                    }}
                    className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${
@@ -298,9 +302,17 @@ const taskRefs = useRef({});
                         {task.priority}
                       </span>
                      
-                     <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={members.find(m => m.id === task.assignee_id)?.full_name || "Unassigned"}>
-                       {(members.find(m => m.id === task.assignee_id)?.full_name || "U")[0].toUpperCase()}
-                     </div>
+                     {(() => {
+                        const assignee = members.find(m => m.id === task.assignee_id);
+                        if (assignee && assignee.profile_image) {
+                          return <img src={assignee.profile_image.startsWith('http') ? assignee.profile_image : `${import.meta.env.VITE_API_URL}${assignee.profile_image}`} alt="Avatar" className="w-7 h-7 rounded-full object-cover shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={assignee.full_name || assignee.name || "Unassigned"} />;
+                        }
+                        return (
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={assignee?.full_name || assignee?.name || "Unassigned"}>
+                            {(assignee?.full_name || assignee?.name || "U")[0].toUpperCase()}
+                          </div>
+                        );
+                      })()}
                    </div>
 
                    {/* Delete button (stop click propagation) */}
@@ -325,7 +337,19 @@ const taskRefs = useRef({});
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => { setShowModal(false); setEditingTaskId(null); }}>
           <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 rounded-2xl w-[95%] max-w-[500px] max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.5)]" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold mb-6 text-white">Ticket Details</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Ticket Details</h2>
+              {sourceLink && (
+                <a 
+                  href={sourceLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-1.5 text-sm font-bold bg-cyan-500/10 text-cyan-400 px-4 py-2 rounded-full border border-cyan-500/20 hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all"
+                >
+                  Open Document
+                </a>
+              )}
+            </div>
 
             <div className="space-y-4">
               <div>

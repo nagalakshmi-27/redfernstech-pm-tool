@@ -325,9 +325,17 @@ export default function ProjectWorkspace() {
                          <span className={`text-xs font-bold px-2 py-1 rounded-full border ${task.priority === "High" ? "bg-red-500/20 text-red-300 border-red-500/30" : task.priority === "Medium" ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" : "bg-green-500/20 text-green-300 border-green-500/30"}`}>
                             {task.priority}
                          </span>
-                         <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={members.find(m => m.id === task.assignee_id)?.full_name || "Unassigned"}>
-                           {(members.find(m => m.id === task.assignee_id)?.full_name || "U")[0].toUpperCase()}
-                         </div>
+                          {(() => {
+                            const assignee = members.find(m => m.id === task.assignee_id);
+                            if (assignee && assignee.profile_image) {
+                              return <img src={assignee.profile_image.startsWith('http') ? assignee.profile_image : `${import.meta.env.VITE_API_URL}${assignee.profile_image}`} alt="Avatar" className="w-7 h-7 rounded-full object-cover shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={assignee.full_name || assignee.name || "Unassigned"} />;
+                            }
+                            return (
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={assignee?.full_name || assignee?.name || "Unassigned"}>
+                                {(assignee?.full_name || assignee?.name || "U")[0].toUpperCase()}
+                              </div>
+                            );
+                          })()}
                        </div>
                        
                        {/* Delete button */}
@@ -350,9 +358,13 @@ export default function ProjectWorkspace() {
           <div className="space-y-4">
             {members.filter(m => project.members?.some(mem => mem.id === m.id) || project.created_by_id === m.id).map(member => (
               <div key={member.id} className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]">
-                  {(member.full_name || member.name || member.email)[0].toUpperCase()}
-                </div>
+                {member.profile_image ? (
+                  <img src={member.profile_image.startsWith('http') ? member.profile_image : `${import.meta.env.VITE_API_URL}${member.profile_image}`} alt="Profile" className="w-10 h-10 rounded-full object-cover shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                    {(member.full_name || member.name || member.email)[0].toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <p className="font-semibold text-white text-sm">{member.full_name || member.name || member.email}</p>
                   <p className="text-xs text-slate-400 font-medium">
