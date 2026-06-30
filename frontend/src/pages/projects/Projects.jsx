@@ -2,7 +2,7 @@ import MainLayout from "../../layouts/MainLayout";
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AppContext from "../../context/AppContext";
-import { FolderKanban, Clock3, PlayCircle, CheckCircle } from "lucide-react";
+import { FolderKanban, Clock3, PlayCircle, CheckCircle, UploadCloud } from "lucide-react";
 
 export default function Projects() {
   const { projects, setProjects, activities, setActivities, members } = useContext(AppContext);
@@ -16,7 +16,10 @@ export default function Projects() {
   const [endDate, setEndDate] = useState("");
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
-
+  const [showImportModal, setShowImportModal] = useState(false);
+const [selectedFile, setSelectedFile] = useState(null);
+const [importProjectName, setImportProjectName] = useState("");
+const [uploading, setUploading] = useState(false);
   const totalProjects = projects.length;
   const planningProjects = projects.filter((p) => p.calculated_status === "Planning").length;
   const inProgressProjects = projects.filter((p) => p.calculated_status === "In Progress").length;
@@ -94,26 +97,87 @@ export default function Projects() {
     }
   };
 
+  const handleImportProject = async () => {
+  if (!selectedFile) {
+    alert("Please select an Excel or CSV file.");
+    return;
+  }
+
+  try {
+    setUploading(true);
+
+    const formData = new FormData();
+
+    formData.append("file", selectedFile);
+
+    if (importProjectName.trim()) {
+      formData.append("project_name", importProjectName);
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/import-excel`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Import failed");
+    }
+
+    const data = await response.json();
+
+    // Close modal
+    setShowImportModal(false);
+    setSelectedFile(null);
+    setImportProjectName("");
+
+    // Redirect to imported project
+    navigate(`/projects/${data.project_id}`);
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to import project.");
+  } finally {
+    setUploading(false);
+  }
+};
+
   return (
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white">Projects</h1>
         {currentUserRole !== "Client" && (
-        <button
-          onClick={() => {
-            setEditingProjectId(null);
-            setProjectName("");
-            setProjectDescription("");
-            setStartDate("");
-            setEndDate("");
-            setSelectedMembers([]);
-            setShowModal(true);
-          }}
-          className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto transition-all"
-        >
-          + Create Project
-        </button>
-        )}
+  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+
+    <button
+      onClick={() => setShowImportModal(true)}
+      className="border border-cyan-500 text-cyan-400 px-4 py-2 rounded-lg font-medium hover:bg-cyan-500/10 transition-all"
+    >
+      Import Excel
+    </button>
+
+    <button
+      onClick={() => {
+        setEditingProjectId(null);
+        setProjectName("");
+        setProjectDescription("");
+        setStartDate("");
+        setEndDate("");
+        setSelectedMembers([]);
+        setShowModal(true);
+      }}
+      className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
+    >
+      + Create Project
+    </button>
+
+  </div>
+)}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -301,6 +365,99 @@ export default function Projects() {
           </div>
         </div>
       )}
+
+      {showImportModal && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="bg-[#141a2d] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+
+      <h2 className="text-2xl font-bold text-white mb-2">
+        Import Project
+      </h2>
+
+      <p className="text-slate-400 mb-6">
+        Upload an Excel (.xlsx) or CSV (.csv) file to create a project.
+      </p>
+
+      {/* Project Name */}
+      <div className="mb-4">
+        <label className="block text-slate-300 mb-2">
+          Project Name (Optional)
+        </label>
+
+        <input
+          type="text"
+          value={importProjectName}
+          onChange={(e) => setImportProjectName(e.target.value)}
+          placeholder="Enter project name"
+          className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
+        />
+      </div>
+
+      {/* File Upload */}
+      <div className="mb-6">
+        <label className="block text-slate-300 mb-2">
+          Select Excel File
+        </label>
+
+        <label className="block">
+  <input
+    type="file"
+    accept=".xlsx,.csv"
+    onChange={(e) => setSelectedFile(e.target.files[0])}
+    className="hidden"
+  />
+
+  <div className="cursor-pointer rounded-xl border-2 border-dashed border-cyan-500/40 bg-black/20 hover:bg-black/30 hover:border-cyan-400 hover:scale-[1.01] transition-all duration-200 p-8 text-center">
+
+    <div className="flex justify-center mb-3">
+  <UploadCloud size={48} className="text-cyan-400" />
+</div>
+
+    <p className="text-white font-medium">
+      Click to choose an Excel or CSV file
+    </p>
+
+    <p className="text-slate-400 text-sm mt-2">
+      Supported formats: .xlsx, .csv
+    </p>
+
+    {selectedFile && (
+      <div className="mt-5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 px-4 py-2 text-cyan-300 font-medium">
+        {selectedFile.name}
+      </div>
+    )}
+
+  </div>
+</label>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex justify-end gap-3">
+
+        <button
+          onClick={() => {
+            setShowImportModal(false);
+            setSelectedFile(null);
+            setImportProjectName("");
+          }}
+          className="px-5 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5"
+        >
+          Cancel
+        </button>
+
+        <button
+  onClick={handleImportProject}
+  disabled={uploading || !selectedFile}
+  className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2 rounded-lg disabled:opacity-50"
+>
+  {uploading ? "Importing..." : "Import"}
+</button>
+
+      </div>
+
+    </div>
+  </div>
+)}
     </MainLayout>
   );
 }
