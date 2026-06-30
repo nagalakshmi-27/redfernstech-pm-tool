@@ -416,10 +416,11 @@ const allProjectsAssigned =
         </div>
       </div>
       {showDeleteModal && (
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div className="bg-[#141a2d] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+  <div className="fixed inset-0 z-50 bg-black/70 overflow-y-auto">
+  <div className="min-h-screen flex items-start sm:items-center justify-center p-3 sm:p-6">
+    <div className="bg-[#141a2d] border border-white/10 rounded-2xl w-full max-w-3xl p-4 sm:p-6 shadow-2xl my-6 max-h-[92vh] overflow-hidden flex flex-col">
 
-      <h2 className="text-2xl font-bold text-red-400 mb-3">
+      <h2 className="text-xl sm:text-2xl font-bold text-red-400 mb-3">
         Delete Account
       </h2>
 
@@ -430,7 +431,7 @@ const allProjectsAssigned =
       <p className="text-slate-400 text-sm mt-3">
         This action cannot be undone.
       </p>
-      <div className="mt-6">
+      <div className="mt-6 flex-1 overflow-y-auto pr-2">
         <div className="mt-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
   <p className="text-yellow-300 font-semibold">
     Before deleting your account
@@ -468,10 +469,10 @@ const allProjectsAssigned =
 
         <div
           key={project.project_id}
-          className="rounded-xl border border-white/10 bg-black/20 p-4"
+          className="rounded-xl border border-white/10 bg-black/20 p-3 sm:p-4"
         >
 
-          <h4 className="font-semibold text-white">
+          <h4 className="font-semibold text-base sm:text-lg text-white">
             {project.project_name}
           </h4>
 
@@ -493,7 +494,7 @@ const allProjectsAssigned =
                     [project.project_id]: e.target.value,
                   }))
                 }
-                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
+                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm sm:text-base"
               >
                 <option value="" className="text-slate-900 bg-slate-100">Select teammate</option>
 
@@ -536,7 +537,7 @@ const allProjectsAssigned =
   </label>
 </div>
 
-      <div className="flex justify-end gap-3 mt-8">
+      <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-white/10 pt-5">
         <button
           onClick={resetDeleteFlow}
           className="px-5 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5"
@@ -562,12 +563,13 @@ const allProjectsAssigned =
 
     </div>
   </div>
+  </div>
 )}
 {showFinalDeleteModal && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
     <div className="bg-[#141a2d] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
 
-      <h2 className="text-2xl font-bold text-red-400 mb-3">
+      <h2 className="text-xl sm:text-2xl font-bold text-red-400 mb-3">
         Final Confirmation
       </h2>
 
