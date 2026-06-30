@@ -23,7 +23,14 @@ const [showNewPassword, setShowNewPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPasswordValidation, setShowPasswordValidation] =
   useState(false);
-
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [ownedProjects, setOwnedProjects] = useState([]);
+const [projectTransfers, setProjectTransfers] = useState({});
+const [loadingProjects, setLoadingProjects] = useState(false);
+const [showFinalDeleteModal, setShowFinalDeleteModal] = useState(false);
+const [deleteConfirmation, setDeleteConfirmation] = useState("");
+const [finalConfirmation, setFinalConfirmation] = useState(false);
   // 1. Load the user's data when the page opens
   useEffect(() => {
     const fetchMyData = async () => {
@@ -127,6 +134,24 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
 };
 
+const allProjectsAssigned =
+  ownedProjects.length === 0 ||
+  ownedProjects.every(
+    (project) => projectTransfers[project.project_id]
+  );
+  const resetDeleteFlow = () => {
+  setShowDeleteModal(false);
+  setShowFinalDeleteModal(false);
+
+  setConfirmDelete(false);
+  setDeleteConfirmation("");
+  setFinalConfirmation(false);
+
+  setProjectTransfers({});
+
+  setOwnedProjects([]);
+  setLoadingProjects(false);
+};
   return (
     <MainLayout>
       <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">
@@ -214,13 +239,25 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
           <h2 className="text-xl font-semibold mb-4 text-white">Security</h2>
 
           {!showPasswordSection ? (
-            <button
-              onClick={() => setShowPasswordSection(true)}
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-3 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto transition-all"
-            >
-              Change Password
-            </button>
-          ) : (
+  <div className="flex flex-col sm:flex-row gap-3">
+    <button
+      onClick={() => setShowPasswordSection(true)}
+      className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-3 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
+    >
+      Change Password
+    </button>
+
+    <button
+      onClick={() => {
+  resetDeleteFlow();
+  setShowDeleteModal(true);
+}}
+      className="border border-red-500 text-red-400 px-5 py-3 rounded-lg font-medium hover:bg-red-500/10 transition-all"
+    >
+      Delete Account
+    </button>
+  </div>
+) : (
             <div className="space-y-4 bg-black/30 p-4 rounded-xl border border-white/10">
               <div className="relative">
   <input
@@ -327,6 +364,213 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
           </button>
         </div>
       </div>
+      {showDeleteModal && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="bg-[#141a2d] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+
+      <h2 className="text-2xl font-bold text-red-400 mb-3">
+        Delete Account
+      </h2>
+
+      <p className="text-slate-300 leading-relaxed">
+        Are you sure you want to delete your account?
+      </p>
+
+      <p className="text-slate-400 text-sm mt-3">
+        This action cannot be undone.
+      </p>
+      <div className="mt-6">
+        <div className="mt-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+  <p className="text-yellow-300 font-semibold">
+    Before deleting your account
+  </p>
+
+  <ul className="list-disc list-inside text-sm text-slate-300 mt-2 space-y-1">
+    <li>All projects you own will be transferred.</li>
+    <li>You will immediately lose access to your projects.</li>
+    <li>Your account will be permanently deleted.</li>
+    <li>This action cannot be undone.</li>
+  </ul>
+</div>
+  <div className="mt-6">
+  <h3 className="text-lg font-semibold text-white mb-4">
+    Project Ownership
+  </h3>
+
+  {loadingProjects ? (
+
+    <div className="text-slate-400">
+      Loading your projects...
+    </div>
+
+  ) : ownedProjects.length === 0 ? (
+
+    <div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-slate-400">
+      No owned projects found.
+    </div>
+
+  ) : (
+
+    <div className="space-y-4">
+
+      {ownedProjects.map((project) => (
+
+        <div
+          key={project.project_id}
+          className="rounded-xl border border-white/10 bg-black/20 p-4"
+        >
+
+          <h4 className="font-semibold text-white">
+            {project.project_name}
+          </h4>
+
+          <p className="text-sm text-slate-400 mt-1 mb-3">
+            Select a new owner for this project.
+          </p>
+
+          <select
+            value={projectTransfers[project.project_id] || ""}
+            onChange={(e) =>
+              setProjectTransfers((prev) => ({
+                ...prev,
+                [project.project_id]: e.target.value,
+              }))
+            }
+            className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
+          >
+            <option value="">Select teammate</option>
+
+            {project.members.map((member) => (
+
+              <option
+                key={member.id}
+                value={member.id}
+              >
+                {member.name}
+              </option>
+
+            ))}
+
+          </select>
+
+        </div>
+
+      ))}
+
+    </div>
+
+  )}
+</div>
+</div>
+      <div className="mt-6">
+  <label className="flex items-center gap-3 text-slate-300 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={confirmDelete}
+      onChange={(e) => setConfirmDelete(e.target.checked)}
+      className="w-4 h-4 accent-red-600"
+    />
+    <span>
+      I understand that deleting my account is permanent.
+    </span>
+  </label>
+</div>
+
+      <div className="flex justify-end gap-3 mt-8">
+        <button
+          onClick={resetDeleteFlow}
+          className="px-5 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5"
+        >
+          Cancel
+        </button>
+
+        <button
+  disabled={!confirmDelete || !allProjectsAssigned}
+  onClick={() => {
+    setShowDeleteModal(false);
+    setShowFinalDeleteModal(true);
+  }}
+  className={`px-5 py-2 rounded-lg text-white font-semibold transition ${
+    confirmDelete && allProjectsAssigned
+      ? "bg-red-600 hover:bg-red-700"
+      : "bg-red-900/40 cursor-not-allowed"
+  }`}
+>
+  Next
+</button>
+      </div>
+
+    </div>
+  </div>
+)}
+{showFinalDeleteModal && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="bg-[#141a2d] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+
+      <h2 className="text-2xl font-bold text-red-400 mb-3">
+        Final Confirmation
+      </h2>
+
+      <p className="text-slate-300 leading-relaxed">
+        Your account will be permanently deleted.
+      </p>
+
+      <p className="text-slate-400 text-sm mt-2">
+        Type <span className="font-bold text-red-400">DELETE</span> below to continue.
+      </p>
+
+      <input
+        type="text"
+        value={deleteConfirmation}
+        onChange={(e) => setDeleteConfirmation(e.target.value)}
+        placeholder="Type DELETE"
+        className="w-full mt-5 bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+      />
+
+      <label className="flex items-center gap-3 mt-5 cursor-pointer text-slate-300">
+        <input
+          type="checkbox"
+          checked={finalConfirmation}
+          onChange={(e) => setFinalConfirmation(e.target.checked)}
+          className="accent-red-600"
+        />
+
+        <span>
+          I understand this action cannot be undone.
+        </span>
+      </label>
+
+      <div className="flex justify-end gap-3 mt-8">
+
+        <button
+          onClick={() => {
+            setShowFinalDeleteModal(false);
+            setShowDeleteModal(true);
+          }}
+          className="px-5 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5"
+        >
+          Back
+        </button>
+
+        <button
+          disabled={
+            deleteConfirmation !== "DELETE" ||
+            !finalConfirmation
+          }
+          className={`px-5 py-2 rounded-lg text-white font-semibold transition ${
+            deleteConfirmation === "DELETE" && finalConfirmation
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-red-900/40 cursor-not-allowed"
+          }`}
+        >
+          Delete Account
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
     </MainLayout>
   );
 }
