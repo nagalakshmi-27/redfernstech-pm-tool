@@ -332,6 +332,15 @@ export default function Sidebar() {
           </li>
 
           <li>
+  <Link
+    to="/reports"
+    className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
+  >
+    Reports & Analytics
+  </Link>
+</li>
+
+          <li>
             <Link
               to="/settings"
               className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
