@@ -10,14 +10,65 @@ export function AppProvider({ children }) {
   
   const [activities, setActivities] = useState([]);
 
+  const [workspaces, setWorkspaces] = useState([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(() => {
+    return localStorage.getItem("activeWorkspaceId") || null;
+  });
+  const [activeWorkspaceRole, setActiveWorkspaceRole] = useState(null);
+
+  // Fetch Workspaces once
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/workspaces/`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setWorkspaces(data);
+          if (data.length > 0) {
+            const currentValid = data.some(ws => ws.id.toString() === activeWorkspaceId?.toString());
+            if (!activeWorkspaceId || !currentValid) {
+              setActiveWorkspaceId(data[0].id.toString());
+            }
+          } else {
+            setActiveWorkspaceId(null);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load workspaces", err);
+      }
+    };
+    fetchWorkspaces();
+  }, []);
+
+  // Save activeWorkspaceId
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      localStorage.setItem("activeWorkspaceId", activeWorkspaceId);
+    }
+  }, [activeWorkspaceId]);
+
+  useEffect(() => {
+    if (activeWorkspaceId && workspaces.length > 0) {
+      const activeWs = workspaces.find(ws => ws.id.toString() === activeWorkspaceId.toString());
+      if (activeWs) {
+        setActiveWorkspaceRole(activeWs.user_role);
+      }
+    }
+  }, [activeWorkspaceId, workspaces]);
+
+  // Fetch Data based on activeWorkspaceId
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
-      if (!token) return; 
+      if (!token || !activeWorkspaceId) return; 
 
       try {
         // Fetch Projects
-        const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/`, {
+        const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (projRes.ok) {
@@ -26,7 +77,7 @@ export function AppProvider({ children }) {
         }
 
         // Fetch Tasks!
-        const teamRes = await fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
+        const teamRes = await fetch(`${import.meta.env.VITE_API_URL}/users/teammates?workspace_id=${activeWorkspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (teamRes.ok) {
@@ -49,11 +100,17 @@ export function AppProvider({ children }) {
     };
     
     fetchData();
-  }, []);
+  }, [activeWorkspaceId]);
 
   return (
     <AppContext.Provider
-      value={{ projects, setProjects, tasks, setTasks, members, setMembers, activities, setActivities }}
+      value={{
+        workspaces,
+        setWorkspaces,
+        activeWorkspaceId,
+        setActiveWorkspaceId,
+        activeWorkspaceRole,
+        projects, setProjects, tasks, setTasks, members, setMembers, activities, setActivities }}
     >
       {children}
     </AppContext.Provider>

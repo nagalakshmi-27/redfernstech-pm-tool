@@ -5,7 +5,6 @@ from typing import Optional, List, Dict
 # --- USERS ---
 class UserBase(BaseModel):
     email: EmailStr
-    role: str
     full_name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -32,6 +31,30 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+# --- WORKSPACES ---
+class WorkspaceBase(BaseModel):
+    name: str
+
+class WorkspaceCreate(WorkspaceBase):
+    pass
+
+class WorkspaceUpdate(BaseModel):
+    name: str
+
+class WorkspaceTransfer(BaseModel):
+    new_owner_id: int
+
+class WorkspaceMemberRoleUpdate(BaseModel):
+    role: str
+
+class WorkspaceResponse(WorkspaceBase):
+    id: int
+    owner_id: int
+    created_at: datetime
+    user_role: Optional[str] = None
+    class Config:
+        from_attributes = True
+
 # --- PROJECTS ---
 class ProjectBase(BaseModel):
     name: str
@@ -41,6 +64,7 @@ class ProjectBase(BaseModel):
     status: Optional[str] = "Planning"
 
 class ProjectCreate(ProjectBase):
+    workspace_id: int
     member_ids: List[int] = []
 
 class ProjectUpdate(BaseModel):
@@ -54,6 +78,7 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(ProjectBase):
     id: int
     created_by_id: int
+    workspace_id: Optional[int] = None
     members: List[UserResponse] = []
     progress: int = 0
     calculated_status: str = "Planning"
@@ -98,7 +123,7 @@ class TaskAttachmentResponse(BaseModel):
     file_url: str
     created_at: datetime
     task_id: int
-    user_id: int
+    user_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -116,6 +141,7 @@ class TaskResponse(TaskBase):
 class InviteCreate(BaseModel):
     email: EmailStr
     role: str = "Standard"
+    workspace_id: int
 class InviteAccept(BaseModel):
     token: str
 class TeammateResponse(BaseModel):
@@ -240,12 +266,14 @@ class WikiHistoryResponse(BaseModel):
 class OwnedProjectMember(BaseModel):
     id: int
     name: str
+    role: Optional[str] = None
 
-class OwnedProjectResponse(BaseModel):
-    project_id: int
-    project_name: str
+
+class OwnedWorkspaceResponse(BaseModel):
+    workspace_id: int
+    workspace_name: str
     members: List[OwnedProjectMember]
 
-class TransferProjectsRequest(BaseModel):
-    projects_to_delete: List[int] = []
+class TransferWorkspacesRequest(BaseModel):
+    workspaces_to_delete: List[int] = []
     transfers: Dict[int, int] = {}

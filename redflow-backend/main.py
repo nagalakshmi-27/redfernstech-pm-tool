@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models
-from app.routers import users, projects, tasks, events, notifications, collaboration
+from app.routers import users, projects, tasks, events, notifications, collaboration, workspaces
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -27,6 +27,7 @@ app.add_middleware(
 )
 
 # Include your routers
+app.include_router(workspaces.router)
 app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(tasks.router) 

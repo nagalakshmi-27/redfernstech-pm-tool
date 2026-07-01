@@ -11,6 +11,14 @@ project_members = Table(
     Column("project_id", Integer, ForeignKey("projects.id"))
 )
 
+workspace_members = Table(
+    "workspace_members",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("workspace_id", Integer, ForeignKey("workspaces.id")),
+    Column("role", String, default="Member") # Admin, Member, Client within this workspace
+)
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -19,16 +27,30 @@ class User(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     hashed_password = Column(String)
-    role = Column(String) # Admin, Member, Client
     company_role = Column(String, nullable=True) # Developer, Designer, etc
     department = Column(String, nullable=True)
     profile_image = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
+    owned_workspaces = relationship("Workspace", back_populates="owner")
+    workspaces = relationship("Workspace", secondary=workspace_members, back_populates="members")
+    
     projects = relationship("Project", back_populates="creator")
     assigned_projects = relationship("Project", secondary=project_members, back_populates="members")
     notifications = relationship("Notification", back_populates="user")
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
+
+    owner = relationship("User", back_populates="owned_workspaces")
+    members = relationship("User", secondary=workspace_members, back_populates="workspaces")
+    projects = relationship("Project", back_populates="workspace", cascade="all, delete-orphan")
+    invitations = relationship("Invitation", back_populates="workspace", cascade="all, delete-orphan")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -39,8 +61,10 @@ class Project(Base):
     end_date = Column(String, nullable=True)   
     status = Column(String, default="Planning") 
     created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
 
     creator = relationship("User", back_populates="projects")
+    workspace = relationship("Workspace", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     members = relationship("User", secondary=project_members, back_populates="assigned_projects")
     messages = relationship("Message", back_populates="project", cascade="all, delete-orphan")
@@ -117,7 +141,10 @@ class Invitation(Base):
     token = Column(String, unique=True, index=True)
     status = Column(String, default="Pending")
     invited_by_id = Column(Integer, ForeignKey("users.id"), index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    workspace = relationship("Workspace", back_populates="invitations")
 
 class Event(Base):
     __tablename__ = "events"

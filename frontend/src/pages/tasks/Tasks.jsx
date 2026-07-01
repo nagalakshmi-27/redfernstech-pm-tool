@@ -7,9 +7,9 @@ import CreateIssueModal from "../../components/CreateIssueModal";
 import TaskComments from "../../components/TaskComments";
 import TaskAttachments from "../../components/TaskAttachments";
 export default function Tasks() {
-  const { tasks, setTasks, projects, members } = useContext(AppContext);
+  const { tasks, setTasks, projects, members, activeWorkspaceRole } = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
-  const currentUserRole = localStorage.getItem("userRole");
+  const currentUserRole = activeWorkspaceRole;
   const location = useLocation();
 
 const [highlightTaskId, setHighlightTaskId] = useState(null);

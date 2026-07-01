@@ -13,8 +13,8 @@ import TaskAttachments from "../../components/TaskAttachments";
 export default function ProjectWorkspace() {
   const { id } = useParams();
   const location = useLocation();
-  const { projects, tasks, setTasks, members } = useContext(AppContext);
-  const currentUserRole = localStorage.getItem("userRole");
+  const { projects, tasks, setTasks, members, activeWorkspaceRole } = useContext(AppContext);
+  const currentUserRole = activeWorkspaceRole;
   const [highlightProject, setHighlightProject] = useState(false);
 
   const project = projects.find(p => p.id === parseInt(id));

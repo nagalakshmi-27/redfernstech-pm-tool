@@ -10,25 +10,21 @@ import io
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 @router.get("/", response_model=List[schemas.ProjectResponse])
-def read_projects(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return crud.get_user_projects(db=db, user_id=current_user.id)
+def read_projects(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=workspace_id)
 
 @router.post("/", response_model=schemas.ProjectResponse)
 def create_project(project: schemas.ProjectCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if current_user.role == "Client":
-        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     return crud.create_project(db=db, project=project, user_id=current_user.id)
 
-@router.post("/import-excel", response_model=schemas.ProjectResponse)
+@router.post("/import-excel", response_model=List[schemas.ProjectResponse])
 async def import_project_from_excel(
+    workspace_id: int = Form(...),
     file: UploadFile = File(...),
     project_name: str = Form(None),
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role == "Client":
-        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
-        
     if not file.filename.endswith(('.xlsx', '.csv')):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .xlsx or .csv file.")
         
@@ -59,13 +55,21 @@ async def import_project_from_excel(
         status_idx = next((i for i, h in enumerate(headers) if h == 'status'), None)
         priority_idx = next((i for i, h in enumerate(headers) if h == 'priority'), None)
         assignee_idx = next((i for i, h in enumerate(headers) if h in ['assignee email', 'assignee', 'email']), None)
+        project_idx = next((i for i, h in enumerate(headers) if h in ['project', 'project name']), None)
         
-        # Create Project
-        new_project_name = project_name or file.filename.rsplit('.', 1)[0]
-        project_create = schemas.ProjectCreate(name=new_project_name)
-        project = crud.create_project(db=db, project=project_create, user_id=current_user.id)
+        created_projects = {}
+        fallback_project_name = project_name or file.filename.rsplit('.', 1)[0]
         
         for row in rows[1:]:
+            proj_name = str(row[project_idx]).strip() if project_idx is not None and len(row) > project_idx and row[project_idx] else ""
+            if not proj_name or proj_name.lower() in ["none", "nan"]:
+                proj_name = fallback_project_name
+                
+            if proj_name not in created_projects:
+                project_create = schemas.ProjectCreate(name=proj_name, workspace_id=workspace_id)
+                created_projects[proj_name] = crud.create_project(db=db, project=project_create, user_id=current_user.id)
+                
+            project = created_projects[proj_name]
             title = str(row[task_name_idx]).strip() if task_name_idx is not None and len(row) > task_name_idx and row[task_name_idx] else "Untitled Task"
             if not title or title.lower() == "none" or title.lower() == "nan":
                 continue
@@ -101,8 +105,9 @@ async def import_project_from_excel(
             db.add(new_task)
             
         db.commit()
-        db.refresh(project)
-        return project
+        for p in created_projects.values():
+            db.refresh(p)
+        return list(created_projects.values())
         
     except HTTPException:
         raise
@@ -112,8 +117,6 @@ async def import_project_from_excel(
 
 @router.put("/{project_id}", response_model=schemas.ProjectResponse)
 def update_project(project_id: int, project: schemas.ProjectUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if current_user.role == "Client":
-        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     updated_project = crud.update_project(db=db, project_id=project_id, project_update=project, user_id=current_user.id)
     if not updated_project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -121,8 +124,6 @@ def update_project(project_id: int, project: schemas.ProjectUpdate, db: Session 
 
 @router.delete("/{project_id}")
 def delete_project(project_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if current_user.role == "Client":
-        raise HTTPException(status_code=403, detail="Clients are strictly read-only.")
     success = crud.delete_project(db=db, project_id=project_id, user_id=current_user.id)
     if not success:
         raise HTTPException(status_code=403, detail="Forbidden")

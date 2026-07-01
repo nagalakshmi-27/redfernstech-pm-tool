@@ -14,8 +14,8 @@ export default function CreateIssueModal({
   hideTrigger = false,
   onSuccess = undefined
 }) {
-  const { tasks, setTasks, activities, setActivities, projects, members } = useContext(AppContext);
-  const currentUserRole = localStorage.getItem("userRole");
+  const { tasks, setTasks, activities, setActivities, projects, members, activeWorkspaceRole } = useContext(AppContext);
+  const currentUserRole = activeWorkspaceRole;
   
   const [internalShowModal, setInternalShowModal] = useState(false);
   const showModal = isOpen !== undefined ? isOpen : internalShowModal;

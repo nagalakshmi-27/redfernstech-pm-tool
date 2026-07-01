@@ -58,7 +58,6 @@ localStorage.setItem("token", data.access_token);
 localStorage.setItem("isLoggedIn", "true");
 localStorage.setItem("userEmail", data.user.email);
 localStorage.setItem("userId", data.user.id);
-localStorage.setItem("userRole", data.user.role);
 
 if (data.user.profile_image) {
   const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
@@ -68,7 +67,7 @@ if (data.user.profile_image) {
 }
 
       // 5. Go to the dashboard
-      navigate("/dashboard");
+      window.location.href = "/dashboard";
       
     } catch (err) {
       alert(err.message); // This will show "Incorrect email or password" if they guess wrong

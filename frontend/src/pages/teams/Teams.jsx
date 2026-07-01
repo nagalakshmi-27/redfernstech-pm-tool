@@ -1,5 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   Code,
@@ -12,8 +13,9 @@ import { Navigate, useLocation } from "react-router-dom";
 import AppContext from "../../context/AppContext";
 
 export default function Teams() {
-  const { members} = useContext(AppContext);
-  const currentUserRole = localStorage.getItem("userRole");
+  const { members, activeWorkspaceRole, activeWorkspaceId } = useContext(AppContext);
+  const currentUserRole = activeWorkspaceRole;
+  const currentUserId = Number(localStorage.getItem("userId"));
   const location = useLocation();
 
 const [highlightMemberId, setHighlightMemberId] = useState(null);
@@ -21,6 +23,19 @@ const [selectedImage, setSelectedImage] = useState(null);
 
 const memberRefs = useRef({});
   const [showModal, setShowModal] = useState(false);
+  const [openRoleDropdownId, setOpenRoleDropdownId] = useState(null);
+  const [roleDropdownPos, setRoleDropdownPos] = useState({ top: 0, left: 0 });
+  
+  useEffect(() => {
+    const closeDropdown = () => setOpenRoleDropdownId(null);
+    document.addEventListener("click", closeDropdown);
+    window.addEventListener("scroll", closeDropdown, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("click", closeDropdown);
+      window.removeEventListener("scroll", closeDropdown, { capture: true });
+    };
+  }, []);
+
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState("Member");
@@ -36,7 +51,8 @@ const memberRefs = useRef({});
         },
         body: JSON.stringify({
           email: memberEmail,
-          role: memberRole
+          role: memberRole,
+          workspace_id: parseInt(activeWorkspaceId)
         })
       });
       if (response.ok) {
@@ -50,8 +66,9 @@ const memberRefs = useRef({});
 console.log(errData);
 alert("Failed to send invite: " + JSON.stringify(errData));
       }
-    } catch{
-      alert("Failed to connect to backend.");
+    } catch (error) {
+      console.error(error);
+      alert("Error: " + error.message);
     }
   };
 
@@ -78,7 +95,7 @@ const handleDeleteMember = async (memberId) => {
 
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/users/teammates/${memberId}`,
+      `${import.meta.env.VITE_API_URL}/users/teammates/${memberId}?workspace_id=${activeWorkspaceId}`,
       {
         method: "DELETE",
         headers: {
@@ -94,8 +111,30 @@ const handleDeleteMember = async (memberId) => {
       const errData = await response.json();
       alert(errData.detail || "Failed to delete member");
     }
-  } catch {
-    alert("Failed to connect to backend");
+  } catch (error) {
+    console.error(error);
+    alert("Error: " + error.message);
+  }
+};
+
+const handleRoleChange = async (memberId, newRole) => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/workspaces/${activeWorkspaceId}/members/${memberId}/role`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+    if (response.ok) {
+      window.location.reload();
+    } else {
+      const err = await response.json();
+      alert(err.detail || "Failed to update role");
+    }
+  } catch (error) {
+    alert("Error updating role");
   }
 };
 
@@ -130,7 +169,7 @@ if (currentUserRole === "Client") {
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white">Teams</h1>
 
-        {currentUserRole === "Admin" && (
+        {currentUserRole !== "Client" && (
           <button
             onClick={() => setShowModal(true)}
             className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto transition-all"
@@ -267,13 +306,41 @@ if (currentUserRole === "Client") {
                     </p>
                   )}
                   {currentUserRole === "Admin" && member.email !== localStorage.getItem("userEmail") && (
-                    <div className="mt-4">
+                    <div className="mt-4 flex gap-2">
                       <button
                         onClick={() => handleDeleteMember(member.id)}
                         className="bg-red-500/20 text-red-200 px-3 py-2 rounded-lg text-sm border border-red-500/30 hover:bg-red-500/40 transition"
                       >
                         Delete
                       </button>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openRoleDropdownId === member.id) {
+                              setOpenRoleDropdownId(null);
+                            } else {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setRoleDropdownPos({ top: rect.bottom + 4, left: rect.left });
+                              setOpenRoleDropdownId(member.id);
+                            }
+                          }}
+                          className="bg-cyan-500/20 text-cyan-200 px-3 py-2 rounded-lg text-sm border border-cyan-500/30 hover:bg-cyan-500/40 transition"
+                        >
+                          Change Role ▾
+                        </button>
+                        {openRoleDropdownId === member.id && createPortal(
+                          <div 
+                            className="fixed z-[100] w-32 bg-slate-800 border border-white/10 shadow-2xl rounded-lg py-1 flex flex-col"
+                            style={{ top: roleDropdownPos.top, left: roleDropdownPos.left }}
+                          >
+                            <button onClick={(e) => { e.stopPropagation(); handleRoleChange(member.id, "Admin"); setOpenRoleDropdownId(null); }} className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-white/10 hover:text-white">Admin</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleRoleChange(member.id, "Member"); setOpenRoleDropdownId(null); }} className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-white/10 hover:text-white">Member</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleRoleChange(member.id, "Client"); setOpenRoleDropdownId(null); }} className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-white/10 hover:text-white">Client</button>
+                          </div>,
+                          document.body
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -324,7 +391,7 @@ if (currentUserRole === "Client") {
             onChange={(e) => setMemberRole(e.target.value)}
             className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
           >
-            <option value="Admin" className="bg-slate-900">Admin</option>
+            {currentUserRole === "Admin" && <option value="Admin" className="bg-slate-900">Admin</option>}
             <option value="Member" className="bg-slate-900">Member</option>
             <option value="Client" className="bg-slate-900">Client</option>
           </select>

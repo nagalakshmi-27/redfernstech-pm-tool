@@ -5,10 +5,10 @@ import AppContext from "../../context/AppContext";
 import { FolderKanban, Clock3, PlayCircle, CheckCircle, UploadCloud } from "lucide-react";
 
 export default function Projects() {
-  const { projects, setProjects, activities, setActivities, members } = useContext(AppContext);
+  const { projects, setProjects, activities, setActivities, members, activeWorkspaceId, workspaces, activeWorkspaceRole } = useContext(AppContext);
   const navigate = useNavigate();
   const currentUserId = Number(localStorage.getItem("userId"));
-  const currentUserRole = localStorage.getItem("userRole");
+  const currentUserRole = activeWorkspaceRole;
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
@@ -41,7 +41,8 @@ const [uploading, setUploading] = useState(false);
       start_date: startDate,
       end_date: endDate,
       status: "Planning", 
-      member_ids: selectedMembers 
+      member_ids: selectedMembers,
+      workspace_id: parseInt(activeWorkspaceId)
     };
 
     try {
@@ -113,6 +114,10 @@ const [uploading, setUploading] = useState(false);
     if (importProjectName.trim()) {
       formData.append("project_name", importProjectName);
     }
+    
+    if (activeWorkspaceId) {
+      formData.append("workspace_id", activeWorkspaceId);
+    }
 
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/projects/import-excel`,
@@ -136,8 +141,12 @@ const [uploading, setUploading] = useState(false);
     setSelectedFile(null);
     setImportProjectName("");
 
-    // Force a hard reload so AppContext fetches the new project and all its new tasks!
-    window.location.href = `/projects/${data.id}`;
+    // Redirect based on how many projects were created
+    if (Array.isArray(data) && data.length === 1) {
+      window.location.href = `/projects/${data[0].id}`;
+    } else {
+      window.location.href = `/projects`;
+    }
 
   } catch (err) {
     console.error(err);

@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import MainLayout from "../../layouts/MainLayout";
+import AppContext from "../../context/AppContext";
 
 export default function Settings() {
-  const currentUserRole = localStorage.getItem("userRole");
+  const { activeWorkspaceRole } = useContext(AppContext);
+  const currentUserRole = activeWorkspaceRole;
   // Profile States
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -25,9 +27,10 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [ownedProjects, setOwnedProjects] = useState([]);
-const [projectTransfers, setProjectTransfers] = useState({});
-const [loadingProjects, setLoadingProjects] = useState(false);
+
+const [ownedWorkspaces, setOwnedWorkspaces] = useState([]);
+const [workspaceTransfers, setWorkspaceTransfers] = useState({});
+const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 const [showFinalDeleteModal, setShowFinalDeleteModal] = useState(false);
 const [deleteConfirmation, setDeleteConfirmation] = useState("");
 const [finalConfirmation, setFinalConfirmation] = useState(false);
@@ -48,18 +51,20 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
           setDepartment(data.department || "");
         }
         
-        setLoadingProjects(true);
-        const projectsResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/me/owned-projects`, {
+
+        
+        setLoadingWorkspaces(true);
+        const workspacesResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/me/owned-workspaces`, {
           headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
         });
-        if (projectsResponse.ok) {
-          const projectsData = await projectsResponse.json();
-          setOwnedProjects(projectsData);
+        if (workspacesResponse.ok) {
+          const workspacesData = await workspacesResponse.json();
+          setOwnedWorkspaces(workspacesData);
         }
       } catch (err) {
         console.error("Failed to load settings", err);
       } finally {
-        setLoadingProjects(false);
+        setLoadingWorkspaces(false);
       }
     };
     fetchMyData();
@@ -132,25 +137,18 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
 
   const handleDeleteAccount = async () => {
     try {
-      const projectsToDelete = ownedProjects.filter(p => p.members.length === 0).map(p => p.project_id);
-      
-      const transferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-projects`, {
+      const workspacesToDelete = ownedWorkspaces.filter(ws => ws.members.length === 0).map(ws => ws.workspace_id);
+      const wsTransferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-workspaces`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({
-          projects_to_delete: projectsToDelete,
-          transfers: projectTransfers
-        })
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+        body: JSON.stringify({ workspaces_to_delete: workspacesToDelete, transfers: workspaceTransfers })
       });
-
-      if (!transferRes.ok) {
-        setMessage("Failed to transfer projects. Please try again.");
-        resetDeleteFlow();
-        return;
+      if (!wsTransferRes.ok) {
+         setMessage("Failed to transfer workspaces. Please try again.");
+         resetDeleteFlow();
+         return;
       }
+
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
         method: "DELETE",
@@ -188,11 +186,12 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
   special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
 };
 
-const allProjectsAssigned =
-  ownedProjects.length === 0 ||
-  ownedProjects.every(
-    (project) => project.members.length === 0 || projectTransfers[project.project_id]
+const allWorkspacesAssigned =
+  ownedWorkspaces.length === 0 ||
+  ownedWorkspaces.every(
+    (ws) => ws.members.length === 0 || workspaceTransfers[ws.workspace_id]
   );
+const allAssigned = allWorkspacesAssigned;
   const resetDeleteFlow = () => {
   setShowDeleteModal(false);
   setShowFinalDeleteModal(false);
@@ -200,8 +199,7 @@ const allProjectsAssigned =
   setConfirmDelete(false);
   setDeleteConfirmation("");
   setFinalConfirmation(false);
-
-  setProjectTransfers({});
+  setWorkspaceTransfers({});
 };
   return (
     <MainLayout>
@@ -253,7 +251,7 @@ const allProjectsAssigned =
           <label className="block font-medium mb-2 text-slate-300">User Type</label>
           <input
             type="text"
-            value={role}
+            value={currentUserRole || "Loading..."}
             readOnly
             className="w-full md:w-2/3 border p-3 rounded-lg bg-white/5 text-slate-300 border-white/10 cursor-not-allowed"
           />
@@ -445,82 +443,51 @@ const allProjectsAssigned =
   </ul>
 </div>
   <div className="mt-6">
-  <h3 className="text-lg font-semibold text-white mb-4">
-    Project Ownership
+  <h3 className="text-lg font-semibold text-white mb-4 mt-6">
+    Workspace Ownership
   </h3>
-
-  {loadingProjects ? (
-
-    <div className="text-slate-400">
-      Loading your projects...
+  {loadingWorkspaces ? (
+    <div className="text-slate-400">Loading your workspaces...</div>
+  ) : ownedWorkspaces.length === 0 ? (
+    <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-slate-400">
+      No owned workspaces found.
     </div>
-
-  ) : ownedProjects.length === 0 ? (
-
-    <div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-slate-400">
-      No owned projects found.
-    </div>
-
   ) : (
-
     <div className="space-y-4">
-
-      {ownedProjects.map((project) => (
-
-        <div
-          key={project.project_id}
-          className="rounded-xl border border-white/10 bg-black/20 p-3 sm:p-4"
-        >
-
-          <h4 className="font-semibold text-base sm:text-lg text-white">
-            {project.project_name}
-          </h4>
-
-          {project.members.length === 0 ? (
-            <p className="text-sm text-red-400 mt-1">
-              No other members. This project will be permanently deleted.
-            </p>
+      {ownedWorkspaces.map((ws) => (
+        <div key={ws.workspace_id} className="rounded-xl border border-white/10 bg-black/20 p-3 sm:p-4">
+          <h4 className="font-semibold text-base sm:text-lg text-white">{ws.workspace_name}</h4>
+          {ws.members.filter(m => m.role !== "Client").length === 0 ? (
+            <p className="text-sm text-red-400 mt-1">No eligible members to transfer to. This workspace will be permanently deleted.</p>
           ) : (
             <>
-              <p className="text-sm text-slate-400 mt-1 mb-3">
-                Select a new owner for this project.
-              </p>
-
+              <p className="text-sm text-slate-400 mt-1 mb-3">Select a new owner for this workspace.</p>
               <select
-                value={projectTransfers[project.project_id] || ""}
-                onChange={(e) =>
-                  setProjectTransfers((prev) => ({
-                    ...prev,
-                    [project.project_id]: e.target.value,
-                  }))
-                }
+                value={workspaceTransfers[ws.workspace_id] || ""}
+                onChange={(e) => setWorkspaceTransfers((prev) => ({ ...prev, [ws.workspace_id]: e.target.value }))}
                 className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm sm:text-base"
               >
                 <option value="" className="text-slate-900 bg-slate-100">Select teammate</option>
-
-                {project.members.map((member) => (
-
-                  <option
-                    key={member.id}
-                    value={member.id}
-                    className="text-slate-900 bg-slate-100"
-                  >
-                    {member.name}
-                  </option>
-
+                {ws.members.filter(m => m.role !== "Client").map((member) => (
+                  <option key={member.id} value={member.id} className="text-slate-900 bg-slate-100">{member.name}</option>
                 ))}
-
               </select>
             </>
           )}
-
         </div>
-
       ))}
-
     </div>
-
   )}
+
+  <h3 className="text-lg font-semibold text-white mb-4 mt-6">
+    Project Ownership
+  </h3>
+
+  <div className="mt-4 p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
+    <p className="text-cyan-200 text-sm">
+      <span className="font-semibold text-cyan-400">Note:</span> Any projects you created will automatically be transferred to their respective workspace owners.
+    </p>
+  </div>
 </div>
 </div>
       <div className="mt-6">
@@ -546,13 +513,15 @@ const allProjectsAssigned =
         </button>
 
         <button
-  disabled={!confirmDelete || !allProjectsAssigned}
+  disabled={!confirmDelete || !allAssigned}
   onClick={() => {
-    setShowDeleteModal(false);
-    setShowFinalDeleteModal(true);
+    if (confirmDelete && allAssigned) {
+      setShowDeleteModal(false);
+      setShowFinalDeleteModal(true);
+    }
   }}
   className={`px-5 py-2 rounded-lg text-white font-semibold transition ${
-    confirmDelete && allProjectsAssigned
+    confirmDelete && allAssigned
       ? "bg-red-600 hover:bg-red-700"
       : "bg-red-900/40 cursor-not-allowed"
   }`}

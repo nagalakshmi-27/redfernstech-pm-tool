@@ -9,6 +9,7 @@ export default function AcceptInvite() {
   const [inviteDetails, setInviteDetails] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [wrongAccount, setWrongAccount] = useState(false);
 
   useEffect(() => {
     const fetchInvite = async () => {
@@ -28,10 +29,20 @@ export default function AcceptInvite() {
   }, [token]);
 
   const handleAccept = async () => {
+    const tokenStr = localStorage.getItem("token");
+    if (!tokenStr) {
+      // Not logged in! Redirect them to signup where the backend will automatically accept the invite during registration
+      navigate("/signup");
+      return;
+    }
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/accept`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({ token })
       });
 
@@ -41,6 +52,9 @@ export default function AcceptInvite() {
       } else {
         const errData = await response.json();
         setError(errData.detail || "Failed to accept invite.");
+        if (response.status === 403) {
+          setWrongAccount(true);
+        }
       }
     } catch {
       setError("Failed to connect to server.");
@@ -50,7 +64,20 @@ export default function AcceptInvite() {
   if (error) {
     return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 px-4 py-6">
   <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] text-center text-red-400">
-    {error}
+    <p className="leading-relaxed">{error}</p>
+    {wrongAccount && (
+      <button 
+        onClick={() => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("isLoggedIn");
+          localStorage.removeItem("userEmail");
+          window.location.reload();
+        }}
+        className="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-lg font-semibold transition-all border border-white/10"
+      >
+        Switch Accounts
+      </button>
+    )}
   </div>
 </div>;
   }

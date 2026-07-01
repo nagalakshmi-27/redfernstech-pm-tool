@@ -34,23 +34,22 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         models.Invitation.email == user.email
     ).order_by(models.Invitation.id.desc()).first()
     
-    user_count = db.query(models.User).count()
-    is_first_user = (user_count == 0)
-
-    if is_first_user:
-        # The very first person to sign up is always the Admin
-        user.role = "Admin"
-    elif invitation:
-        # If they have an invite, strict override
-        user.role = invitation.role 
-    else:
-        # Prevent unauthorized users from choosing Admin from a public dropdown
-        if user.role == "Admin":
-            user.role = "Member"
-        elif not user.role or user.role not in ["Member", "Client"]:
-            user.role = "Member"
+    # Global roles are removed; workspace roles are assigned upon workspace creation or invite acceptance.
         
-    return crud.create_user(db=db, user=user)
+    new_user = crud.create_user(db=db, user=user)
+    
+    # Create personal workspace
+    workspace_name = f"{new_user.first_name}'s Workspace" if new_user.first_name else f"{new_user.email.split('@')[0]}'s Workspace"
+    crud.create_workspace(db, schemas.WorkspaceCreate(name=workspace_name), new_user.id)
+    
+    # Check if they had a pending invitation and add them
+    if invitation and invitation.workspace_id:
+        invitation.status = "Accepted"
+        stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=new_user.id, role=invitation.role)
+        db.execute(stmt)
+        db.commit()
+        
+    return new_user
 
 # Sign In (Login) Route
 @router.post("/login")
@@ -68,7 +67,6 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
         "user": {
             "id": authenticated_user.id, 
             "email": authenticated_user.email, 
-            "role": authenticated_user.role,
             "profile_image": authenticated_user.profile_image
         }
     }
@@ -164,8 +162,11 @@ def send_reset_email(to_email: str, token: str):
     msg["From"] = sender_email
     msg["To"] = to_email
     
-    # Connect to Gmail and send it
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    # Connect and send email
+    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 465))
+    
+    with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
         server.login(sender_email, sender_password)
         server.send_message(msg)
 
@@ -201,16 +202,25 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 # --- TEAMS & INVITATIONS LOGIC ---
 @router.post("/invite")
 def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "Admin":
-        raise HTTPException(status_code=403, detail="Only Admins can invite new users.")
-    if current_user.role == "Client":
-        raise HTTPException(status_code=403, detail="Clients cannot send invitations.")
+    if not invite.workspace_id:
+        raise HTTPException(status_code=400, detail="Workspace ID is required to invite users.")
+        
+    workspace_membership = db.query(models.workspace_members).filter(
+        models.workspace_members.c.workspace_id == invite.workspace_id, 
+        models.workspace_members.c.user_id == current_user.id
+    ).first()
+    
+    if not workspace_membership or workspace_membership.role == "Client":
+        raise HTTPException(status_code=403, detail="Clients cannot invite new users.")
+        
+    if invite.role == "Admin" and workspace_membership.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only Workspace Admins can invite someone as an Admin.")
         
     if invite.email == current_user.email:
         raise HTTPException(status_code=400, detail="You cannot invite yourself.")
         
     token = auth.create_reset_token(invite.email) 
-    crud.create_invitation(db, invite.email, token, current_user.id, invite.role)
+    crud.create_invitation(db, invite.email, token, current_user.id, invite.role, invite.workspace_id)
     
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")
@@ -222,7 +232,9 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
     msg["To"] = invite.email
     
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", 465))
+        with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
             server.login(sender_email, sender_password)
             server.send_message(msg)
     except Exception as e:
@@ -238,68 +250,101 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
     return {"email": invite.email} # <--- Removed role/dept
 
 @router.post("/invite/accept")
-def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(get_db)):
+def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     invite = crud.get_invitation_by_token(db, accept_data.token)
     if not invite:
         raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
         
+    if invite.email != current_user.email:
+        raise HTTPException(status_code=403, detail=f"This invite was sent to {invite.email}, but you are logged in as {current_user.email}. Please log in with the correct account.")
+        
     invite.status = "Accepted"
     
+    if invite.workspace_id:
+        exists = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == invite.workspace_id, models.workspace_members.c.user_id == current_user.id).first()
+        if not exists:
+            stmt = models.workspace_members.insert().values(workspace_id=invite.workspace_id, user_id=current_user.id, role=invite.role)
+            db.execute(stmt)
+            
     notif = models.Notification(
         user_id=invite.invited_by_id, 
-        message=f"{invite.email} has accepted your team invitation!"
+        message=f"{current_user.email} has accepted your workspace invitation!"
     )
     db.add(notif)
     
     db.commit()
-    return {"message": "Successfully joined the team!"}
+    return {"message": "Successfully joined the workspace!"}
 
-@router.get("/me/owned-projects", response_model=list[schemas.OwnedProjectResponse])
-def get_owned_projects(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    projects = db.query(models.Project).filter(models.Project.created_by_id == current_user.id).all()
+@router.get("/me/owned-workspaces", response_model=list[schemas.OwnedWorkspaceResponse])
+def get_owned_workspaces(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    workspaces = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).all()
     response = []
-    for p in projects:
-        members = [{"id": m.id, "name": (m.first_name + " " + m.last_name).strip() if m.first_name and m.last_name else m.email} for m in p.members if m.id != current_user.id and m.role != "Client"]
+    for ws in workspaces:
+        ws_members = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == ws.id).all()
+        role_map = {m.user_id: m.role for m in ws_members}
+        members = [{"id": m.id, "name": (m.first_name + " " + m.last_name).strip() if m.first_name and m.last_name else m.email, "role": role_map.get(m.id)} for m in ws.members if m.id != current_user.id]
         response.append({
-            "project_id": p.id,
-            "project_name": p.name,
+            "workspace_id": ws.id,
+            "workspace_name": ws.name,
             "members": members
         })
     return response
 
-@router.put("/me/transfer-projects")
-def transfer_owned_projects(
-    request: schemas.TransferProjectsRequest, 
+@router.put("/me/transfer-workspaces")
+def transfer_owned_workspaces(
+    request: schemas.TransferWorkspacesRequest, 
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
     user_id = current_user.id
     
-    # Process deletions for empty projects
-    for project_id in request.projects_to_delete:
-        project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.created_by_id == user_id).first()
-        if project:
-            db.delete(project)
+    # Process deletions for empty workspaces
+    for ws_id in request.workspaces_to_delete:
+        workspace = db.query(models.Workspace).filter(models.Workspace.id == ws_id, models.Workspace.owner_id == user_id).first()
+        if workspace:
+            db.delete(workspace)
             
     # Process transfers to new owners
-    for project_id, new_owner_id in request.transfers.items():
-        project = db.query(models.Project).filter(models.Project.id == int(project_id), models.Project.created_by_id == user_id).first()
-        if project:
-            project.created_by_id = new_owner_id
-            db.query(models.Task).filter(models.Task.project_id == int(project_id), models.Task.assignee_id == user_id).update({"assignee_id": new_owner_id})
-            db.query(models.Comment).filter(models.Comment.project_id == int(project_id), models.Comment.user_id == user_id).update({"user_id": new_owner_id})
-            db.query(models.Message).filter(models.Message.project_id == int(project_id), models.Message.user_id == user_id).update({"user_id": new_owner_id})
-            db.query(models.WikiPage).filter(models.WikiPage.project_id == int(project_id), models.WikiPage.author_id == user_id).update({"author_id": new_owner_id})
+    for ws_id, new_owner_id in request.transfers.items():
+        workspace = db.query(models.Workspace).filter(models.Workspace.id == int(ws_id), models.Workspace.owner_id == user_id).first()
+        if workspace:
+            workspace.owner_id = new_owner_id
+            # Also ensure new owner is an Admin in workspace_members
+            membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == int(ws_id), models.workspace_members.c.user_id == new_owner_id).first()
+            if membership:
+                # Need to use update since it's a table, not a model
+                stmt = models.workspace_members.update().where(
+                    (models.workspace_members.c.workspace_id == int(ws_id)) & 
+                    (models.workspace_members.c.user_id == new_owner_id)
+                ).values(role="Admin")
+                db.execute(stmt)
+            else:
+                stmt = models.workspace_members.insert().values(workspace_id=int(ws_id), user_id=new_owner_id, role="Admin")
+                db.execute(stmt)
             
     db.commit()
-    return {"message": "Projects transferred and deleted successfully"}
+    return {"message": "Workspaces transferred and deleted successfully"}
 
 @router.delete("/me")
 def delete_user_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     user_id = current_user.id
     
-    # Nullify creator/author references to preserve the data but anonymize the user
-    db.query(models.Project).filter(models.Project.created_by_id == user_id).update({"created_by_id": None})
+    # Delete workspaces owned by the user (this cascades to projects, tasks, etc.)
+    workspaces = db.query(models.Workspace).filter(models.Workspace.owner_id == user_id).all()
+    for ws in workspaces:
+        db.delete(ws)
+
+    
+    # Transfer all projects created by this user to the workspace owner
+    user_projects = db.query(models.Project).filter(models.Project.created_by_id == user_id).all()
+    for proj in user_projects:
+        workspace = db.query(models.Workspace).filter(models.Workspace.id == proj.workspace_id).first()
+        if workspace:
+            proj.created_by_id = workspace.owner_id
+        else:
+            proj.created_by_id = None
+            
+    # Nullify creator/author references for other items to preserve the data but anonymize the user
     db.query(models.Task).filter(models.Task.assignee_id == user_id).update({"assignee_id": None})
     db.query(models.Comment).filter(models.Comment.user_id == user_id).update({"user_id": None})
     db.query(models.Message).filter(models.Message.user_id == user_id).update({"user_id": None})
@@ -322,17 +367,21 @@ def delete_user_account(db: Session = Depends(get_db), current_user: models.User
     return {"message": "Account deleted successfully"}
 
 @router.get("/teammates", response_model=list[schemas.TeammateResponse])
-def get_my_teammates(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # crud.get_teammates already includes the current_user at the top of the list!
-    return crud.get_teammates(db, current_user.id)
+def get_my_teammates(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return crud.get_teammates(db, workspace_id)
 
 @router.delete("/teammates/{teammate_id}")
-def delete_teammate(teammate_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_teammate(teammate_id: int, workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # SECURITY: Prevent the user from deleting themselves!
     if teammate_id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot remove yourself from your own team!")
         
-    success = crud.remove_teammate(db, current_user.id, teammate_id)
+    # SECURITY: Check Admin status for the specific workspace
+    ws_membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == current_user.id).first()
+    if not ws_membership or ws_membership.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only Workspace Admins can remove teammates.")
+        
+    success = crud.remove_teammate(db, workspace_id, teammate_id)
     if not success:
         raise HTTPException(status_code=404, detail="Teammate not found or they are not on your team.")
     return {"message": "Teammate removed successfully!"}
