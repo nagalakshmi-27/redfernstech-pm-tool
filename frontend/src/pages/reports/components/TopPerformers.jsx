@@ -3,19 +3,24 @@ import { Trophy, TrendingUp } from "lucide-react";
 export default function TopPerformers({ members, tasks }) {
   // Calculate completed task count for each member
   const leaderboard = members
-    .map((member) => {
-      const completedTasks = tasks.filter(
-        (task) =>
-          task.assignee_id === member.id &&
-          task.status === "Completed"
-      ).length;
+  .map((member) => {
+    const assignedTasks = tasks.filter(
+      (task) => task.assignee_id === member.id
+    ).length;
 
-      return {
-        id: member.id,
-        name: member.full_name || member.name || member.email,
-        completedTasks,
-      };
-    })
+    const completedTasks = tasks.filter(
+      (task) =>
+        task.assignee_id === member.id &&
+        task.status === "Completed"
+    ).length;
+
+    return {
+      id: member.id,
+      name: member.full_name || member.name || member.email,
+      assignedTasks,
+      completedTasks,
+    };
+  })
     .sort((a, b) => b.completedTasks - a.completedTasks)
     .slice(0, 5);
 
@@ -37,12 +42,13 @@ export default function TopPerformers({ members, tasks }) {
       <div className="space-y-4">
 
         {leaderboard.map((member, index) => {
+
           const percentage =
-            tasks.length > 0
-              ? Math.round(
-                  (member.completedTasks / tasks.length) * 100
-                )
-              : 0;
+  member.assignedTasks > 0
+    ? Math.round(
+        (member.completedTasks / member.assignedTasks) * 100
+      )
+    : 0;
 
           const rankColors = [
             "bg-yellow-500",

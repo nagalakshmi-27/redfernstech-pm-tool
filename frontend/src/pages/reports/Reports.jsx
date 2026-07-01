@@ -20,7 +20,6 @@ export default function Reports() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedMember, setSelectedMember] = useState("All");
   const [fromDate, setFromDate] = useState("");
-const [toDate, setToDate] = useState("");
 
   // Filter Tasks
 
@@ -45,15 +44,6 @@ if (fromDate) {
   matchesDate =
     matchesDate &&
     createdDate >= new Date(fromDate);
-}
-
-if (toDate) {
-  const endDate = new Date(toDate);
-  endDate.setHours(23, 59, 59, 999);
-
-  matchesDate =
-    matchesDate &&
-    createdDate <= endDate;
 }
 
   return (
@@ -170,7 +160,6 @@ const handleResetFilters = () => {
   setSelectedStatus("All");
   setSelectedMember("All");
   setFromDate("");
-  setToDate("");
 };
   return (
     <MainLayout>
@@ -191,8 +180,6 @@ const handleResetFilters = () => {
   setSelectedMember={setSelectedMember}
   fromDate={fromDate}
 setFromDate={setFromDate}
-toDate={toDate}
-setToDate={setToDate}
 />
 
       <SummaryCards

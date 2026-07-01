@@ -16,8 +16,6 @@ export default function ReportsFilters({
   setSelectedMember,
   fromDate,
   setFromDate,
-  toDate,
-  setToDate,
 }) {
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-5 mb-6">
@@ -32,28 +30,14 @@ export default function ReportsFilters({
 
         <div>
   <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">
-    <CalendarDays size={16} />
-    From Date
-  </label>
+  <CalendarDays size={16} />
+  Start Date
+</label>
 
   <input
     type="date"
     value={fromDate}
     onChange={(e) => setFromDate(e.target.value)}
-    className="w-full bg-slate-900/60 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500"
-  />
-</div>
-
-<div>
-  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">
-    <CalendarDays size={16} />
-    To Date
-  </label>
-
-  <input
-    type="date"
-    value={toDate}
-    onChange={(e) => setToDate(e.target.value)}
     className="w-full bg-slate-900/60 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500"
   />
 </div>
