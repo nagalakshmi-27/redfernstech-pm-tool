@@ -14,7 +14,7 @@ import Teams from "../pages/teams/Teams";
 import Calendar from "../pages/calendar/Calender";
 import Notifications from "../pages/notifications/Notifications";
 import Settings from "../pages/settings/Settings";
-
+import Reports from "../pages/reports/Reports";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRoutes() {
@@ -33,6 +33,14 @@ export default function AppRoutes() {
         <Route path="/teams" element={<Teams />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route
+  path="/reports"
+  element={
+    <ProtectedRoute>
+      <Reports />
+    </ProtectedRoute>
+  }
+/>
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </BrowserRouter>
