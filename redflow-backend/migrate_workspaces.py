@@ -30,7 +30,7 @@ def migrate_workspaces():
                 db.execute(stmt)
                 
                 # Assign existing projects of this user to this workspace
-                projects = db.query(models.Project).filter(models.Project.owner_id == user.id).all()
+                projects = db.query(models.Project).filter(models.Project.created_by_id == user.id).all()
                 for project in projects:
                     project.workspace_id = new_workspace.id
                     
