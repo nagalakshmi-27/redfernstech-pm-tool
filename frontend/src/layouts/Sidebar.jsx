@@ -321,6 +321,15 @@ export default function Sidebar() {
               Calendar
             </Link>
           </li>
+          
+          <li>
+            <Link
+              to="/notebook"
+              className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
+            >
+              Notebook
+            </Link>
+          </li>
 
           <li>
             <Link

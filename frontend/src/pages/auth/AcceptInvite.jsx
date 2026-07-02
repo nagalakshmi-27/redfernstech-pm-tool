@@ -31,8 +31,8 @@ export default function AcceptInvite() {
   const handleAccept = async () => {
     const tokenStr = localStorage.getItem("token");
     if (!tokenStr) {
-      // Not logged in! Redirect them to signup where the backend will automatically accept the invite during registration
-      navigate("/signup");
+      // Not logged in! Redirect them to login where they can sign in or sign up
+      navigate(`/?redirect=accept-invite&token=${token}`);
       return;
     }
 
@@ -49,8 +49,15 @@ export default function AcceptInvite() {
       if (response.ok) {
         setMessage("Invite accepted! You are now part of the team.");
         setTimeout(() => navigate("/"), 3000);
+      } else if (response.status === 401) {
+        // Auth token expired
+        localStorage.removeItem("token");
+        localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("userId");
+        navigate(`/?redirect=accept-invite&token=${token}`);
       } else {
-        const errData = await response.json();
+        const errData = await response.json().catch(() => ({}));
         setError(errData.detail || "Failed to accept invite.");
         if (response.status === 403) {
           setWrongAccount(true);
