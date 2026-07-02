@@ -13,9 +13,10 @@ import TeamWorkload from "./components/TeamWorkload";
 import * as XLSX from "xlsx";
 
 export default function Reports() {
-  const { projects, tasks, members } = useContext(AppContext);
-
-  // Filter State
+  const { projects, tasks, members, activeWorkspaceRole } = useContext(AppContext);
+console.log("Current Workspace Role:", activeWorkspaceRole);
+const isAdmin = activeWorkspaceRole === "Admin";
+// Filter State
   const [selectedProject, setSelectedProject] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedMember, setSelectedMember] = useState("All");
@@ -164,6 +165,7 @@ const handleResetFilters = () => {
   return (
     <MainLayout>
       <ReportsHeader
+  isAdmin={isAdmin}
   onResetFilters={handleResetFilters}
   onExportCSV={handleExportCSV}
   onExportExcel={handleExportExcel}
@@ -199,10 +201,12 @@ setFromDate={setFromDate}
     tasks={filteredTasks}
   />
 
-  <TeamWorkload
-    members={members}
-    tasks={filteredTasks}
-  />
+  {isAdmin && (
+    <TeamWorkload
+      members={members}
+      tasks={filteredTasks}
+    />
+  )}
 
 </div>
 
@@ -211,10 +215,12 @@ setFromDate={setFromDate}
   projects={projects}
 />
 
-      <TopPerformers
-        tasks={filteredTasks}
-        members={members}
-      />
+      {isAdmin && (
+  <TopPerformers
+    tasks={filteredTasks}
+    members={members}
+  />
+)}
     </MainLayout>
   );
 }

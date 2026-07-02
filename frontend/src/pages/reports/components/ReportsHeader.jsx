@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 export default function ReportsHeader({
+  isAdmin,
   onExportCSV,
   onExportExcel,
   onResetFilters,
@@ -46,6 +47,7 @@ export default function ReportsHeader({
   </button>
 
   {/* Export */}
+  {isAdmin && (
   <div className="relative">
 
     <button
@@ -102,7 +104,8 @@ export default function ReportsHeader({
 
       </div>
     )}
-      </div>
+  </div>
+)}
     </div>
   </div>
   );
