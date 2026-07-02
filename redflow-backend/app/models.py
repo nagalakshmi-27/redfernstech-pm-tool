@@ -213,3 +213,18 @@ class WikiPageHistory(Base):
     
     wiki = relationship("WikiPage", back_populates="histories")
     author = relationship("User")
+
+class NotebookItem(Base):
+    __tablename__ = "notebook_items"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, default="Untitled")
+    item_type = Column(String, default="note") # "note" or "scribble"
+    content = Column(String, nullable=True) # Text or base64 image data
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), index=True)
+    
+    user = relationship("User")
+    workspace = relationship("Workspace")

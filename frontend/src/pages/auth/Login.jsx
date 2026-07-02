@@ -66,9 +66,15 @@ if (data.user.profile_image) {
   localStorage.removeItem("profileImage");
 }
 
-      // 5. Go to the dashboard
-      window.location.href = "/dashboard";
-      
+      // 5. Check if there's a redirect pending
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirect = searchParams.get("redirect");
+      if (redirect === "accept-invite") {
+        const inviteToken = searchParams.get("token");
+        window.location.href = `/accept-invite?token=${inviteToken}`;
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch (err) {
       alert(err.message); // This will show "Incorrect email or password" if they guess wrong
     }

@@ -277,3 +277,26 @@ class OwnedWorkspaceResponse(BaseModel):
 class TransferWorkspacesRequest(BaseModel):
     workspaces_to_delete: List[int] = []
     transfers: Dict[int, int] = {}
+
+# --- NOTEBOOK ITEMS ---
+class NotebookItemBase(BaseModel):
+    title: str
+    item_type: str # "note" or "scribble"
+    content: Optional[str] = None
+    workspace_id: int
+
+class NotebookItemCreate(NotebookItemBase):
+    pass
+
+class NotebookItemUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+
+class NotebookItemResponse(NotebookItemBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
