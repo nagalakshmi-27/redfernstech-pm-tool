@@ -21,11 +21,12 @@ export default function Reports() {
   const [selectedMember, setSelectedMember] = useState("All");
   const [fromDate, setFromDate] = useState("");
 
-  // Filter Tasks
+  // Filter Tasks by Workspace Projects First
+  const workspaceTasks = tasks.filter(t => projects.some(p => p.id === t.project_id));
 
-const filteredTasks = tasks.filter((task) => {
-  const matchesProject =
-    selectedProject === "All" ||
+  const filteredTasks = workspaceTasks.filter((task) => {
+    const matchesProject =
+      selectedProject === "All" ||
     task.project_id === Number(selectedProject);
 
   const matchesStatus =
