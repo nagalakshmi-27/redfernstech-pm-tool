@@ -15,8 +15,8 @@ export default function Tasks() {
 const [highlightTaskId, setHighlightTaskId] = useState(null);
 
 const taskRefs = useRef({});
-  // STEP 1: Filter to ONLY show tasks assigned to the logged-in user
-  const myTasks = tasks.filter(t => t.assignee_id === currentUserId);
+  // STEP 1: Filter to ONLY show tasks assigned to the logged-in user AND belong to the active workspace
+  const myTasks = tasks.filter(t => t.assignee_id === currentUserId && projects.some(p => p.id === t.project_id));
   useEffect(() => {
     console.log("Highlight Task:", location.state?.highlightTaskId);
 

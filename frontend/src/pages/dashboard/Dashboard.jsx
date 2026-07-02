@@ -22,13 +22,15 @@ const [modalData, setModalData] = useState([]);
     return "In Progress";
   };
 
-  const upcomingTasks = [...tasks]
+  const workspaceTasks = tasks.filter(t => projects.some(p => p.id === t.project_id));
+
+  const upcomingTasks = [...workspaceTasks]
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date)) 
     .slice(0, 3);
 
   const activeProjectsCount = projects.filter((project) => getDynamicStatus(project) === "In Progress").length;
-  const pendingTasksCount = tasks.filter((task) => task.status === "To Do").length;
-  const completedTasksCount = tasks.filter((task) => task.status === "Completed").length;
+  const pendingTasksCount = workspaceTasks.filter((task) => task.status === "To Do").length;
+  const completedTasksCount = workspaceTasks.filter((task) => task.status === "Completed").length;
   const openProjectsModal = () => {
   setModalTitle("Total Projects");
   setModalData(projects);
