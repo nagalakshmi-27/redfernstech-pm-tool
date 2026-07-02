@@ -219,11 +219,10 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
         return None
     user = db.query(models.User).filter(models.User.id == user_id).first()
 
-    is_creator = db_task.created_by_id == user_id
     is_assignee = db_task.assignee_id == user_id
     project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
     
-    if not is_workspace_admin(db, project.workspace_id, user_id) and not is_creator and not is_assignee:
+    if not is_workspace_admin(db, project.workspace_id, user_id) and not is_assignee:
         return None
 
     update_data = task_update.model_dump(exclude_unset=True)
@@ -235,7 +234,7 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
         setattr(db_task, key, value)
         
     # If someone is just changing status (drag drop), they need to be the assignee or workspace admin
-    if "status" in update_data and not is_creator and not is_workspace_admin(db, project.workspace_id, user_id):
+    if "status" in update_data and not is_workspace_admin(db, project.workspace_id, user_id):
         if not is_assignee:
             db_notification = models.Notification(
                 user_id=project.created_by_id,
@@ -254,7 +253,7 @@ def delete_task(db: Session, task_id: int, user_id: int):
     
     project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
     
-    if not is_workspace_admin(db, project.workspace_id, user_id) and db_task.created_by_id != user_id:
+    if not is_workspace_admin(db, project.workspace_id, user_id):
         return False
     db.delete(db_task)
     db.commit()
