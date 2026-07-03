@@ -1,13 +1,42 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { FolderKanban, Briefcase, ListTodo, CheckCircle } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function Dashboard() {
   const { projects, tasks, activities } = useContext(AppContext);
   const [showModal, setShowModal] = useState(false);
-const [modalTitle, setModalTitle] = useState("");
-const [modalData, setModalData] = useState([]);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalData, setModalData] = useState([]);
+
+  // Sticky Notes State
+  const [stickyNotes, setStickyNotes] = useState(() => {
+    const saved = localStorage.getItem("dashboardStickyNotes");
+    if (saved) return JSON.parse(saved);
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dashboardStickyNotes", JSON.stringify(stickyNotes));
+  }, [stickyNotes]);
+
+  const addStickyNote = () => {
+    const newNote = {
+      id: Date.now(),
+      text: "",
+      color: ["bg-yellow-200", "bg-pink-200", "bg-blue-200", "bg-green-200"][Math.floor(Math.random() * 4)],
+      rotation: Math.floor(Math.random() * 6) - 3
+    };
+    setStickyNotes([newNote, ...stickyNotes]);
+  };
+
+  const updateStickyNote = (id, text) => {
+    setStickyNotes(notes => notes.map(n => n.id === id ? { ...n, text } : n));
+  };
+
+  const deleteStickyNote = (id) => {
+    setStickyNotes(notes => notes.filter(n => n.id !== id));
+  };
 
   // Helper to dynamically calculate project status based on tasks!
   const getDynamicStatus = (project) => {
@@ -46,7 +75,7 @@ const openActiveProjectsModal = () => {
 };
 
 const openPendingTasksModal = () => {
-  const pendingTasks = tasks.filter(
+  const pendingTasks = workspaceTasks.filter(
     (task) => task.status === "To Do"
   );
 
@@ -56,7 +85,7 @@ const openPendingTasksModal = () => {
 };
 
 const openCompletedTasksModal = () => {
-  const completedTasks = tasks.filter(
+  const completedTasks = workspaceTasks.filter(
     (task) => task.status === "Completed"
   );
 
@@ -127,7 +156,7 @@ const openCompletedTasksModal = () => {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Recent Activities */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
           <h2 className="text-xl font-semibold mb-4 text-white">Recent Activities</h2>
@@ -155,9 +184,72 @@ const openCompletedTasksModal = () => {
           </ul>
         </div>
       </div>
+
+      {/* Quick Notes Section */}
+      <div className="mb-8 relative z-0">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-white">Quick Notes</h2>
+          <button 
+            onClick={addStickyNote}
+            className="flex items-center text-sm bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors border border-white/10"
+          >
+            + Add Note
+          </button>
+        </div>
+        
+        {stickyNotes.length === 0 ? (
+          <div className="text-slate-400 text-sm italic bg-white/5 p-6 rounded-xl border border-white/10 border-dashed text-center">
+            You don't have any sticky notes. Click "Add Note" to jot something down!
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-6 items-start pb-4">
+            {stickyNotes.map((note) => {
+              const bgClass = note.color.startsWith("bg-") ? note.color : `bg-${note.color}-200`;
+              return (
+                <div 
+                  key={note.id} 
+                  className={`relative w-48 h-48 md:w-56 md:h-56 p-4 shadow-[3px_5px_15px_rgba(0,0,0,0.4)] hover:shadow-[5px_10px_20px_rgba(0,0,0,0.5)] transition-shadow duration-300 flex flex-col ${bgClass} text-slate-800 shrink-0 group rounded-sm`}
+                  style={{
+                    transform: `rotate(${note.rotation}deg)`,
+                    fontFamily: "'Comic Sans MS', 'Caveat', 'Kalam', cursive, sans-serif"
+                  }}
+                >
+                  {/* Tape effect */}
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-6 bg-white/50 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.1)] transform rotate-2 z-10 rounded-sm"></div>
+                  
+                  <button 
+                    onClick={() => deleteStickyNote(note.id)} 
+                    className="absolute top-2 right-2 text-black/30 hover:text-red-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity z-20 text-lg leading-none"
+                    title="Discard Note"
+                  >
+                    ×
+                  </button>
+                  <textarea 
+                    value={note.text}
+                    onChange={(e) => updateStickyNote(note.id, e.target.value)}
+                    placeholder="Type a quick note..."
+                    className="w-full flex-1 bg-transparent border-none outline-none resize-none placeholder-black/30 mt-4 leading-relaxed font-medium text-sm md:text-base scrollbar-hide z-10"
+                    spellCheck="false"
+                  />
+                  
+                  {/* Folded corner effect */}
+                  <div className="absolute bottom-0 right-0 w-6 h-6 bg-black/10" style={{ clipPath: "polygon(100% 0, 0 100%, 100% 100%)" }}></div>
+                  <div className={`absolute bottom-0 right-0 w-6 h-6 ${bgClass} brightness-90`} style={{ clipPath: "polygon(100% 0, 0 100%, 0 0)" }}></div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {showModal && (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl p-4 md:p-6 w-[95%] max-w-[700px] max-h-[80vh] overflow-y-auto shadow-2xl">
+  <div 
+    onClick={() => setShowModal(false)} 
+    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+  >
+    <div 
+      onClick={(e) => e.stopPropagation()} 
+      className="relative bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl p-4 md:p-6 w-[95%] max-w-[700px] max-h-[80vh] overflow-y-auto shadow-2xl"
+    >
       <h2 className="text-xl md:text-2xl font-bold mb-4 text-white">
         {modalTitle}
       </h2>
