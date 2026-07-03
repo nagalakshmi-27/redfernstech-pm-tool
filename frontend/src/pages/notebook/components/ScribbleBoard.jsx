@@ -324,11 +324,11 @@ export default function ScribbleBoard({ item, onClose, token }) {
 
   return (
     <div className="fixed inset-0 bg-[#13131a] z-50 flex flex-col touch-none select-none">
-      <div className="h-16 bg-[#1e1e2d] border-b border-slate-800 flex items-center justify-between px-6 z-20">
-        <div className="flex items-center flex-1">
+      <div className="min-h-[4rem] py-2 sm:py-0 bg-[#1e1e2d] border-b border-slate-800 flex flex-wrap sm:flex-nowrap items-center justify-between px-2 sm:px-6 z-20 gap-y-2">
+        <div className="flex items-center w-[60%] sm:w-auto sm:flex-1 order-1 sm:order-none">
           <button 
             onClick={() => saveToBackend(true)}
-            className="text-slate-400 hover:text-white mr-4 p-2 rounded-full hover:bg-slate-700 transition-colors"
+            className="text-slate-400 hover:text-white mr-2 sm:mr-4 p-2 rounded-full hover:bg-slate-700 transition-colors shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -337,11 +337,11 @@ export default function ScribbleBoard({ item, onClose, token }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Board Title..."
-            className="bg-transparent border-none outline-none text-xl font-semibold text-white w-64 placeholder-slate-600"
+            className="bg-transparent border-none outline-none text-lg sm:text-xl font-semibold text-white w-full sm:w-64 placeholder-slate-600 truncate"
           />
         </div>
         
-        <div className="flex flex-1 justify-center items-center space-x-1">
+        <div className="flex justify-start sm:justify-center items-center space-x-1 order-3 sm:order-none w-full sm:w-auto sm:flex-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
           <button 
             onClick={handleUndo}
             disabled={!canUndo}
@@ -446,20 +446,21 @@ export default function ScribbleBoard({ item, onClose, token }) {
           </div>
         </div>
 
-        <div className="flex flex-1 justify-end items-center">
+        <div className="flex items-center justify-end space-x-2 order-2 sm:order-none w-[40%] sm:w-auto sm:flex-1 shrink-0">
           <button 
             onClick={handleExport}
-            className="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors border border-slate-600 mr-2"
-            title="Download as PNG"
+            className="flex items-center p-2 sm:px-4 sm:py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+            title="Export to PNG"
           >
-            <Download className="w-4 h-4 mr-2" /> Export
+            <Download className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Export</span>
           </button>
           
           <button 
             onClick={() => saveToBackend(true)}
-            className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+            className="flex items-center p-2 sm:px-4 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+            title="Save"
           >
-            {saving ? <><Save className="w-4 h-4 mr-2 animate-pulse" /> Saving...</> : <><Save className="w-4 h-4 mr-2" /> Save & Close</>}
+            {saving ? <><Save className="w-4 h-4 sm:mr-2 animate-pulse" /> <span className="hidden sm:inline">Saving...</span></> : <><Save className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Save</span></>}
           </button>
         </div>
       </div>

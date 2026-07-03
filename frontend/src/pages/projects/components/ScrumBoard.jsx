@@ -1,3 +1,5 @@
+import { Trash2 } from "lucide-react";
+
 export default function ScrumBoard({
   columns,
   projectTasks,
@@ -9,6 +11,7 @@ export default function ScrumBoard({
   handleDropOnCard,
   getColumnIcon,
   getColumnBorder,
+  handleDeleteTask,
   openTask,
 }) {
   return (
@@ -125,7 +128,7 @@ export default function ScrumBoard({
   onDragStart={(e) => handleDragStart(e, task.id)}
   onDragOver={handleDragOver}
   onDrop={(e) => handleDropOnCard(e, task, column)}
-  className={`rounded-xl border border-white/10 border-l-4 ${getColumnBorder(column)} bg-white/10 p-3 hover:bg-white/15 transition cursor-pointer`}
+  className={`rounded-xl border border-white/10 border-l-4 ${getColumnBorder(column)} bg-white/10 p-3 hover:bg-white/15 transition cursor-pointer relative group`}
   onClick={() => openTask(task)}
 >
           <div className="flex items-center justify-between">
@@ -153,6 +156,18 @@ export default function ScrumBoard({
           <p className="mt-3 text-xs text-slate-400">
             {assignee?.full_name || assignee?.name || "Unassigned"}
           </p>
+          
+          {currentUserRole !== "Client" && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteTask(task.id);
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       );
     })}

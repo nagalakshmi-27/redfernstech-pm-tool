@@ -95,9 +95,27 @@ def update_password(db: Session, user: models.User, new_password: str):
     db.refresh(user)
     return user
 
+def generate_project_key(db: Session, name: str, workspace_id: int) -> str:
+    base_key = "".join([c for c in name if c.isalnum()]).upper()[:3]
+    if len(base_key) < 3:
+        base_key = (base_key + "XXX")[:3]
+        
+    key = base_key
+    counter = 1
+    while True:
+        existing = db.query(models.Project).filter(
+            models.Project.project_key == key
+        ).first()
+        if not existing:
+            return key
+        key = f"{base_key}{counter}"
+        counter += 1
+
 def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
     if is_client(db, project.workspace_id, user_id):
         return None
+    project_key = generate_project_key(db, project.name, project.workspace_id)
+    
     db_project = models.Project(
         name=project.name,
         description=project.description,
@@ -107,7 +125,9 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
         created_by_id=user_id,
         workspace_id=project.workspace_id,
         board_type=project.board_type,
-        board_columns=project.board_columns
+        board_columns=project.board_columns,
+        project_key=project_key,
+        task_counter=0
     )
     
     if project.member_ids:
@@ -217,17 +237,20 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
     if not is_creator and not is_member:
         return None
 
-    prefix = project.name[:3].upper() if project else "TSK"
+    # Increment project task counter atomically
+    project.task_counter += 1
+    db.add(project)
     
-    # First, create the task to get its globally unique auto-incrementing ID
-    db_task = models.Task(**task.dict())
+    prefix = project.project_key if project.project_key else "".join([c for c in project.name if c.isalnum()]).upper()[:3]
+    ticket_id = f"{prefix}-{project.task_counter}"
+    
+    task_data = task.dict()
+    db_task = models.Task(**task_data)
+    db_task.ticket_id = ticket_id
+    
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
-
-    # Now assign a guaranteed unique ticket_id based on its global ID
-    db_task.ticket_id = f"{prefix}-{db_task.id}"
-    db.add(db_task)
     db.commit()
     db.refresh(db_task)
     return db_task

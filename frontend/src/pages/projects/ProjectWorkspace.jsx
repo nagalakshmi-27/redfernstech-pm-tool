@@ -396,6 +396,7 @@ const getColumnBorder = (column) => {
   handleDropOnCard={handleDropOnCard}
   getColumnIcon={getColumnIcon}
   getColumnBorder={getColumnBorder}
+  handleDeleteTask={handleDeleteTask}
   openTask={(task) => {
     setEditingTaskId(task.id);
     setTaskName(task.name);
@@ -417,6 +418,8 @@ const getColumnBorder = (column) => {
     <TaskListBoard
   projectTasks={projectTasks}
   members={members}
+  currentUserRole={currentUserRole}
+  handleDeleteTask={handleDeleteTask}
   openTask={(task) => {
     setEditingTaskId(task.id);
     setTaskName(task.name);

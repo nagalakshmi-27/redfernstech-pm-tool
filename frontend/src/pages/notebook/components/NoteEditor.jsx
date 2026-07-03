@@ -87,7 +87,15 @@ export default function NoteEditor({ item, onClose, token }) {
           border: none;
           border-bottom: 1px solid #1e293b;
           background-color: #1e1e2d;
-          padding: 12px 24px;
+          padding: 8px 12px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+        @media (min-width: 640px) {
+          .note-editor-container .ql-toolbar.ql-snow {
+            padding: 12px 24px;
+          }
         }
         .note-editor-container .ql-container.ql-snow {
           border: none;
@@ -167,11 +175,11 @@ export default function NoteEditor({ item, onClose, token }) {
         }
       `}} />
 
-      <div className="h-16 bg-[#13131a] border-b border-slate-800 flex items-center justify-between px-6 z-10">
-        <div className="flex items-center flex-1">
+      <div className="min-h-[4rem] py-2 sm:py-0 bg-[#13131a] border-b border-slate-800 flex flex-wrap sm:flex-nowrap items-center justify-between px-2 sm:px-6 z-10 gap-2">
+        <div className="flex items-center flex-1 min-w-[150px]">
           <button 
             onClick={() => saveToBackend(title, content, true)}
-            className="text-slate-400 hover:text-white mr-4 p-2 rounded-full hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-white mr-2 sm:mr-4 p-2 rounded-full hover:bg-slate-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -180,11 +188,11 @@ export default function NoteEditor({ item, onClose, token }) {
             value={title}
             onChange={handleTitleChange}
             placeholder="Note Title..."
-            className="bg-transparent border-none outline-none text-xl font-semibold text-white flex-1 placeholder-slate-600"
+            className="bg-transparent border-none outline-none text-lg sm:text-xl font-semibold text-white w-24 sm:w-auto sm:flex-1 placeholder-slate-600 truncate"
           />
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-slate-500">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="hidden sm:block text-sm text-slate-500">
             {saving ? (
               <span className="flex items-center text-indigo-400"><Save className="w-4 h-4 mr-1 animate-pulse" /> Saving...</span>
             ) : (
@@ -193,17 +201,18 @@ export default function NoteEditor({ item, onClose, token }) {
           </div>
           <button 
             onClick={handleExport}
-            className="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors border border-slate-600"
+            className="flex items-center p-2 sm:px-4 sm:py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors border border-slate-600"
             title="Download as TXT"
           >
-            <Download className="w-4 h-4 mr-2" /> Export
+            <Download className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Export</span>
           </button>
           
           <button 
             onClick={() => saveToBackend(title, content, true)}
-            className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+            className="flex items-center p-2 sm:px-4 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+            title="Save & Close"
           >
-            <Save className="w-4 h-4 mr-2" /> Save & Close
+            <Save className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Save & Close</span>
           </button>
         </div>
       </div>

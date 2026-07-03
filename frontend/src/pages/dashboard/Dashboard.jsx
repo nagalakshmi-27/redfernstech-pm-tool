@@ -5,8 +5,6 @@ import AppContext from "../../context/AppContext";
 
 export default function Dashboard() {
   const { projects, tasks, activities } = useContext(AppContext);
-  console.log("Projects:", projects);
-console.log("Tasks:", tasks);
   const [showModal, setShowModal] = useState(false);
 const [modalTitle, setModalTitle] = useState("");
 const [modalData, setModalData] = useState([]);

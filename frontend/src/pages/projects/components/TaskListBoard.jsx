@@ -1,6 +1,10 @@
+import { Trash2 } from "lucide-react";
+
 export default function TaskListBoard({
   projectTasks,
   members,
+  currentUserRole,
+  handleDeleteTask,
   openTask,
 }) {
   return (
@@ -19,6 +23,7 @@ export default function TaskListBoard({
               <th className="px-4 py-3 text-left text-white">Status</th>
               <th className="px-4 py-3 text-left text-white">Assignee</th>
               <th className="px-4 py-3 text-left text-white">Due Date</th>
+              <th className="px-4 py-3 w-10"></th>
             </tr>
 
           </thead>
@@ -34,7 +39,7 @@ export default function TaskListBoard({
                 <tr
                   key={task.id}
                   onClick={() => openTask && openTask(task)}
-                  className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
+                  className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer group"
                 >
                   <td className="px-4 py-3 text-slate-300">
                     {task.ticket_id || `TSK-${task.id}`}
@@ -60,6 +65,21 @@ export default function TaskListBoard({
 
                   <td className="px-4 py-3 text-slate-300">
                     {task.due_date || "-"}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {currentUserRole !== "Client" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task.id);
+                        }}
+                        className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                        title="Delete Task"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

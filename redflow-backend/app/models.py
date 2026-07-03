@@ -65,6 +65,8 @@ class Project(Base):
     
     board_type = Column(String, default="kanban")
     board_columns = Column(JSON, default=["To Do", "In Progress", "Completed"])
+    project_key = Column(String, index=True, nullable=True)
+    task_counter = Column(Integer, default=0)
 
     creator = relationship("User", back_populates="projects")
     workspace = relationship("Workspace", back_populates="projects")
