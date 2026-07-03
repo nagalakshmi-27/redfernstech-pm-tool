@@ -77,8 +77,9 @@ async def import_project_from_excel(
             description = str(row[desc_idx]).strip() if desc_idx is not None and len(row) > desc_idx and row[desc_idx] else ""
             if description.lower() == "none": description = ""
             
-            status = str(row[status_idx]).strip() if status_idx is not None and len(row) > status_idx and row[status_idx] else "To Do"
-            if status.lower() == "none": status = "To Do"
+            default_status = project.board_columns[0] if project.board_columns else "To Do"
+            status = str(row[status_idx]).strip() if status_idx is not None and len(row) > status_idx and row[status_idx] else default_status
+            if status.lower() == "none": status = default_status
             
             priority = str(row[priority_idx]).strip() if priority_idx is not None and len(row) > priority_idx and row[priority_idx] else "Medium"
             if priority.lower() == "none": priority = "Medium"

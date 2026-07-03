@@ -1,6 +1,7 @@
 export default function TaskListBoard({
   projectTasks,
   members,
+  openTask,
 }) {
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden">
@@ -32,7 +33,8 @@ export default function TaskListBoard({
               return (
                 <tr
                   key={task.id}
-                  className="border-t border-white/10 hover:bg-white/5 transition"
+                  onClick={() => openTask && openTask(task)}
+                  className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
                 >
                   <td className="px-4 py-3 text-slate-300">
                     {task.ticket_id || `TSK-${task.id}`}

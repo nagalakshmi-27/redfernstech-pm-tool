@@ -3,7 +3,8 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2 } from "lucide-react";
+import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2, Users } from "lucide-react";
+import ProjectTeamModal from "./components/ProjectTeamModal";
 import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
 import ProjectComments from "./ProjectComments";
@@ -47,6 +48,7 @@ export default function ProjectWorkspace() {
   const [dueDate, setDueDate] = useState("");
   const [sourceLink, setSourceLink] = useState("");
   const [showCustomizeBoard, setShowCustomizeBoard] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
   const [boardColumns, setBoardColumns] = useState(
   project?.board_columns?.length
     ? [...project.board_columns]
@@ -309,6 +311,14 @@ const getColumnBorder = (column) => {
           {currentUserRole !== "Client" && (
   <div className="flex items-center gap-3">
     <button
+      onClick={() => setShowTeamModal(true)}
+      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
+    >
+      <Users size={18} />
+      Team
+    </button>
+
+    <button
       onClick={() => {
   setTempBoardColumns([...boardColumns]);
   setShowCustomizeBoard(true);
@@ -342,10 +352,7 @@ const getColumnBorder = (column) => {
 
       {/* TAB CONTENT */}
       {activeTab === "Board" && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Kanban Board */}
-        {/* Board View */}
-<div className="lg:col-span-3">
+        <div className="w-full">
 
   {(!project.board_type || project.board_type === "kanban") && (
   <KanbanBoard
@@ -427,31 +434,6 @@ const getColumnBorder = (column) => {
 />
   )}
 
-</div>
-
-        {/* Sidebar Panel for Team Roster */}
-        <div className="lg:col-span-1 bg-white/5 backdrop-blur-md rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-6 h-fit">
-          <h2 className="text-lg font-bold mb-4 text-white">Project Team</h2>
-          <div className="space-y-4">
-            {members.filter(m => project.members?.some(mem => mem.id === m.id) || project.created_by_id === m.id).map(member => (
-              <div key={member.id} className="flex items-center gap-3">
-                {member.profile_image ? (
-                  <img src={member.profile_image.startsWith('http') ? member.profile_image : `${import.meta.env.VITE_API_URL}${member.profile_image}`} alt="Profile" className="w-10 h-10 rounded-full object-cover shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]">
-                    {(member.full_name || member.name || member.email)[0].toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <p className="font-semibold text-white text-sm">{member.full_name || member.name || member.email}</p>
-                  <p className="text-xs text-slate-400 font-medium">
-                    {member.role === "Client" ? "Client" : member.company_role}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
         </div>
       )}
 
@@ -606,7 +588,7 @@ const getColumnBorder = (column) => {
   setTempBoardColumns={setTempBoardColumns}
   newColumnName={newColumnName}
   setNewColumnName={setNewColumnName}
-  onSave={() => {
+  onSave={async () => {
   const cleaned = tempBoardColumns.map(col => col.trim());
 
   if (cleaned.some(col => !col)) {
@@ -621,12 +603,31 @@ const getColumnBorder = (column) => {
     return;
   }
 
-  setBoardColumns(cleaned);
-  setNewColumnName("");
-  setShowCustomizeBoard(false);
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${project.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+      body: JSON.stringify({ board_columns: cleaned })
+    });
+    if (!response.ok) throw new Error("Failed to save");
+    
+    setBoardColumns(cleaned);
+    setNewColumnName("");
+    setShowCustomizeBoard(false);
+    
+    // Force a reload so the global context pulls the updated tasks/columns from the backend 
+    // since the backend might have moved tasks during a rename/delete!
+    window.location.reload();
+  } catch (error) {
+    alert("Failed to save columns to database.");
+  }
 }}
 />
-
+      <ProjectTeamModal
+        open={showTeamModal}
+        onClose={() => setShowTeamModal(false)}
+        members={members.filter(m => project.members?.some(mem => mem.id === m.id) || project.created_by_id === m.id)}
+      />
     </MainLayout>
   );
 }

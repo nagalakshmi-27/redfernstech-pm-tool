@@ -105,7 +105,9 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
         end_date=project.end_date,
         status=project.status,
         created_by_id=user_id,
-        workspace_id=project.workspace_id
+        workspace_id=project.workspace_id,
+        board_type=project.board_type,
+        board_columns=project.board_columns
     )
     
     if project.member_ids:
@@ -155,6 +157,26 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
                 db.add(notif)
                 
         db_project.members = users
+
+    if "board_columns" in update_data:
+        new_columns = update_data["board_columns"]
+        old_columns = db_project.board_columns or []
+        
+        old_set = set(old_columns)
+        new_set = set(new_columns)
+        removed = list(old_set - new_set)
+        added = list(new_set - old_set)
+        
+        rename_map = {}
+        if len(removed) == 1 and len(added) == 1 and len(old_columns) == len(new_columns):
+            rename_map[removed[0]] = added[0]
+            
+        tasks = db.query(models.Task).filter(models.Task.project_id == project_id).all()
+        for task in tasks:
+            if task.status in rename_map:
+                task.status = rename_map[task.status]
+            elif task.status not in new_columns and new_columns:
+                task.status = new_columns[0]
 
     for key, value in update_data.items():
         setattr(db_project, key, value)
