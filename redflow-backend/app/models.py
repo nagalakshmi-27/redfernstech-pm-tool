@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Table, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Table, Float, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -62,6 +62,9 @@ class Project(Base):
     status = Column(String, default="Planning") 
     created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
+    
+    board_type = Column(String, default="kanban")
+    board_columns = Column(JSON, default=["To Do", "In Progress", "Completed"])
 
     creator = relationship("User", back_populates="projects")
     workspace = relationship("Workspace", back_populates="projects")
@@ -71,16 +74,18 @@ class Project(Base):
     wiki_pages = relationship("WikiPage", back_populates="project", cascade="all, delete-orphan")
     @property
     def progress(self):
-        if not self.tasks:
+        if not self.tasks or not self.board_columns:
             return 0
-        completed = sum(1 for t in self.tasks if t.status == "Completed")
+        last_column = self.board_columns[-1]
+        completed = sum(1 for t in self.tasks if t.status == last_column)
         return round((completed / len(self.tasks)) * 100)
         
     @property
     def calculated_status(self):
-        if not self.tasks:
+        if not self.tasks or not self.board_columns:
             return "Planning"
-        if all(t.status == "Completed" for t in self.tasks):
+        last_column = self.board_columns[-1]
+        if all(t.status == last_column for t in self.tasks):
             return "Completed"
         return "In Progress"
 

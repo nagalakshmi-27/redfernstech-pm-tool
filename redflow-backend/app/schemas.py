@@ -62,6 +62,8 @@ class ProjectBase(BaseModel):
     start_date: Optional[str] = None 
     end_date: Optional[str] = None
     status: Optional[str] = "Planning"
+    board_type: Optional[str] = "kanban"
+    board_columns: Optional[List[str]] = ["To Do", "In Progress", "Completed"]
 
 class ProjectCreate(ProjectBase):
     workspace_id: int
@@ -74,6 +76,8 @@ class ProjectUpdate(BaseModel):
     end_date: Optional[str] = None
     status: Optional[str] = None
     member_ids: Optional[List[int]] = None
+    board_type: Optional[str] = None
+    board_columns: Optional[List[str]] = None
 
 class ProjectResponse(ProjectBase):
     id: int

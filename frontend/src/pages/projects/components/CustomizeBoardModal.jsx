@@ -14,6 +14,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 function SortableColumn({
+  id,
   column,
   index,
   tempBoardColumns,
@@ -26,7 +27,7 @@ function SortableColumn({
     transform,
     transition,
   } = useSortable({
-  id: index,
+  id: id,
 });
 
   const style = {
@@ -93,9 +94,11 @@ const handleDragEnd = (event) => {
 
   if (!over || active.id === over.id) return;
 
-  setTempBoardColumns((items) =>
-    arrayMove(items, active.id, over.id)
-  );
+  setTempBoardColumns((items) => {
+    const oldIndex = items.indexOf(active.id);
+    const newIndex = items.indexOf(over.id);
+    return arrayMove(items, oldIndex, newIndex);
+  });
 };
 
   return (
@@ -123,13 +126,14 @@ const handleDragEnd = (event) => {
   onDragEnd={handleDragEnd}
 >
   <SortableContext
-    items={tempBoardColumns.map((_, index) => index)}
+    items={tempBoardColumns}
     strategy={verticalListSortingStrategy}
   >
     <div className="space-y-3">
       {tempBoardColumns.map((column, index) => (
         <SortableColumn
-          key={index}
+          key={column}
+          id={column}
           column={column}
           index={index}
           tempBoardColumns={tempBoardColumns}
