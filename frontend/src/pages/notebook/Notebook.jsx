@@ -4,6 +4,13 @@ import MainLayout from "../../layouts/MainLayout";
 import NoteEditor from "./components/NoteEditor";
 import ScribbleBoard from "./components/ScribbleBoard";
 
+const stripHtml = (html) => {
+  if (!html) return "";
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
 export default function Notebook() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -180,7 +187,7 @@ export default function Notebook() {
                 <div className="flex-1 overflow-hidden">
                   {item.item_type === "note" ? (
                     <p className="text-slate-400 text-sm line-clamp-4">
-                      {item.content ? item.content.replace(/<[^>]*>?/gm, '') : "Empty note..."}
+                      {stripHtml(item.content) || "Empty note..."}
                     </p>
                   ) : (
                     <div className="w-full h-full bg-[#13131a] rounded flex items-center justify-center overflow-hidden border border-slate-800">
