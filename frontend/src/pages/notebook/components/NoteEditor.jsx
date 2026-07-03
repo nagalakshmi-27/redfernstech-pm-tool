@@ -14,7 +14,7 @@ export default function NoteEditor({ item, onClose, token }) {
       [{ 'size': ['small', false, 'large', 'huge'] }],
       ['bold', 'italic', 'underline', 'strike'],
       [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
       ['clean']
     ],
   };
@@ -23,7 +23,7 @@ export default function NoteEditor({ item, onClose, token }) {
     'size',
     'bold', 'italic', 'underline', 'strike',
     'color', 'background',
-    'list', 'bullet'
+    'list', 'bullet', 'check'
   ];
 
   const saveToBackend = async (newTitle, newContent, isClosing = false) => {
