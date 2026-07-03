@@ -14,7 +14,6 @@ import * as XLSX from "xlsx";
 
 export default function Reports() {
   const { projects, tasks, members, activeWorkspaceRole } = useContext(AppContext);
-console.log("Current Workspace Role:", activeWorkspaceRole);
 const isAdmin = activeWorkspaceRole === "Admin";
 // Filter State
   const [selectedProject, setSelectedProject] = useState("All");

@@ -3,17 +3,30 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-import { Bug, CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink } from "lucide-react";
+import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2 } from "lucide-react";
 import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
 import ProjectComments from "./ProjectComments";
 import TaskComments from "../../components/TaskComments";
 import TaskAttachments from "../../components/TaskAttachments";
+import CustomizeBoardModal from "./components/CustomizeBoardModal";
+import KanbanBoard from "./components/KanbanBoard";
+import ScrumBoard from "./components/ScrumBoard";
+import TaskListBoard from "./components/TaskListBoard";
+import { useMemo } from "react";
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
   const location = useLocation();
   const { projects, tasks, setTasks, members, activeWorkspaceRole } = useContext(AppContext);
+  const DEFAULT_COLUMNS = useMemo(
+  () => [
+    "To Do",
+    "In Progress",
+    "Completed",
+  ],
+  []
+);
   const currentUserRole = activeWorkspaceRole;
   const [highlightProject, setHighlightProject] = useState(false);
 
@@ -33,6 +46,23 @@ export default function ProjectWorkspace() {
   const [selectedProject, setSelectedProject] = useState(id);
   const [dueDate, setDueDate] = useState("");
   const [sourceLink, setSourceLink] = useState("");
+  const [showCustomizeBoard, setShowCustomizeBoard] = useState(false);
+  const [boardColumns, setBoardColumns] = useState(
+  project?.board_columns?.length
+    ? [...project.board_columns]
+    : [...DEFAULT_COLUMNS]
+);
+
+const [tempBoardColumns, setTempBoardColumns] = useState([]);
+
+const [newColumnName, setNewColumnName] = useState("");
+useEffect(() => {
+  setBoardColumns(
+    project?.board_columns?.length
+      ? [...project.board_columns]
+      : [...DEFAULT_COLUMNS]
+  );
+}, [project]);
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("tab") || localStorage.getItem(`activeTab_${id}`) || "Board";
@@ -132,7 +162,7 @@ export default function ProjectWorkspace() {
      const filteredTasks = projectTasks.filter(t => t.status === columnTitle && t.id !== draggedTaskId).sort((a, b) => (a.position || 0) - (b.position || 0));
      const targetIndex = filteredTasks.findIndex(t => t.id === targetTask.id);
      
-     let newPosition = 0;
+     let newPosition;
      
      if (isBottomHalf) {
         if (targetIndex === filteredTasks.length - 1) {
@@ -216,12 +246,40 @@ export default function ProjectWorkspace() {
     }
   };
 
-  const COLUMNS = [
-    { title: "To Do", icon: <Clock3 size={20} className="text-yellow-400" />, border: "border-yellow-400" },
-    { title: "In Progress", icon: <PlayCircle size={20} className="text-cyan-400" />, border: "border-cyan-400" },
-    { title: "Completed", icon: <CheckCircle size={20} className="text-green-400" />, border: "border-green-400" }
-  ];
+const columns = boardColumns;
+const getColumnIcon = (column) => {
+  switch (column) {
+    case "To Do":
+      return <Clock3 size={20} className="text-yellow-400" />;
 
+    case "In Progress":
+      return <PlayCircle size={20} className="text-cyan-400" />;
+
+    case "Completed":
+    case "Done":
+      return <CheckCircle size={20} className="text-green-400" />;
+
+    default:
+      return <CheckSquare size={20} className="text-slate-400" />;
+  }
+};
+
+const getColumnBorder = (column) => {
+  switch (column) {
+    case "To Do":
+      return "border-yellow-400";
+
+    case "In Progress":
+      return "border-cyan-400";
+
+    case "Completed":
+    case "Done":
+      return "border-green-400";
+
+    default:
+      return "border-slate-500";
+  }
+};
   return (
     <MainLayout>
       <div className="mb-6">
@@ -249,8 +307,21 @@ export default function ProjectWorkspace() {
             <p className="text-slate-300 mt-2 max-w-2xl">{project.description}</p>
           </div>
           {currentUserRole !== "Client" && (
-             <CreateIssueModal defaultProjectId={project.id} />
-          )}
+  <div className="flex items-center gap-3">
+    <button
+      onClick={() => {
+  setTempBoardColumns([...boardColumns]);
+  setShowCustomizeBoard(true);
+}}
+      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
+    >
+      <Settings2 size={18} />
+      Customize Board
+    </button>
+
+    <CreateIssueModal defaultProjectId={project.id} />
+  </div>
+)}
         </div>
       </div>
 
@@ -273,84 +344,90 @@ export default function ProjectWorkspace() {
       {activeTab === "Board" && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Kanban Board */}
-        <div className="lg:col-span-3">
-          <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
-            {COLUMNS.map((col) => (
-              <div 
-                key={col.title} 
-                className="flex-1 min-w-[280px] bg-white/5 backdrop-blur-md rounded-2xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10"
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDropOnColumn(e, col.title)}
-              >
-                <div className="flex items-center gap-2 mb-4 px-2">
-                  {col.icon}
-                  <h2 className="text-lg font-bold text-white">{col.title}</h2>
-                  <span className="ml-auto bg-white/10 text-slate-300 px-2 py-0.5 rounded-full text-xs font-bold border border-white/10">
-                    {projectTasks.filter(t => t.status === col.title).length}
-                  </span>
-                </div>
+        {/* Board View */}
+<div className="lg:col-span-3">
 
-                <div className="flex flex-col gap-3 min-h-[500px]">
-                  {projectTasks.filter(t => t.status === col.title).sort((a, b) => (a.position || 0) - (b.position || 0)).map((task) => (
-                     <div 
-                       key={task.id} 
-                       draggable={currentUserRole !== "Client"}
-                       onDragStart={(e) => handleDragStart(e, task.id)}
-                       onDragOver={handleDragOver}
-                       onDrop={(e) => handleDropOnCard(e, task, col.title)}
-                       onClick={() => {
-                         setEditingTaskId(task.id); setTaskName(task.name); setTaskDescription(task.description);
-                         setPriority(task.priority); setStatus(task.status); setIssueType(task.issue_type || "Task");
-                         setSeverity(task.severity || "Medium"); setAssigneeId(task.assignee_id || "");
-                         setSelectedProject(task.project_id); setDueDate(task.due_date || "");
-                         setSourceLink(task.source_link || "");
-                         setShowEditModal(true);
-                       }}
-                       className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${col.border} p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
-                     >
-                       <div className="flex justify-between items-start mb-2">
-                         <span className="text-xs font-bold text-slate-300 bg-black/30 px-2 py-1 rounded border border-white/5">
-                           {task.ticket_id || `TSK-${task.id}`}
-                         </span>
-                         <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)] ${task.issue_type === "Bug" ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"}`}>
-                           {task.issue_type === "Bug" ? <Bug size={12}/> : <CheckSquare size={12}/>}
-                           {task.issue_type || "Task"}
-                         </span>
-                       </div>
+  {(!project.board_type || project.board_type === "kanban") && (
+  <KanbanBoard
+    columns={columns}
+    projectTasks={projectTasks}
+    members={members}
+    currentUserRole={currentUserRole}
+    handleDragStart={handleDragStart}
+    handleDragOver={handleDragOver}
+    handleDropOnColumn={handleDropOnColumn}
+    handleDropOnCard={handleDropOnCard}
+    getColumnIcon={getColumnIcon}
+    getColumnBorder={getColumnBorder}
+    handleDeleteTask={handleDeleteTask}
+    openTask={(task) => {
+      setEditingTaskId(task.id);
+      setTaskName(task.name);
+      setTaskDescription(task.description || "");
+      setPriority(task.priority);
+      setStatus(task.status);
+      setIssueType(task.issue_type || "Task");
+      setSeverity(task.severity || "Medium");
+      setAssigneeId(task.assignee_id || "");
+      setSelectedProject(task.project_id);
+      setDueDate(task.due_date || "");
+      setSourceLink(task.source_link || "");
+      setShowEditModal(true);
+    }}
+  />
+)}
 
-                       <h3 className="text-md font-semibold text-white mb-1 leading-snug">{task.name}</h3>
-                       {task.issue_type === "Bug" && task.severity && <p className="text-xs text-red-400 font-medium mb-2">Severity: {task.severity}</p>}
+  {project.board_type === "scrum" && (
+    <ScrumBoard
+  columns={columns}
+  projectTasks={projectTasks}
+  members={members}
+  currentUserRole={currentUserRole}
+  handleDragStart={handleDragStart}
+  handleDragOver={handleDragOver}
+  handleDropOnColumn={handleDropOnColumn}
+  handleDropOnCard={handleDropOnCard}
+  getColumnIcon={getColumnIcon}
+  getColumnBorder={getColumnBorder}
+  openTask={(task) => {
+    setEditingTaskId(task.id);
+    setTaskName(task.name);
+    setTaskDescription(task.description || "");
+    setPriority(task.priority);
+    setStatus(task.status);
+    setIssueType(task.issue_type || "Task");
+    setSeverity(task.severity || "Medium");
+    setAssigneeId(task.assignee_id || "");
+    setSelectedProject(task.project_id);
+    setDueDate(task.due_date || "");
+    setSourceLink(task.source_link || "");
+    setShowEditModal(true);
+  }}
+/>
+  )}
 
-                       <div className="flex justify-between items-end mt-4">
-                         <span className={`text-xs font-bold px-2 py-1 rounded-full border ${task.priority === "High" ? "bg-red-500/20 text-red-300 border-red-500/30" : task.priority === "Medium" ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" : "bg-green-500/20 text-green-300 border-green-500/30"}`}>
-                            {task.priority}
-                         </span>
-                          {(() => {
-                            const assignee = members.find(m => m.id === task.assignee_id);
-                            if (assignee && assignee.profile_image) {
-                              return <img src={assignee.profile_image.startsWith('http') ? assignee.profile_image : `${import.meta.env.VITE_API_URL}${assignee.profile_image}`} alt="Avatar" className="w-7 h-7 rounded-full object-cover shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={assignee.full_name || assignee.name || "Unassigned"} />;
-                            }
-                            return (
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(6,182,212,0.5)]" title={assignee?.full_name || assignee?.name || "Unassigned"}>
-                                {(assignee?.full_name || assignee?.name || "U")[0].toUpperCase()}
-                              </div>
-                            );
-                          })()}
-                       </div>
-                       
-                       {/* Delete button */}
-                       {currentUserRole !== "Client" && (
-                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }} className="text-red-400 hover:text-red-300 p-1 bg-black/40 rounded-full shadow-sm border border-red-400/20 backdrop-blur-md">×</button>
-                         </div>
-                       )}
-                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  {project.board_type === "list" && (
+    <TaskListBoard
+  projectTasks={projectTasks}
+  members={members}
+  openTask={(task) => {
+    setEditingTaskId(task.id);
+    setTaskName(task.name);
+    setTaskDescription(task.description || "");
+    setPriority(task.priority);
+    setStatus(task.status);
+    setIssueType(task.issue_type || "Task");
+    setSeverity(task.severity || "Medium");
+    setAssigneeId(task.assignee_id || "");
+    setSelectedProject(task.project_id);
+    setDueDate(task.due_date || "");
+    setSourceLink(task.source_link || "");
+    setShowEditModal(true);
+  }}
+/>
+  )}
+
+</div>
 
         {/* Sidebar Panel for Team Roster */}
         <div className="lg:col-span-1 bg-white/5 backdrop-blur-md rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-6 h-fit">
@@ -433,11 +510,21 @@ export default function ProjectWorkspace() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block mb-2 font-semibold text-slate-300">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
-                    <option className="bg-slate-900" value="To Do">To Do</option>
-                    <option className="bg-slate-900" value="In Progress">In Progress</option>
-                    <option className="bg-slate-900" value="Completed">Completed</option>
-                  </select>
+                  <select
+  value={status}
+  onChange={(e) => setStatus(e.target.value)}
+  className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+>
+  {columns.map((column) => (
+    <option
+      key={column}
+      value={column}
+      className="bg-slate-900"
+    >
+      {column}
+    </option>
+  ))}
+</select>
                 </div>
               </div>
 
@@ -507,6 +594,39 @@ export default function ProjectWorkspace() {
           </div>
         </div>
       )}
+
+      <CustomizeBoardModal
+  open={showCustomizeBoard}
+  onClose={() => {
+  setTempBoardColumns([...boardColumns]);
+  setNewColumnName("");
+  setShowCustomizeBoard(false);
+}}
+  tempBoardColumns={tempBoardColumns}
+  setTempBoardColumns={setTempBoardColumns}
+  newColumnName={newColumnName}
+  setNewColumnName={setNewColumnName}
+  onSave={() => {
+  const cleaned = tempBoardColumns.map(col => col.trim());
+
+  if (cleaned.some(col => !col)) {
+    alert("Column names cannot be empty.");
+    return;
+  }
+
+  const unique = new Set(cleaned.map(col => col.toLowerCase()));
+
+  if (unique.size !== cleaned.length) {
+    alert("Duplicate column names are not allowed.");
+    return;
+  }
+
+  setBoardColumns(cleaned);
+  setNewColumnName("");
+  setShowCustomizeBoard(false);
+}}
+/>
+
     </MainLayout>
   );
 }

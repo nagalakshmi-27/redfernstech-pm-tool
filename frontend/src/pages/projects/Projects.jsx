@@ -14,6 +14,7 @@ export default function Projects() {
   const [projectDescription, setProjectDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [boardType, setBoardType] = useState("kanban");
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -36,14 +37,15 @@ const [uploading, setUploading] = useState(false);
     
     // Notice how we don't even care about status here anymore because it's calculated on the fly!
     const projectData = {
-      name: projectName,
-      description: projectDescription,
-      start_date: startDate,
-      end_date: endDate,
-      status: "Planning", 
-      member_ids: selectedMembers,
-      workspace_id: parseInt(activeWorkspaceId)
-    };
+  name: projectName,
+  description: projectDescription,
+  start_date: startDate,
+  end_date: endDate,
+  status: "Planning",
+  board_type: boardType,
+  member_ids: selectedMembers,
+  workspace_id: parseInt(activeWorkspaceId)
+};
 
     try {
       if (editingProjectId) {
@@ -77,6 +79,7 @@ const [uploading, setUploading] = useState(false);
     setStartDate("");
     setEndDate("");
     setSelectedMembers([]);
+    setBoardType("kanban");
     setEditingProjectId(null);
     setShowModal(false);
   };
@@ -178,6 +181,7 @@ const [uploading, setUploading] = useState(false);
         setStartDate("");
         setEndDate("");
         setSelectedMembers([]);
+        setBoardType("kanban");
         setShowModal(true);
       }}
       className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
@@ -280,6 +284,7 @@ const [uploading, setUploading] = useState(false);
         setProjectDescription(project.description);
         setStartDate(project.start_date || "");
         setEndDate(project.end_date || "");
+        setBoardType(project.board_type || "kanban");
         setSelectedMembers(memberArray.map((m) => m.id));
         setShowModal(true);
       }}
@@ -319,6 +324,30 @@ const [uploading, setUploading] = useState(false);
                 <label className="block mb-2 font-medium text-slate-300">Project Description</label>
                 <textarea value={projectDescription} onChange={(e) => setProjectDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500" />
               </div>
+
+              <div>
+  <label className="block mb-2 font-medium text-slate-300">
+    Board Type
+  </label>
+
+  <select
+    value={boardType}
+    onChange={(e) => setBoardType(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+  >
+    <option value="kanban" className="bg-slate-900">
+      Kanban
+    </option>
+
+    <option value="scrum" className="bg-slate-900">
+      Scrum
+    </option>
+
+    <option value="list" className="bg-slate-900">
+      List
+    </option>
+  </select>
+</div>
 
               <div>
                 <label className="block mb-2 font-medium text-slate-300">Assign Team Members</label>
