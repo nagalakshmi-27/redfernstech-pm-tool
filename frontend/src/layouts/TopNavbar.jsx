@@ -34,6 +34,17 @@ const [selectedImage, setSelectedImage] = useState(null);
 const [profileImage, setProfileImage] = useState(
   localStorage.getItem("profileImage") || null
 );
+useEffect(() => {
+  const handleProfileImageUpdate = () => {
+    setProfileImage(localStorage.getItem("profileImage"));
+  };
+
+  window.addEventListener("profileImageUpdated", handleProfileImageUpdate);
+
+  return () => {
+    window.removeEventListener("profileImageUpdated", handleProfileImageUpdate);
+  };
+}, []);
 const [searchText, setSearchText] = useState("");
 const [showSearchResults, setShowSearchResults] = useState(false);
 const [showMobileSearch, setShowMobileSearch] = useState(false);
@@ -508,6 +519,7 @@ const handleSearchClick = (item) => {
         
         setProfileImage(fullUrl);
         localStorage.setItem("profileImage", fullUrl);
+        window.dispatchEvent(new Event("profileImageUpdated"));
       }
     } catch (err) {
       console.error("Failed to save profile picture to backend", err);

@@ -2,7 +2,17 @@ import MainLayout from "../../layouts/MainLayout";
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AppContext from "../../context/AppContext";
-import { FolderKanban, Clock3, PlayCircle, CheckCircle, UploadCloud } from "lucide-react";
+import {
+  FolderKanban,
+  Clock3,
+  PlayCircle,
+  CheckCircle,
+  UploadCloud,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Users,
+} from "lucide-react";
 
 export default function Projects() {
   const { projects, setProjects, activities, setActivities, members, activeWorkspaceId, workspaces, activeWorkspaceRole } = useContext(AppContext);
@@ -17,6 +27,8 @@ export default function Projects() {
   const [boardType, setBoardType] = useState("kanban");
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
+  const [memberSearch, setMemberSearch] = useState("");
+const [showAllMembers, setShowAllMembers] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 const [selectedFile, setSelectedFile] = useState(null);
 const [importProjectName, setImportProjectName] = useState("");
@@ -79,9 +91,11 @@ const [uploading, setUploading] = useState(false);
     setStartDate("");
     setEndDate("");
     setSelectedMembers([]);
-    setBoardType("kanban");
-    setEditingProjectId(null);
-    setShowModal(false);
+setBoardType("kanban");
+setEditingProjectId(null);
+setMemberSearch("");
+setShowAllMembers(false);
+setShowModal(false);
   };
 
   const handleDeleteProject = async (id) => {
@@ -159,6 +173,16 @@ const [uploading, setUploading] = useState(false);
   }
 };
 
+const filteredMembers = members.filter((member) =>
+  (member.full_name || "")
+    .toLowerCase()
+    .includes(memberSearch.toLowerCase())
+);
+
+const displayedMembers = showAllMembers
+  ? filteredMembers
+  : filteredMembers.slice(0, 5);
+
   return (
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
@@ -181,8 +205,10 @@ const [uploading, setUploading] = useState(false);
         setStartDate("");
         setEndDate("");
         setSelectedMembers([]);
-        setBoardType("kanban");
-        setShowModal(true);
+setBoardType("kanban");
+setMemberSearch("");
+setShowAllMembers(false);
+setShowModal(true);
       }}
       className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
     >
@@ -350,26 +376,80 @@ const [uploading, setUploading] = useState(false);
 </div>
 
               <div>
-                <label className="block mb-2 font-medium text-slate-300">Assign Team Members</label>
-                <div className="space-y-2 border border-white/10 bg-black/20 rounded-lg p-3 text-slate-300">
-                  {members.map((member) => (
-                    <label key={member.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedMembers.includes(member.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedMembers([...selectedMembers, member.id]);
-                          } else {
-                            setSelectedMembers(selectedMembers.filter((id) => id !== member.id));
-                          }
-                        }}
-                      />
-                      {member.full_name}
-                    </label>
-                  ))}
-                </div>
-              </div>
+  <label className="flex items-center gap-2 mb-2 font-medium text-slate-300">
+    <Users size={18} className="text-cyan-400" />
+    Assign Team Members
+  </label>
+
+  <div className="border border-white/10 bg-black/20 rounded-lg p-3">
+
+    <div className="relative mb-3">
+      <Search
+        size={18}
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+
+      <input
+        type="text"
+        placeholder="Search team members..."
+        value={memberSearch}
+        onChange={(e) => {
+          setMemberSearch(e.target.value);
+          setShowAllMembers(false);
+        }}
+        className="w-full pl-10 pr-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+      />
+    </div>
+
+    <div className="space-y-2 text-slate-300 max-h-56 overflow-y-auto pr-1">
+
+      {displayedMembers.map((member) => (
+        <label
+          key={member.id}
+          className="flex items-center gap-2"
+        >
+          <input
+            type="checkbox"
+            checked={selectedMembers.includes(member.id)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedMembers([...selectedMembers, member.id]);
+              } else {
+                setSelectedMembers(
+                  selectedMembers.filter((id) => id !== member.id)
+                );
+              }
+            }}
+          />
+
+          {member.full_name}
+        </label>
+      ))}
+
+      {filteredMembers.length > 5 && (
+        <button
+          type="button"
+          onClick={() => setShowAllMembers(!showAllMembers)}
+          className="flex items-center gap-2 mt-3 text-cyan-400 hover:text-cyan-300 text-sm font-medium transition"
+        >
+          {showAllMembers ? (
+            <>
+              <ChevronUp size={16} />
+              Show Less
+            </>
+          ) : (
+            <>
+              <ChevronDown size={16} />
+              Show More
+            </>
+          )}
+        </button>
+      )}
+
+    </div>
+
+  </div>
+</div>
 
               <div>
                 <label className="block mb-2 font-medium text-slate-300">Start Date</label>
