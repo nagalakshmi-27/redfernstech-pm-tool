@@ -27,6 +27,22 @@ export default function CreateIssueModal({
   const [severity, setSeverity] = useState("Medium");
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
   const [selectedProject, setSelectedProject] = useState(defaultProjectId);
+  const selectedProjectData = projects.find(
+  (project) => project.id === Number(selectedProject)
+);
+
+const filteredMembers = members.filter((member) => {
+  // Hide Clients
+  if (member.role === "Client") return false;
+
+  // If no project is selected, show all non-client members
+  if (!selectedProjectData) return true;
+
+  // Show only members who belong to the selected project
+  return selectedProjectData.members?.some(
+  (projectMember) => projectMember.id === member.id
+);
+});
   const [dueDate, setDueDate] = useState(defaultDueDate);
 
   useEffect(() => {
@@ -151,7 +167,9 @@ export default function CreateIssueModal({
                 {issueType === "Bug" && (
                 <div>
                   <label className="block mb-2 font-semibold text-slate-300">Severity</label>
-                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
+                  <select
+  value={severity}
+  onChange={(e) => setSeverity(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
                     <option className="bg-slate-900">Critical</option>
                     <option className="bg-slate-900">Major</option>
                     <option className="bg-slate-900">Medium</option>
@@ -164,7 +182,12 @@ export default function CreateIssueModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block mb-2 font-semibold text-slate-300">Project</label>
-                  <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
+                  <select
+    value={selectedProject}
+    onChange={(e) => {
+        setSelectedProject(e.target.value);
+        setAssigneeId("");
+    }} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
                     <option className="bg-slate-900" value="">Select a project...</option>
                     {projects.map((project) => (
                       <option className="bg-slate-900" key={project.id} value={project.id}>{project.name}</option>
@@ -175,9 +198,15 @@ export default function CreateIssueModal({
                   <label className="block mb-2 font-semibold text-slate-300">Assignee</label>
                   <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
                     <option className="bg-slate-900" value="">Select assignee...</option>
-                    {members.map((member) => (
-                      <option className="bg-slate-900" key={member.id} value={member.id}>{member.full_name || member.name || member.email}</option>
-                    ))}
+                    {filteredMembers.map((member) => (
+  <option
+    key={member.id}
+    value={member.id}
+    className="bg-slate-900"
+  >
+    {member.full_name || member.name || member.email}
+  </option>
+))}
                   </select>
                 </div>
               </div>

@@ -19,6 +19,11 @@ export default function ProjectWorkspace() {
   const { id } = useParams();
   const location = useLocation();
   const { projects, tasks, setTasks, members, activeWorkspaceRole } = useContext(AppContext);
+  useEffect(() => {
+  if (projects.length > 0) {
+    console.log("First Project:", projects[0]);
+  }
+}, [projects]);
   const DEFAULT_COLUMNS = useMemo(
   () => [
     "To Do",
