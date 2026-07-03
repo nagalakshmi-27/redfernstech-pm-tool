@@ -494,49 +494,48 @@ const getColumnBorder = (column) => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Status</label>
-                  <select
-  value={status}
-  onChange={(e) => setStatus(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
->
-  {columns.map((column) => (
-    <option
-      key={column}
-      value={column}
-      className="bg-slate-900"
-    >
-      {column}
-    </option>
-  ))}
-</select>
-                </div>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Priority</label>
-                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
-                    <option className="bg-slate-900">High</option>
-                    <option className="bg-slate-900">Medium</option>
-                    <option className="bg-slate-900">Low</option>
-                  </select>
-                </div>
-                
-                {issueType === "Bug" && (
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Severity</label>
-                  <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500">
-                    <option className="bg-slate-900">Critical</option>
-                    <option className="bg-slate-900">Major</option>
-                    <option className="bg-slate-900">Medium</option>
-                    <option className="bg-slate-900">Minor</option>
-                  </select>
-                </div>
-                )}
-              </div>
+  {/* Status */}
+  <div>
+    <label className="block mb-2 font-semibold text-slate-300">
+      Status
+    </label>
+
+    <select
+      value={status}
+      onChange={(e) => setStatus(e.target.value)}
+      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+    >
+      {columns.map((column) => (
+        <option
+          key={column}
+          value={column}
+          className="bg-slate-900"
+        >
+          {column}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+  <label className="block mb-2 font-semibold text-slate-300">
+    Priority
+  </label>
+
+  <select
+    value={priority}
+    onChange={(e) => setPriority(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+  >
+    <option className="bg-slate-900">High</option>
+    <option className="bg-slate-900">Medium</option>
+    <option className="bg-slate-900">Low</option>
+  </select>
+</div>
+
+</div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -559,23 +558,64 @@ const getColumnBorder = (column) => {
                 </div>
               </div>
 
-              <div>
-                <label className="block mb-2 font-semibold text-slate-300">Due Date</label>
-                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500" />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-white/10 mt-6">
-                <button onClick={() => setShowEditModal(false)} className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition">Cancel</button>
-                <button onClick={handleUpdateTask} className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all">
-                  Save Changes
-                </button>
-              </div>
+  {issueType === "Bug" && (
+    <div>
+      <label className="block mb-2 font-semibold text-slate-300">
+        Severity
+      </label>
+
+      <select
+        value={severity}
+        onChange={(e) => setSeverity(e.target.value)}
+        className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+      >
+        <option className="bg-slate-900">Critical</option>
+        <option className="bg-slate-900">Major</option>
+        <option className="bg-slate-900">Medium</option>
+        <option className="bg-slate-900">Minor</option>
+      </select>
+    </div>
+  )}
+
+  <div className={issueType === "Task" ? "md:col-span-2" : ""}>
+    <label className="block mb-2 font-semibold text-slate-300">
+      Due Date
+    </label>
+
+    <input
+      type="date"
+      value={dueDate}
+      min={new Date().toISOString().split("T")[0]}
+      onChange={(e) => setDueDate(e.target.value)}
+      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+    />
+  </div>
+
+</div>
 
               {/* Attachments Section */}
-              <TaskAttachments taskId={editingTaskId} />
+<TaskAttachments taskId={editingTaskId} />
 
-              {/* Comments Section */}
-              <TaskComments taskId={editingTaskId} />
+<div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+  <button
+    onClick={() => setShowEditModal(false)}
+    className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition"
+  >
+    Cancel
+  </button>
+
+  <button
+    onClick={handleUpdateTask}
+    className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
+  >
+    Save Changes
+  </button>
+</div>
+
+{/* Comments Section */}
+<TaskComments taskId={editingTaskId} />
 
             </div>
           </div>

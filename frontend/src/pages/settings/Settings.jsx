@@ -1,7 +1,8 @@
-import { useState, useEffect, useContext } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useState, useEffect, useContext, useRef } from "react";
+import { Eye, EyeOff, Upload, Camera, Trash2 } from "lucide-react";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
+import ImageCropModal from "../../components/ImageCropModal";
 
 export default function Settings() {
   const { activeWorkspaceRole } = useContext(AppContext);
@@ -34,6 +35,25 @@ const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 const [showFinalDeleteModal, setShowFinalDeleteModal] = useState(false);
 const [deleteConfirmation, setDeleteConfirmation] = useState("");
 const [finalConfirmation, setFinalConfirmation] = useState(false);
+const [showPhotoModal, setShowPhotoModal] = useState(false);
+const [showCamera, setShowCamera] = useState(false);
+const [showCropModal, setShowCropModal] = useState(false);
+const [selectedImage, setSelectedImage] = useState(null);
+
+const [profileImage, setProfileImage] = useState(
+  localStorage.getItem("profileImage") || null
+);
+
+const fileInputRef = useRef(null);
+const videoRef = useRef(null);
+const canvasRef = useRef(null);
+const streamRef = useRef(null);
+
+const userEmail = localStorage.getItem("userEmail") || "";
+
+const userInitial = userEmail
+  ? userEmail.charAt(0).toUpperCase()
+  : "U";
   // 1. Load the user's data when the page opens
   useEffect(() => {
     const fetchMyData = async () => {
@@ -69,6 +89,21 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
     };
     fetchMyData();
   }, []);
+  useEffect(() => {
+  const handleProfileImageUpdate = () => {
+    const latestImage = localStorage.getItem("profileImage");
+    setProfileImage(latestImage);
+  };
+
+  window.addEventListener("profileImageUpdated", handleProfileImageUpdate);
+
+  return () => {
+    window.removeEventListener(
+      "profileImageUpdated",
+      handleProfileImageUpdate
+    );
+  };
+}, []);
 
   // 2. Save Profile Data
   const handleSave = async () => {
@@ -170,6 +205,68 @@ const [finalConfirmation, setFinalConfirmation] = useState(false);
       resetDeleteFlow();
     }
   };
+  const handleImageSelect = (event) => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  const imageUrl = URL.createObjectURL(file);
+
+  setSelectedImage(imageUrl);
+
+  setShowCropModal(true);
+
+  setShowPhotoModal(false);
+};
+
+const startCamera = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+    });
+
+    streamRef.current = stream;
+
+    setShowCamera(true);
+
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    }, 100);
+  } catch {
+    alert("Unable to access camera.");
+  }
+};
+
+const stopCamera = () => {
+  if (streamRef.current) {
+    streamRef.current.getTracks().forEach((track) => track.stop());
+  }
+
+  setShowCamera(false);
+};
+
+const capturePhoto = () => {
+  const canvas = canvasRef.current;
+  const video = videoRef.current;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+
+  const image = canvas.toDataURL("image/png");
+
+  setSelectedImage(image);
+
+  stopCamera();
+
+  setShowCropModal(true);
+
+  setShowPhotoModal(false);
+};
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -213,6 +310,35 @@ const allAssigned = allWorkspacesAssigned;
     {message}
   </div>
 )}
+<div className="flex flex-col items-start mb-8">
+  <div className="relative">
+    <div
+      onClick={() => setShowPhotoModal(true)}
+      className="w-32 h-32 rounded-full overflow-hidden border-2 border-cyan-500 cursor-pointer"
+    >
+      {profileImage ? (
+        <img
+          src={profileImage}
+          alt="Profile"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full bg-slate-800 flex items-center justify-center text-4xl font-bold text-white">
+          {userInitial}
+        </div>
+      )}
+    </div>
+  </div>
+  
+
+<input
+  type="file"
+  accept="image/*"
+  ref={fileInputRef}
+  onChange={handleImageSelect}
+  className="hidden"
+/>
+</div>
 
         <div className="flex flex-col md:flex-row gap-4 md:w-2/3">
           <div className="flex-1">
@@ -602,6 +728,195 @@ const allAssigned = allWorkspacesAssigned;
 
     </div>
   </div>
+)}
+{showPhotoModal && (
+  <div
+  className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999]"
+  onClick={() => setShowPhotoModal(false)}
+>
+    <div
+  className="relative bg-slate-900 border border-white/10 rounded-2xl shadow-2xl w-[380px] p-6"
+  onClick={(e) => e.stopPropagation()}
+>
+
+      {/* Close Button */}
+      <button
+        onClick={() => setShowPhotoModal(false)}
+        className="absolute top-4 right-4 text-slate-400 hover:text-white text-xl"
+      >
+        ✕
+      </button>
+
+      {/* Profile Image */}
+      <div className="flex flex-col items-center">
+
+        <div className="w-44 h-44 rounded-full overflow-hidden border-2 border-cyan-500 mb-5">
+
+          {profileImage ? (
+            <img
+              src={profileImage}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-slate-800 flex items-center justify-center text-5xl font-bold text-white">
+              {userInitial}
+            </div>
+          )}
+
+        </div>
+
+        <p className="text-slate-300 text-sm mb-6 break-all">
+          {userEmail}
+        </p>
+
+      </div>
+
+      <div className="border-t border-white/10">
+
+        <button
+          onClick={() => {
+    setShowPhotoModal(false);
+    fileInputRef.current.click();
+}}
+          className="w-full flex items-center gap-3 px-4 py-4 text-slate-200 hover:bg-white/10"
+        >
+          <Upload size={20} className="text-cyan-400" />
+          Upload from Device
+        </button>
+
+        <button
+          onClick={startCamera}
+          className="w-full flex items-center gap-3 px-4 py-4 text-slate-200 hover:bg-white/10"
+        >
+          <Camera size={20} className="text-cyan-400" />
+          Take Photo
+        </button>
+
+        {profileImage && (
+          <button
+            onClick={async () => {
+              try {
+                const token = localStorage.getItem("token");
+
+                await fetch(
+                  `${import.meta.env.VITE_API_URL}/users/me/avatar`,
+                  {
+                    method: "DELETE",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                );
+
+                setProfileImage(null);
+                localStorage.removeItem("profileImage");
+                setShowPhotoModal(false);
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="w-full flex items-center gap-3 px-4 py-4 text-red-400 hover:bg-red-500/10"
+          >
+            <Trash2 size={20} />
+            Remove Photo
+          </button>
+        )}
+
+      </div>
+
+    </div>
+  </div>
+)}
+
+{showCamera && (
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[999]">
+    <div className="bg-slate-900 rounded-2xl p-6 border border-white/10 w-[420px]">
+
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className="w-full rounded-xl"
+      />
+
+      <canvas
+        ref={canvasRef}
+        className="hidden"
+      />
+
+      <div className="flex justify-between mt-5">
+
+        <button
+          onClick={stopCamera}
+          className="px-5 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={capturePhoto}
+          className="px-5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white"
+        >
+          Capture
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
+{showCropModal && (
+  <ImageCropModal
+    image={selectedImage}
+    onCancel={() => {
+      setShowCropModal(false);
+      setSelectedImage(null);
+    }}
+    onSave={async (croppedImage) => {
+      setProfileImage(croppedImage);
+      localStorage.setItem("profileImage", croppedImage);
+
+      setShowCropModal(false);
+      setShowPhotoModal(false);
+      setSelectedImage(null);
+
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/users/me/avatar`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              avatar_base64: croppedImage,
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          const backendHost = import.meta.env.VITE_API_URL
+            .replace("/api", "")
+            .replace(/\/$/, "");
+
+          const fullUrl = `${backendHost}${data.profile_image}`;
+
+          setProfileImage(fullUrl);
+          localStorage.setItem("profileImage", fullUrl);
+          window.dispatchEvent(new Event("profileImageUpdated"));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }}
+  />
 )}
     </MainLayout>
   );

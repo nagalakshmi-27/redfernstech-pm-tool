@@ -436,18 +436,32 @@ const taskRefs = useRef({});
                 <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500" />
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-white/10 mt-6">
-                <button onClick={() => { setShowModal(false); setEditingTaskId(null); }} className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition">Cancel</button>
-                <button onClick={handleUpdateTask} className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all">
-                  Save Changes
-                </button>
-              </div>
+              
 
               {/* Attachments Section */}
-              <TaskAttachments taskId={editingTaskId} />
+<TaskAttachments taskId={editingTaskId} />
 
-              {/* Comments Section */}
-              <TaskComments taskId={editingTaskId} />
+<div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 mt-6">
+  <button
+    onClick={() => {
+      setShowModal(false);
+      setEditingTaskId(null);
+    }}
+    className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition"
+  >
+    Cancel
+  </button>
+
+  <button
+    onClick={handleUpdateTask}
+    className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
+  >
+    Save Changes
+  </button>
+</div>
+
+{/* Comments Section */}
+<TaskComments taskId={editingTaskId} />
             </div>
           </div>
         </div>

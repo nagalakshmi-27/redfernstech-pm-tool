@@ -154,67 +154,174 @@ const filteredMembers = members.filter((member) => {
                 <textarea placeholder="Steps to reproduce or acceptance criteria..." value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg h-28 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Priority</label>
-                  <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
-                    <option className="bg-slate-900">High</option>
-                    <option className="bg-slate-900">Medium</option>
-                    <option className="bg-slate-900">Low</option>
-                  </select>
-                </div>
-                
-                {issueType === "Bug" && (
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Severity</label>
-                  <select
-  value={severity}
-  onChange={(e) => setSeverity(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
-                    <option className="bg-slate-900">Critical</option>
-                    <option className="bg-slate-900">Major</option>
-                    <option className="bg-slate-900">Medium</option>
-                    <option className="bg-slate-900">Minor</option>
-                  </select>
-                </div>
-                )}
-              </div>
+              {issueType === "Task" ? (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+    {/* Priority */}
+    <div>
+      <label className="block mb-2 font-semibold text-slate-300">
+        Priority
+      </label>
+
+      <select
+        value={priority}
+        onChange={(e) => setPriority(e.target.value)}
+        className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+      >
+        <option className="bg-slate-900">High</option>
+        <option className="bg-slate-900">Medium</option>
+        <option className="bg-slate-900">Low</option>
+      </select>
+    </div>
+
+    {/* Project */}
+    <div>
+      <label className="block mb-2 font-semibold text-slate-300">
+        Project
+      </label>
+
+      <select
+        value={selectedProject}
+        onChange={(e) => {
+          setSelectedProject(e.target.value);
+          setAssigneeId("");
+        }}
+        className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+      >
+        <option value="" className="bg-slate-900">
+          Select a project...
+        </option>
+
+        {projects.map((project) => (
+          <option
+            key={project.id}
+            value={project.id}
+            className="bg-slate-900"
+          >
+            {project.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+  </div>
+) : (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+    {/* Priority */}
+    <div>
+      <label className="block mb-2 font-semibold text-slate-300">
+        Priority
+      </label>
+
+      <select
+        value={priority}
+        onChange={(e) => setPriority(e.target.value)}
+        className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+      >
+        <option className="bg-slate-900">High</option>
+        <option className="bg-slate-900">Medium</option>
+        <option className="bg-slate-900">Low</option>
+      </select>
+    </div>
+
+    {/* Severity */}
+    <div>
+      <label className="block mb-2 font-semibold text-slate-300">
+        Severity
+      </label>
+
+      <select
+        value={severity}
+        onChange={(e) => setSeverity(e.target.value)}
+        className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+      >
+        <option className="bg-slate-900">Critical</option>
+        <option className="bg-slate-900">Major</option>
+        <option className="bg-slate-900">Medium</option>
+        <option className="bg-slate-900">Minor</option>
+      </select>
+    </div>
+
+  </div>
+)}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Project</label>
-                  <select
-    value={selectedProject}
-    onChange={(e) => {
+
+
+  {issueType === "Bug" && (
+  <div>
+    <label className="block mb-2 font-semibold text-slate-300">
+      Project
+    </label>
+
+    <select
+      value={selectedProject}
+      onChange={(e) => {
         setSelectedProject(e.target.value);
         setAssigneeId("");
-    }} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
-                    <option className="bg-slate-900" value="">Select a project...</option>
-                    {projects.map((project) => (
-                      <option className="bg-slate-900" key={project.id} value={project.id}>{project.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-2 font-semibold text-slate-300">Assignee</label>
-                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition">
-                    <option className="bg-slate-900" value="">Select assignee...</option>
-                    {filteredMembers.map((member) => (
-  <option
-    key={member.id}
-    value={member.id}
-    className="bg-slate-900"
-  >
-    {member.full_name || member.name || member.email}
-  </option>
-))}
-                  </select>
-                </div>
-              </div>
+      }}
+      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+    >
+      <option value="" className="bg-slate-900">
+        Select a project...
+      </option>
 
-              <div>
-                <label className="block mb-2 font-semibold text-slate-300">Due Date</label>
-                <input type="date" value={dueDate} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition" />
-              </div>
+      {projects.map((project) => (
+        <option
+          key={project.id}
+          value={project.id}
+          className="bg-slate-900"
+        >
+          {project.name}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
+  {/* Assignee */}
+  <div>
+    <label className="block mb-2 font-semibold text-slate-300">
+      Assignee
+    </label>
+
+    <select
+      value={assigneeId}
+      onChange={(e) => setAssigneeId(e.target.value)}
+      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+    >
+      <option className="bg-slate-900" value="">
+        Select assignee...
+      </option>
+
+      {filteredMembers.map((member) => (
+        <option
+          key={member.id}
+          value={member.id}
+          className="bg-slate-900"
+        >
+          {member.full_name || member.name || member.email}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* Due Date */}
+  <div className={issueType === "Bug" ? "sm:col-span-2" : ""}>
+    <label className="block mb-2 font-semibold text-slate-300">
+      Due Date
+    </label>
+
+    <input
+      type="date"
+      value={dueDate}
+      min={new Date().toISOString().split("T")[0]}
+      onChange={(e) => setDueDate(e.target.value)}
+      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+    />
+  </div>
+
+</div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-white/10 mt-8">
                 <button onClick={handleClose} className="px-5 py-2.5 font-bold text-slate-300 border border-white/20 hover:bg-white/5 rounded-lg transition">Cancel</button>
