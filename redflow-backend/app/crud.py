@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from . import models, schemas
 from passlib.context import CryptContext
 
@@ -144,16 +144,45 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
     return db_project
 
 from sqlalchemy import or_
+
 def get_user_projects(db: Session, user_id: int, workspace_id: int = None):
-    query = db.query(models.Project).filter(
-        or_(
-            models.Project.created_by_id == user_id,
-            models.Project.members.any(models.User.id == user_id)
+    query = (
+        db.query(models.Project)
+        .options(selectinload(models.Project.tasks))
+        .filter(
+            or_(
+                models.Project.created_by_id == user_id,
+                models.Project.members.any(models.User.id == user_id)
+            )
         )
     )
+
     if workspace_id:
         query = query.filter(models.Project.workspace_id == workspace_id)
-    return query.all()
+
+    projects = query.all()
+
+    for project in projects:
+        total_tasks = len(project.tasks)
+        completed_tasks = len(
+            [t for t in project.tasks if t.status == "Completed"]
+        )
+
+        if total_tasks == 0:
+            project.__dict__["progress"] = 0
+            project.__dict__["calculated_status"] = project.status or "Planning"
+        else:
+            progress = round((completed_tasks / total_tasks) * 100)
+            project.__dict__["progress"] = progress
+
+            if completed_tasks == total_tasks:
+                project.__dict__["calculated_status"] = "Completed"
+            elif completed_tasks > 0:
+                project.__dict__["calculated_status"] = "In Progress"
+            else:
+                project.__dict__["calculated_status"] = "Planning"
+
+    return projects
 
 def update_project(db: Session, project_id: int, project_update: schemas.ProjectUpdate, user_id: int):
     user = db.query(models.User).filter(models.User.id == user_id).first()

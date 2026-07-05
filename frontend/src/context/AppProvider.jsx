@@ -7,7 +7,7 @@ export function AppProvider({ children }) {
   
   // We keep this fake data for the Teams UI for now
   const [members, setMembers] = useState([]);
-  
+  const [currentUser, setCurrentUser] =useState(null);
   const [activities, setActivities] = useState([]);
 
   const [workspaces, setWorkspaces] = useState([]);
@@ -65,8 +65,22 @@ export function AppProvider({ children }) {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
       if (!token || !activeWorkspaceId) return; 
-
       try {
+      const userRes = await fetch(
+  `${import.meta.env.VITE_API_URL}/users/me`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+if (userRes.ok) {
+  const userData = await userRes.json();
+  setCurrentUser(userData);
+}
+
+      
         // Fetch Projects
         const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
@@ -115,7 +129,8 @@ export function AppProvider({ children }) {
         activeWorkspaceId,
         setActiveWorkspaceId,
         activeWorkspaceRole,
-        projects, setProjects, tasks, setTasks, members, setMembers, activities, setActivities }}
+        projects, setProjects, tasks, setTasks, members, setMembers, activities, setActivities, currentUser,
+setCurrentUser }}
     >
       {children}
     </AppContext.Provider>

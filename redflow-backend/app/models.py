@@ -76,20 +76,33 @@ class Project(Base):
     wiki_pages = relationship("WikiPage", back_populates="project", cascade="all, delete-orphan")
     @property
     def progress(self):
-        if not self.tasks or not self.board_columns:
-            return 0
-        last_column = self.board_columns[-1]
-        completed = sum(1 for t in self.tasks if t.status == last_column)
+        if not self.tasks:
+           return 0
+
+        completed = sum(
+           1 for t in self.tasks
+           if t.status.lower() == "completed"
+        )
+
         return round((completed / len(self.tasks)) * 100)
         
     @property
     def calculated_status(self):
-        if not self.tasks or not self.board_columns:
-            return "Planning"
-        last_column = self.board_columns[-1]
-        if all(t.status == last_column for t in self.tasks):
-            return "Completed"
-        return "In Progress"
+        if not self.tasks:
+          return "Planning"
+
+        completed = sum(
+          1 for t in self.tasks
+          if t.status.lower() == "completed"
+        )
+
+        if completed == len(self.tasks):
+          return "Completed"
+
+        if completed > 0:
+          return "In Progress"
+
+        return "Planning"
 
 class Task(Base):
     __tablename__ = "tasks"

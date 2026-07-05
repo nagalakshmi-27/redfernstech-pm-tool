@@ -19,7 +19,15 @@ import { useMemo } from "react";
 export default function ProjectWorkspace() {
   const { id } = useParams();
   const location = useLocation();
-  const { projects, tasks, setTasks, members, activeWorkspaceRole } = useContext(AppContext);
+  const {
+  projects,
+  setProjects,
+  tasks,
+  setTasks,
+  members,
+  activeWorkspaceId,
+  activeWorkspaceRole,
+} = useContext(AppContext);
   useEffect(() => {
   if (projects.length > 0) {
     console.log("First Project:", projects[0]);
@@ -205,6 +213,26 @@ useEffect(() => {
      
      updateTaskPosition(draggedTaskId, columnTitle, newPosition);
   };
+  const refreshProjects = async () => {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Updated Projects:", data);
+      setProjects(data);
+    }
+  } catch (err) {
+    console.error("Failed to refresh projects", err);
+  }
+};
 
   const handleUpdateTask = async () => {
     if (!taskName.trim()) { alert("Name is required"); return; }
@@ -227,10 +255,16 @@ useEffect(() => {
         body: JSON.stringify(taskData)
       });
       if (response.ok) {
-        const updatedTask = await response.json();
-        setTasks(tasks.map(t => t.id === editingTaskId ? updatedTask : t));
-        setShowEditModal(false);
-      }
+  const updatedTask = await response.json();
+
+  setTasks(tasks.map(t =>
+    t.id === editingTaskId ? updatedTask : t
+  ));
+
+  await refreshProjects();
+
+  setShowEditModal(false);
+}
     } catch {
       alert("Error updating task.");
     }

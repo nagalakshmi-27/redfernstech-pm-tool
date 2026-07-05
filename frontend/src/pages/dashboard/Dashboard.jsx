@@ -5,7 +5,6 @@ import {
   Briefcase,
   ListTodo,
   CheckCircle,
-  History,
   CalendarClock,
   StickyNote,
   Plus,
@@ -13,9 +12,10 @@ import {
 } from "lucide-react";
 import { AlarmClock } from "lucide-react";
 import AppContext from "../../context/AppContext";
+import WelcomeOverview from "./components/WelcomeOverview";
 
 export default function Dashboard() {
-  const { projects, tasks, activities } = useContext(AppContext);
+  const { projects, tasks } = useContext(AppContext);
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState([]);
@@ -168,20 +168,7 @@ const openCompletedTasksModal = () => {
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Recent Activities */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
-          <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
-  <History size={20} className="text-cyan-400" />
-  Recent Activities
-</h2>
-          <ul className="space-y-3">
-            {activities.length > 0 ? (
-              activities.map((activity, index) => <li key={index} className="text-slate-300">{activity}</li>)
-            ) : (
-              <li className="text-slate-400">No recent activities</li>
-            )}
-          </ul>
-        </div>
+        <WelcomeOverview />
 
         {/* Upcoming Deadlines */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
