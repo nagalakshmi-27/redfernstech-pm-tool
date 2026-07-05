@@ -9,7 +9,9 @@ import {
 } from "recharts";
 
 export default function TeamWorkload({ members, tasks }) {
-  const workloadData = members.map((member) => {
+  const workloadData = members
+  .filter((member) => member.role !== "Client")
+  .map((member) => {
     const assignedTasks = tasks.filter(
       (task) => task.assignee_id === member.id
     ).length;

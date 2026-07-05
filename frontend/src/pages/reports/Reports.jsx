@@ -174,6 +174,7 @@ const handleResetFilters = () => {
       <ReportsFilters
   projects={projects}
   members={members}
+  activeWorkspaceRole={activeWorkspaceRole}
   selectedProject={selectedProject}
   setSelectedProject={setSelectedProject}
   selectedStatus={selectedStatus}
@@ -181,7 +182,7 @@ const handleResetFilters = () => {
   selectedMember={selectedMember}
   setSelectedMember={setSelectedMember}
   fromDate={fromDate}
-setFromDate={setFromDate}
+  setFromDate={setFromDate}
 />
 
       <SummaryCards

@@ -1,4 +1,12 @@
-import { Settings2, GripVertical, Trash2, X } from "lucide-react";
+import { useState } from "react";
+import { iconLibrary } from "../../../utils/iconLibrary";
+import {
+  Settings2,
+  GripVertical,
+  Trash2,
+  X,
+  Search,
+} from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -13,6 +21,29 @@ import {
 
 import { CSS } from "@dnd-kit/utilities";
 
+
+const popularIcons = [
+  "Clock3",
+  "PlayCircle",
+  "CheckCircle2",
+  "Eye",
+  "Flag",
+  "ClipboardList",
+  "Package",
+  "Wrench",
+  "Star",
+  "MessageSquare",
+  "Calendar",
+  "CalendarDays",
+  "Folder",
+  "FolderKanban",
+  "Bug",
+  "Rocket",
+  "Target",
+  "Users",
+  "User",
+  "Settings",
+];
 function SortableColumn({
   id,
   column,
@@ -50,14 +81,14 @@ function SortableColumn({
       </div>
 
       <input
-        value={column}
-        onChange={(e) => {
-          const updated = [...tempBoardColumns];
-          updated[index] = e.target.value;
-          setTempBoardColumns(updated);
-        }}
-        className="flex-1 bg-transparent outline-none text-white"
-      />
+  value={column}
+  onChange={(e) => {
+    const updated = [...tempBoardColumns];
+    updated[index] = e.target.value;
+    setTempBoardColumns(updated);
+  }}
+  className="flex-1 bg-transparent outline-none text-white"
+/>
 
       <button
   onClick={() => {
@@ -87,6 +118,38 @@ export default function CustomizeBoardModal({
   setNewColumnName,
   onSave,
 }) {
+
+  const [showAddColumnModal, setShowAddColumnModal] = useState(false);
+  const [selectedIcon, setSelectedIcon] = useState(null);
+  const [selectedColor, setSelectedColor] = useState("#06b6d4");
+  const [iconSearch, setIconSearch] = useState("");
+const [visibleCount, setVisibleCount] = useState(5);
+const search = iconSearch.trim().toLowerCase();
+
+const matchedIcons =
+  search === ""
+    ? iconLibrary.filter((icon) =>
+        popularIcons.includes(icon.name)
+      )
+    : iconLibrary.filter((icon) => {
+        const text = [
+          icon.name,
+          ...icon.keywords,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return text.includes(search);
+      });
+
+const filteredIcons =
+  search === ""
+    ? matchedIcons
+    : matchedIcons.slice(0, visibleCount);
+  console.log("Total Icons:", iconLibrary.length);
+console.log("First 10:", iconLibrary.slice(0, 10));
+console.log("Search:", search);
+
   if (!open) return null;
 
 const handleDragEnd = (event) => {
@@ -144,54 +207,21 @@ const handleDragEnd = (event) => {
   </SortableContext>
 </DndContext>
         {/* Add Column */}
-        <div className="mt-5 flex gap-2">
-
-          <input
-            value={newColumnName}
-            onChange={(e) => setNewColumnName(e.target.value)}
-            placeholder="New workflow stage"
-            className="flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white"
-          />
-
-          <button
-            onClick={() => {
-  const name = newColumnName.trim();
-
-  if (!name) {
-    alert("Column name cannot be empty.");
-    return;
-  }
-
-  if (name.length > 50) {
-    alert("Column name cannot exceed 50 characters.");
-    return;
-  }
-
-  if (
-    tempBoardColumns.some(
-      (column) => column.toLowerCase() === name.toLowerCase()
-    )
-  ) {
-    alert("A column with this name already exists.");
-    return;
-  }
-
-  setTempBoardColumns([...tempBoardColumns, name]);
-  setNewColumnName("");
-}}
-            className="rounded-xl bg-cyan-500 px-5 text-white hover:bg-cyan-400"
-          >
-            Add
-          </button>
-
-        </div>
+<div className="mt-6 flex justify-center">
+  <button
+    onClick={() => setShowAddColumnModal(true)}
+    className="rounded-xl bg-cyan-500 hover:bg-cyan-400 px-6 py-3 text-white font-medium transition"
+  >
+    + Add Column
+  </button>
+</div>
 
         {/* Footer */}
-        <div className="mt-8 flex justify-end gap-3">
+        <div className="mt-8 flex flex-col sm:flex-row justify-end gap-3">
 
           <button
             onClick={onClose}
-            className="rounded-lg border border-white/10 px-5 py-2 text-slate-300"
+            className="w-full sm:w-auto rounded-lg border border-white/10 px-5 py-2 text-slate-300"
           >
             Cancel
           </button>
@@ -205,7 +235,276 @@ const handleDragEnd = (event) => {
 
         </div>
 
+            </div>
+
+      {showAddColumnModal && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/70 backdrop-blur-sm p-4">
+  <div className="min-h-full flex items-center justify-center">
+
+          <div
+  className="
+    w-[95vw]
+    sm:w-[90vw]
+    md:w-full
+    md:max-w-md
+    max-h-[90vh]
+    overflow-y-auto
+    rounded-2xl
+    border
+    border-white/10
+    bg-[#171d33]
+    p-4
+    sm:p-5
+    md:p-6
+  "
+>
+
+            <div className="flex items-center justify-between mb-6">
+
+              <h2 className="text-xl font-bold text-white">
+                Add New Column
+              </h2>
+
+              <button
+                onClick={() => setShowAddColumnModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+
+  
+            </div>
+
+            <div className="space-y-6">
+
+  {/* Column Name */}
+  <div>
+
+    <label className="block text-sm text-slate-300 mb-2">
+      Column Name
+    </label>
+
+    <input
+      value={newColumnName}
+      onChange={(e) => setNewColumnName(e.target.value)}
+      placeholder="Enter column name"
+      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+    />
+
+  </div>
+
+  {/* Search Icon */}
+  <div>
+
+    <label className="block text-sm text-slate-300 mb-2">
+      Column Icon
+    </label>
+
+    <div className="relative">
+
+      <Search
+        size={18}
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+
+      <input
+        value={iconSearch}
+        onChange={(e) => {
+  setIconSearch(e.target.value);
+  setVisibleCount(5);
+}}
+        placeholder="Search icons..."
+        className="w-full rounded-xl border border-white/10 bg-black/20 pl-11 pr-4 py-3 text-white"
+      />
+
+    </div>
+
+  </div>
+  {/* Popular Icons */}
+
+<div>
+
+  <label className="block text-sm text-slate-300 mb-3">
+  {iconSearch.trim() ? "Search Results" : "Popular Icons"}
+</label>
+
+  <div className="max-h-56 sm:max-h-72 overflow-y-auto">
+  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+
+    {filteredIcons.map(({ name, component: Icon }) => (
+
+      <button
+        key={name}
+        onClick={() =>
+  setSelectedIcon({
+    name,
+    component: Icon,
+  })
+}
+        className={`flex flex-col items-center justify-center rounded-xl border p-3 transition
+
+        ${
+          selectedIcon?.name === name
+            ? "border-cyan-400 bg-cyan-500/20"
+            : "border-white/10 bg-black/20 hover:border-cyan-400"
+        }`}
+      >
+
+        <Icon
+          size={22}
+          className="text-cyan-400"
+        />
+
+        <span
+  title={name}
+  className="mt-2 w-full truncate text-center text-[10px] text-slate-300"
+>
+  {name}
+</span>
+
+      </button>
+
+    ))}
+</div>
+  </div>
+
+  {search !== "" &&
+ matchedIcons.length > visibleCount &&
+ visibleCount < 15 && (
+  <div className="mt-4 text-center">
+    <button
+      onClick={() =>
+  setVisibleCount((prev) =>
+    Math.min(prev + 5, 15)
+  )
+}
+      className="text-cyan-400 hover:text-cyan-300 text-sm"
+    >
+      Show 5 More
+    </button>
+  </div>
+)}
+
+{search !== "" &&
+ visibleCount > 5 && (
+  <div className="mt-2 text-center">
+    <button
+      onClick={() => setVisibleCount(5)}
+      className="text-slate-400 hover:text-white text-sm"
+    >
+      Show Less
+    </button>
+  </div>
+)}
+  {filteredIcons.length === 0 && (
+  <div className="text-center py-4 text-slate-400">
+    No matching icons found.
+  </div>
+)}
+
+</div>
+{/* Column Color */}
+
+<label className="flex items-center gap-4 cursor-pointer">
+  <div
+    className="relative h-12 w-12 rounded-full border-2 border-white/10 overflow-hidden"
+    style={{ backgroundColor: selectedColor }}
+  >
+    <input
+      type="color"
+      value={selectedColor}
+      onChange={(e) => setSelectedColor(e.target.value)}
+      className="absolute inset-0 opacity-0 cursor-pointer"
+    />
+  </div>
+
+  <span className="text-sm text-slate-300">
+    Click to choose any color
+  </span>
+</label>
+
+{/* Preview */}
+
+<div>
+
+  <label className="block text-sm text-slate-300 mb-3">
+    Preview
+  </label>
+
+  {(() => {
+    const SelectedIcon = selectedIcon?.component;
+
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3 sm:px-4 sm:py-4">
+
+        <div className="flex items-center justify-center">
+  {SelectedIcon ? (
+    <SelectedIcon
+      size={24}
+      style={{ color: selectedColor }}
+    />
+  ) : (
+    <span
+      className="text-xl font-bold"
+      style={{ color: selectedColor }}
+    >
+      ?
+    </span>
+  )}
+</div>
+
+        <span className="text-white font-medium">
+          {newColumnName || "Column Name"}
+        </span>
+
       </div>
+    );
+  })()}
+
+</div>
+{/* Bottom Buttons */}
+
+<div className="mt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
+
+  <button
+    onClick={() => setShowAddColumnModal(false)}
+    className="w-full sm:w-auto rounded-lg border border-white/10 px-5 py-2 text-slate-300 hover:bg-white/5 transition"
+  >
+    Cancel
+  </button>
+
+  <button
+    onClick={() => {
+      if (!newColumnName.trim()) return;
+
+      setTempBoardColumns([
+        ...tempBoardColumns,
+        newColumnName,
+      ]);
+
+      setNewColumnName("");
+      setSelectedIcon(null);
+      setSelectedColor("#06b6d4");
+      setIconSearch("");
+      setVisibleCount(5);
+
+      setShowAddColumnModal(false);
+    }}
+    className="w-full sm:w-auto rounded-lg bg-cyan-500 hover:bg-cyan-400 px-5 py-2 text-white transition"
+  >
+    Add Column
+  </button>
+
+</div>
+
+</div>
+</div>
+
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 }

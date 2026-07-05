@@ -8,6 +8,7 @@ import {
 export default function ReportsFilters({
   projects,
   members,
+  activeWorkspaceRole,
   selectedProject,
   setSelectedProject,
   selectedStatus,
@@ -54,43 +55,53 @@ export default function ReportsFilters({
             onChange={(e) => setSelectedProject(e.target.value)}
             className="w-full bg-slate-900/60 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500"
           >
-            <option value="All">All Projects</option>
+            <option value="All" className="bg-slate-900 text-white">
+  All Projects
+</option>
 
-            {projects.map((project) => (
-              <option
-                key={project.id}
-                value={project.id}
-              >
-                {project.name}
-              </option>
-            ))}
+{projects.map((project) => (
+  <option
+    key={project.id}
+    value={project.id}
+    className="bg-slate-900 text-white"
+  >
+    {project.name}
+  </option>
+))}
           </select>
         </div>
 
         {/* Team */}
-        <div>
-          <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">
-            <Users size={16} />
-            Team
-          </label>
+{activeWorkspaceRole === "Admin" && (
+  
+  <div>
+    <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">
+      <Users size={16} />
+      Team
+    </label>
+    <select
+      value={selectedMember}
+      onChange={(e) => setSelectedMember(e.target.value)}
+      className="w-full bg-slate-900/60 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500"
+    >
+      <option value="All" className="bg-slate-900 text-white">
+        All Members
+      </option>
 
-          <select
-  value={selectedMember}
-  onChange={(e) => setSelectedMember(e.target.value)}
-  className="w-full bg-slate-900/60 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500"
->
-  <option value="All">All Members</option>
-
-  {members.map((member) => (
+      {members
+  .filter((member) => member.role !== "Client")
+  .map((member) => (
     <option
       key={member.id}
       value={member.id}
+      className="bg-slate-900 text-white"
     >
       {member.full_name || member.name || member.email}
     </option>
-  ))}
-</select>
-        </div>
+))}
+    </select>
+  </div>
+)}
 
         {/* Status */}
         <div>
@@ -104,10 +115,18 @@ export default function ReportsFilters({
             onChange={(e) => setSelectedStatus(e.target.value)}
             className="w-full bg-slate-900/60 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500"
           >
-            <option value="All">All Status</option>
-            <option value="Completed">Completed</option>
-            <option value="In Progress">In Progress</option>
-            <option value="To Do">To Do</option>
+            <option value="All" className="bg-slate-900 text-white">
+  All Status
+</option>
+<option value="Completed" className="bg-slate-900 text-white">
+  Completed
+</option>
+<option value="In Progress" className="bg-slate-900 text-white">
+  In Progress
+</option>
+<option value="To Do" className="bg-slate-900 text-white">
+  To Do
+</option>
           </select>
         </div>
 

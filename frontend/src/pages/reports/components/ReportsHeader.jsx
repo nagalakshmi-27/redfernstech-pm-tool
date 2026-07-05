@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Download,
   ChevronDown,
@@ -14,6 +14,24 @@ export default function ReportsHeader({
   onResetFilters,
 }) {
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target)
+    ) {
+      setOpen(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
@@ -48,7 +66,7 @@ export default function ReportsHeader({
 
   {/* Export */}
   {isAdmin && (
-  <div className="relative">
+  <div className="relative" ref={dropdownRef}>
 
     <button
       onClick={() => setOpen((prev) => !prev)}

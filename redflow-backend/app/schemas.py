@@ -55,6 +55,11 @@ class WorkspaceResponse(WorkspaceBase):
     class Config:
         from_attributes = True
 
+class BoardColumn(BaseModel):
+    name: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
 # --- PROJECTS ---
 class ProjectBase(BaseModel):
     name: str

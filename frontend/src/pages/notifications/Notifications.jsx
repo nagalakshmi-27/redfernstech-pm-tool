@@ -1,5 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useEffect } from "react";
+import { Bell, BellOff } from "lucide-react";
 
 export default function Notifications() {
   const [dbNotifications, setDbNotifications] = useState([]);
@@ -35,15 +36,23 @@ export default function Notifications() {
       key={activity.id || index}
       className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-5"
     >
-      <h3 className="font-semibold break-words text-sm md:text-base text-white">
-        🔔 {activity.message}
-      </h3>
+      <div className="flex items-start gap-3">
+  <Bell
+    size={20}
+    className="text-cyan-400 mt-0.5 flex-shrink-0"
+  />
+
+  <h3 className="font-semibold break-words text-sm md:text-base text-white">
+    {activity.message}
+  </h3>
+</div>
     </div>
   ))
 ) : (
-  <div className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-5 text-slate-300">
-    No Notifications Yet
-  </div>
+  <div className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-6 flex items-center gap-3 text-slate-300">
+  <BellOff size={22} className="text-slate-400" />
+  <span>No Notifications Yet</span>
+</div>
 )}
       </div>
     </MainLayout>

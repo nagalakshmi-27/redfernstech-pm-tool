@@ -3,6 +3,7 @@ import { Trophy, TrendingUp } from "lucide-react";
 export default function TopPerformers({ members, tasks }) {
   // Calculate completed task count for each member
   const leaderboard = members
+  .filter((member) => member.role !== "Client")
   .map((member) => {
     const assignedTasks = tasks.filter(
       (task) => task.assignee_id === member.id

@@ -1,6 +1,17 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useContext, useState, useEffect } from "react";
-import { FolderKanban, Briefcase, ListTodo, CheckCircle } from "lucide-react";
+import {
+  FolderKanban,
+  Briefcase,
+  ListTodo,
+  CheckCircle,
+  History,
+  CalendarClock,
+  StickyNote,
+  Plus,
+  X,
+} from "lucide-react";
+import { AlarmClock } from "lucide-react";
 import AppContext from "../../context/AppContext";
 
 export default function Dashboard() {
@@ -159,7 +170,10 @@ const openCompletedTasksModal = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Recent Activities */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
-          <h2 className="text-xl font-semibold mb-4 text-white">Recent Activities</h2>
+          <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
+  <History size={20} className="text-cyan-400" />
+  Recent Activities
+</h2>
           <ul className="space-y-3">
             {activities.length > 0 ? (
               activities.map((activity, index) => <li key={index} className="text-slate-300">{activity}</li>)
@@ -171,14 +185,20 @@ const openCompletedTasksModal = () => {
 
         {/* Upcoming Deadlines */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
-          <h2 className="text-xl font-semibold mb-4 text-white">Upcoming Deadlines</h2>
+          <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
+  <CalendarClock size={20} className="text-purple-400" />
+  Upcoming Deadlines
+</h2>
           <ul className="space-y-3">
             {upcomingTasks.map((task) => (
               <li
   key={task.id}
-  className="text-sm md:text-base break-words text-slate-300"
+  className="flex items-center gap-2 text-sm md:text-base break-words text-slate-300"
 >
-  📅 {task.name} - {task.due_date}
+  <AlarmClock size={16} className="text-red-400 shrink-0" />
+  <span>
+    {task.name} - {task.due_date}
+  </span>
 </li>
             ))}
           </ul>
@@ -188,13 +208,17 @@ const openCompletedTasksModal = () => {
       {/* Quick Notes Section */}
       <div className="mb-8 relative z-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-white">Quick Notes</h2>
-          <button 
-            onClick={addStickyNote}
-            className="flex items-center text-sm bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors border border-white/10"
-          >
-            + Add Note
-          </button>
+          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+  <StickyNote size={20} className="text-yellow-400" />
+  Quick Notes
+</h2>
+          <button
+  onClick={addStickyNote}
+  className="flex items-center gap-2 text-sm bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors border border-white/10"
+>
+  <Plus size={16} />
+  Add Note
+</button>
         </div>
         
         {stickyNotes.length === 0 ? (
@@ -217,13 +241,13 @@ const openCompletedTasksModal = () => {
                   {/* Tape effect */}
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-6 bg-white/50 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.1)] transform rotate-2 z-10 rounded-sm"></div>
                   
-                  <button 
-                    onClick={() => deleteStickyNote(note.id)} 
-                    className="absolute top-2 right-2 text-black/30 hover:text-red-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity z-20 text-lg leading-none"
-                    title="Discard Note"
-                  >
-                    ×
-                  </button>
+                  <button
+  onClick={() => deleteStickyNote(note.id)}
+  className="absolute top-2 right-2 text-black/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+  title="Discard Note"
+>
+  <X size={18} />
+</button>
                   <textarea 
                     value={note.text}
                     onChange={(e) => updateStickyNote(note.id, e.target.value)}
