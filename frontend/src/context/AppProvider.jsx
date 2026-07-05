@@ -86,9 +86,14 @@ export function AppProvider({ children }) {
           const formattedMembers = teamData.map(m => ({ ...m, name: m.full_name || m.email }));
           setMembers(formattedMembers);
         }
-        const taskRes = await fetch(`${import.meta.env.VITE_API_URL}/tasks/`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const taskRes = await fetch(
+  `${import.meta.env.VITE_API_URL}/tasks/?workspace_id=${activeWorkspaceId}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
         if (taskRes.ok) {
           const taskData = await taskRes.json();
           setTasks(taskData);

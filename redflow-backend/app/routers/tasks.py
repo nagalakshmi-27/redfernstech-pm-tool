@@ -9,8 +9,16 @@ from .users import get_current_user, get_db
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 @router.get("/", response_model=List[schemas.TaskResponse])
-def read_tasks(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return crud.get_user_tasks(db=db, user_id=current_user.id)
+def read_tasks(
+    workspace_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return crud.get_user_tasks(
+        db=db,
+        user_id=current_user.id,
+        workspace_id=workspace_id,
+    )
 
 @router.post("/", response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

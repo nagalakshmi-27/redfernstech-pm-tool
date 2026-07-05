@@ -217,13 +217,22 @@ def delete_project(db: Session, project_id: int, user_id: int):
     db.commit()
     return True
 
-def get_user_tasks(db: Session, user_id: int):
-    return db.query(models.Task).filter(
+def get_user_tasks(db: Session, user_id: int, workspace_id: int = None):
+    query = db.query(models.Task).filter(
         models.Task.project.has(
             models.Project.members.any(models.User.id == user_id) |
             (models.Project.created_by_id == user_id)
         )
-    ).all()
+    )
+
+    if workspace_id:
+        query = query.filter(
+            models.Task.project.has(
+                models.Project.workspace_id == workspace_id
+            )
+        )
+
+    return query.all()
 
 def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
     # Fetch the project to get its name for the ticket ID prefix
