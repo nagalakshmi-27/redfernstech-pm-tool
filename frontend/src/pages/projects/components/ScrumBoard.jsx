@@ -10,7 +10,7 @@ export default function ScrumBoard({
   handleDropOnColumn,
   handleDropOnCard,
   getColumnIcon,
-  getColumnBorder,
+  getColumnColor,
   handleDeleteTask,
   openTask,
 }) {
@@ -86,13 +86,15 @@ export default function ScrumBoard({
 
 <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4 mt-4">
 
-  {columns.map((column) => (
+  {columns.map((column) => {
+    const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+    return (
 
     <div
-  key={column}
+  key={colName}
   className="flex-1 min-w-[280px] rounded-2xl border border-white/10 bg-white/5 p-4"
   onDragOver={handleDragOver}
-  onDrop={(e) => handleDropOnColumn(e, column)}
+  onDrop={(e) => handleDropOnColumn(e, colName)}
 >
 
       <div className="flex items-center justify-between mb-4">
@@ -102,20 +104,20 @@ export default function ScrumBoard({
           {getColumnIcon(column)}
 
           <h3 className="text-white font-bold">
-            {column}
+            {colName}
           </h3>
 
         </div>
 
         <span className="rounded-full bg-cyan-500/20 px-2 py-1 text-xs text-cyan-300">
-          {projectTasks.filter(task => task.status === column).length}
+          {projectTasks.filter(task => task.status === colName).length}
         </span>
 
       </div>
 
       <div className="space-y-3">
   {projectTasks
-    .filter(task => task.status === column)
+    .filter(task => task.status === colName)
     .map(task => {
       const assignee = members.find(
         m => m.id === task.assignee_id
@@ -128,7 +130,8 @@ export default function ScrumBoard({
   onDragStart={(e) => handleDragStart(e, task.id)}
   onDragOver={handleDragOver}
   onDrop={(e) => handleDropOnCard(e, task, column)}
-  className={`rounded-xl border border-white/10 border-l-4 ${getColumnBorder(column)} bg-white/10 p-3 hover:bg-white/15 transition cursor-pointer relative group`}
+  className={`rounded-xl border border-white/10 border-l-4 bg-white/10 p-3 hover:bg-white/15 transition cursor-pointer relative group`}
+  style={{ borderLeftColor: getColumnColor(column) }}
   onClick={() => openTask(task)}
 >
           <div className="flex items-center justify-between">
@@ -174,9 +177,7 @@ export default function ScrumBoard({
 </div>
 
     </div>
-
-  ))}
-
+  )})}
 </div>
 
     </div>

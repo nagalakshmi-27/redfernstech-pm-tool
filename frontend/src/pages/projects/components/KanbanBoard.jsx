@@ -16,36 +16,38 @@ export default function KanbanBoard({
   handleDropOnColumn,
   handleDropOnCard,
   getColumnIcon,
-  getColumnBorder,
-  openTask,
+  getColumnColor,
   handleDeleteTask,
+  openTask,
 }) {
   return (
     <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
-      {columns.map((column) => (
+      {columns.map((column) => {
+        const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+        return (
         <div
-          key={column}
+          key={colName}
           className="flex-1 min-w-[280px] bg-white/5 backdrop-blur-md rounded-2xl p-4 shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10"
           onDragOver={handleDragOver}
-          onDrop={(e) => handleDropOnColumn(e, column)}
+          onDrop={(e) => handleDropOnColumn(e, colName)}
         >
           {/* Column Header */}
           <div className="flex items-center gap-2 mb-4 px-2">
             {getColumnIcon(column)}
 
             <h2 className="text-lg font-bold text-white">
-              {column}
+              {colName}
             </h2>
 
             <span className="ml-auto bg-white/10 text-slate-300 px-2 py-0.5 rounded-full text-xs font-bold border border-white/10">
-              {projectTasks.filter((t) => t.status === column).length}
+              {projectTasks.filter((t) => t.status === colName).length}
             </span>
           </div>
 
           {/* Cards */}
           <div className="flex flex-col gap-3 min-h-[500px]">
             {projectTasks
-              .filter((t) => t.status === column)
+              .filter((t) => t.status === colName)
               .sort((a, b) => (a.position || 0) - (b.position || 0))
               .map((task) => (
                 <div
@@ -55,9 +57,8 @@ export default function KanbanBoard({
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDropOnCard(e, task, column)}
                   onClick={() => openTask(task)}
-                  className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 ${getColumnBorder(
-                    column
-                  )} p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
+                  className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
+                  style={{ borderLeftColor: getColumnColor(column) }}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="flex items-center gap-1 text-xs font-bold text-slate-300 bg-black/30 px-2 py-1 rounded border border-white/5">
@@ -148,7 +149,7 @@ export default function KanbanBoard({
               ))}
           </div>
         </div>
-      ))}
+      )})}
     </div>
   );
 }

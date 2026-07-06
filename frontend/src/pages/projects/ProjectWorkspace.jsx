@@ -15,6 +15,7 @@ import KanbanBoard from "./components/KanbanBoard";
 import ScrumBoard from "./components/ScrumBoard";
 import TaskListBoard from "./components/TaskListBoard";
 import { useMemo } from "react";
+import { iconLibrary } from "../../utils/iconLibrary";
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
@@ -35,9 +36,9 @@ export default function ProjectWorkspace() {
 }, [projects]);
   const DEFAULT_COLUMNS = useMemo(
   () => [
-    "To Do",
-    "In Progress",
-    "Completed",
+    { name: "To Do", icon: "Clock3", color: "#facc15" },
+    { name: "In Progress", icon: "PlayCircle", color: "#22d3ee" },
+    { name: "Completed", icon: "CheckCircle", color: "#4ade80" }
   ],
   []
 );
@@ -78,6 +79,26 @@ useEffect(() => {
       : [...DEFAULT_COLUMNS]
   );
 }, [project]);
+
+useEffect(() => {
+  if (!project || !boardColumns.length) return;
+  
+  const totalTasks = projectTasks.length;
+  const lastColumn = boardColumns[boardColumns.length - 1];
+  const lastColName = typeof lastColumn === 'string' ? lastColumn : (lastColumn?.name || 'Completed');
+  
+  const completedTasks = projectTasks.filter(t => t.status === lastColName).length;
+  const newProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  
+  let newCalculatedStatus = "To Do";
+  if (newProgress === 100 && totalTasks > 0) newCalculatedStatus = "Completed";
+  else if (newProgress > 0) newCalculatedStatus = "In Progress";
+  
+  if (project.progress !== newProgress || project.calculated_status !== newCalculatedStatus) {
+    setProjects(prevProjects => prevProjects.map(p => p.id === project.id ? { ...p, progress: newProgress, calculated_status: newCalculatedStatus } : p));
+  }
+}, [projectTasks, boardColumns, project?.id]);
+
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("tab") || localStorage.getItem(`activeTab_${id}`) || "Board";
@@ -289,7 +310,16 @@ useEffect(() => {
 
 const columns = boardColumns;
 const getColumnIcon = (column) => {
-  switch (column) {
+  if (column && typeof column === 'object' && column.icon) {
+    const IconObj = iconLibrary.find(i => i.name === column.icon);
+    if (IconObj) {
+      const IconComp = IconObj.component;
+      return <IconComp size={20} style={{ color: column.color || '#94a3b8' }} />;
+    }
+  }
+
+  const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+  switch (colName) {
     case "To Do":
       return <Clock3 size={20} className="text-yellow-400" />;
 
@@ -305,20 +335,24 @@ const getColumnIcon = (column) => {
   }
 };
 
-const getColumnBorder = (column) => {
-  switch (column) {
+const getColumnColor = (column) => {
+  if (column && typeof column === 'object' && column.color) {
+    return column.color;
+  }
+  const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+  switch (colName) {
     case "To Do":
-      return "border-yellow-400";
+      return "#facc15";
 
     case "In Progress":
-      return "border-cyan-400";
+      return "#22d3ee";
 
     case "Completed":
     case "Done":
-      return "border-green-400";
+      return "#4ade80";
 
     default:
-      return "border-slate-500";
+      return "#94a3b8";
   }
 };
   return (
@@ -404,7 +438,7 @@ const getColumnBorder = (column) => {
     handleDropOnColumn={handleDropOnColumn}
     handleDropOnCard={handleDropOnCard}
     getColumnIcon={getColumnIcon}
-    getColumnBorder={getColumnBorder}
+    getColumnColor={getColumnColor}
     handleDeleteTask={handleDeleteTask}
     openTask={(task) => {
       setEditingTaskId(task.id);
@@ -434,7 +468,7 @@ const getColumnBorder = (column) => {
   handleDropOnColumn={handleDropOnColumn}
   handleDropOnCard={handleDropOnCard}
   getColumnIcon={getColumnIcon}
-  getColumnBorder={getColumnBorder}
+  getColumnColor={getColumnColor}
   handleDeleteTask={handleDeleteTask}
   openTask={(task) => {
     setEditingTaskId(task.id);
@@ -544,15 +578,17 @@ const getColumnBorder = (column) => {
       onChange={(e) => setStatus(e.target.value)}
       className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
     >
-      {columns.map((column) => (
+      {columns.map((column) => {
+        const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+        return (
         <option
-          key={column}
-          value={column}
+          key={colName}
+          value={colName}
           className="bg-slate-900"
         >
-          {column}
+          {colName}
         </option>
-      ))}
+      )})}
     </select>
   </div>
 
@@ -671,14 +707,22 @@ const getColumnBorder = (column) => {
   newColumnName={newColumnName}
   setNewColumnName={setNewColumnName}
   onSave={async () => {
-  const cleaned = tempBoardColumns.map(col => col.trim());
+  const cleaned = tempBoardColumns
+    .filter(Boolean)
+    .map(col => typeof col === 'string' ? col.trim() : { ...col, name: (col.name || "").trim() });
 
-  if (cleaned.some(col => !col)) {
+  if (cleaned.some(col => {
+    const name = typeof col === 'string' ? col : col.name;
+    return !name;
+  })) {
     alert("Column names cannot be empty.");
     return;
   }
 
-  const unique = new Set(cleaned.map(col => col.toLowerCase()));
+  const unique = new Set(cleaned.map(col => {
+    const name = typeof col === 'string' ? col : col.name;
+    return name.toLowerCase();
+  }));
 
   if (unique.size !== cleaned.length) {
     alert("Duplicate column names are not allowed.");

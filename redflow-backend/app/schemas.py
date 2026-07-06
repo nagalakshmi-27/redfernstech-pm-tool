@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional, List, Dict
 
@@ -56,6 +56,11 @@ class WorkspaceResponse(WorkspaceBase):
         from_attributes = True
 
 # --- PROJECTS ---
+class BoardColumn(BaseModel):
+    name: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
 class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -63,7 +68,31 @@ class ProjectBase(BaseModel):
     end_date: Optional[str] = None
     status: Optional[str] = "Planning"
     board_type: Optional[str] = "kanban"
-    board_columns: Optional[List[str]] = ["To Do", "In Progress", "Completed"]
+    board_columns: Optional[List[BoardColumn]] = [
+        {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
+        {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"},
+        {"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"}
+    ]
+
+    @field_validator("board_columns", mode="before")
+    @classmethod
+    def parse_board_columns(cls, v):
+        if v is None:
+            return v
+        parsed = []
+        for item in v:
+            if isinstance(item, str):
+                if item == "To Do":
+                    parsed.append({"name": item, "icon": "Clock3", "color": "#facc15"})
+                elif item == "In Progress":
+                    parsed.append({"name": item, "icon": "PlayCircle", "color": "#22d3ee"})
+                elif item == "Completed" or item == "Done":
+                    parsed.append({"name": item, "icon": "CheckCircle", "color": "#4ade80"})
+                else:
+                    parsed.append({"name": item, "icon": "Circle", "color": "#94a3b8"})
+            else:
+                parsed.append(item)
+        return parsed
 
 class ProjectCreate(ProjectBase):
     workspace_id: int
@@ -77,7 +106,7 @@ class ProjectUpdate(BaseModel):
     status: Optional[str] = None
     member_ids: Optional[List[int]] = None
     board_type: Optional[str] = None
-    board_columns: Optional[List[str]] = None
+    board_columns: Optional[List[BoardColumn]] = None
 
 class ProjectResponse(ProjectBase):
     id: int

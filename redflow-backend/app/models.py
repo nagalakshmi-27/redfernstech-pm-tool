@@ -64,7 +64,11 @@ class Project(Base):
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
     
     board_type = Column(String, default="kanban")
-    board_columns = Column(JSON, default=["To Do", "In Progress", "Completed"])
+    board_columns = Column(JSON, default=[
+        {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
+        {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"},
+        {"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"}
+    ])
     project_key = Column(String, index=True, nullable=True)
     task_counter = Column(Integer, default=0)
 

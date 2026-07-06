@@ -211,21 +211,27 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
         new_columns = update_data["board_columns"]
         old_columns = db_project.board_columns or []
         
-        old_set = set(old_columns)
-        new_set = set(new_columns)
+        def get_col_name(c):
+            return c.get("name") if isinstance(c, dict) else c
+
+        old_names = [get_col_name(c) for c in old_columns]
+        new_names = [get_col_name(c) for c in new_columns]
+        
+        old_set = set(old_names)
+        new_set = set(new_names)
         removed = list(old_set - new_set)
         added = list(new_set - old_set)
         
         rename_map = {}
-        if len(removed) == 1 and len(added) == 1 and len(old_columns) == len(new_columns):
+        if len(removed) == 1 and len(added) == 1 and len(old_names) == len(new_names):
             rename_map[removed[0]] = added[0]
             
         tasks = db.query(models.Task).filter(models.Task.project_id == project_id).all()
         for task in tasks:
             if task.status in rename_map:
                 task.status = rename_map[task.status]
-            elif task.status not in new_columns and new_columns:
-                task.status = new_columns[0]
+            elif task.status not in new_names and new_names:
+                task.status = new_names[0]
 
     for key, value in update_data.items():
         setattr(db_project, key, value)

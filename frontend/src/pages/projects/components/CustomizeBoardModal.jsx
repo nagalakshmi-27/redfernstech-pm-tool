@@ -44,6 +44,11 @@ const popularIcons = [
   "User",
   "Settings",
 ];
+
+const colors = ["#facc15", "#22d3ee", "#4ade80", "#f87171", "#a78bfa", "#f472b6", "#fb923c"];
+const getRandomColor = () => colors[Math.floor(Math.random() * colors.length)];
+const getRandomIcon = () => popularIcons[Math.floor(Math.random() * popularIcons.length)];
+
 function SortableColumn({
   id,
   column,
@@ -81,10 +86,14 @@ function SortableColumn({
       </div>
 
       <input
-  value={column}
+  value={typeof column === 'string' ? column : (column?.name || "")}
   onChange={(e) => {
     const updated = [...tempBoardColumns];
-    updated[index] = e.target.value;
+    if (typeof updated[index] === 'string') {
+      updated[index] = e.target.value;
+    } else {
+      updated[index] = { ...updated[index], name: e.target.value };
+    }
     setTempBoardColumns(updated);
   }}
   className="flex-1 bg-transparent outline-none text-white"
@@ -121,7 +130,7 @@ export default function CustomizeBoardModal({
 
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [selectedIcon, setSelectedIcon] = useState(null);
-  const [selectedColor, setSelectedColor] = useState("#06b6d4");
+  const [selectedColor, setSelectedColor] = useState(getRandomColor());
   const [iconSearch, setIconSearch] = useState("");
 const [visibleCount, setVisibleCount] = useState(5);
 const search = iconSearch.trim().toLowerCase();
@@ -193,16 +202,18 @@ const handleDragEnd = (event) => {
     strategy={verticalListSortingStrategy}
   >
     <div className="space-y-3">
-      {tempBoardColumns.map((column, index) => (
+      {tempBoardColumns.map((column, index) => {
+        const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+        return (
         <SortableColumn
-          key={column}
-          id={column}
+          key={colName}
+          id={colName}
           column={column}
           index={index}
           tempBoardColumns={tempBoardColumns}
           setTempBoardColumns={setTempBoardColumns}
         />
-      ))}
+      )})}
     </div>
   </SortableContext>
 </DndContext>
@@ -479,12 +490,16 @@ const handleDragEnd = (event) => {
 
       setTempBoardColumns([
         ...tempBoardColumns,
-        newColumnName,
+        {
+          name: newColumnName,
+          icon: selectedIcon?.name || getRandomIcon(),
+          color: selectedColor || getRandomColor()
+        },
       ]);
 
       setNewColumnName("");
       setSelectedIcon(null);
-      setSelectedColor("#06b6d4");
+      setSelectedColor(getRandomColor());
       setIconSearch("");
       setVisibleCount(5);
 
