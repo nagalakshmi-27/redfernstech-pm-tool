@@ -9,8 +9,9 @@ import {
   StickyNote,
   Plus,
   X,
+  Clock3,
+  Circle,
 } from "lucide-react";
-import { AlarmClock } from "lucide-react";
 import AppContext from "../../context/AppContext";
 import WelcomeOverview from "./components/WelcomeOverview";
 
@@ -69,6 +70,23 @@ export default function Dashboard() {
   const activeProjectsCount = projects.filter((project) => getDynamicStatus(project) === "In Progress").length;
   const pendingTasksCount = workspaceTasks.filter((task) => task.status === "To Do").length;
   const completedTasksCount = workspaceTasks.filter((task) => task.status === "Completed").length;
+  const getDaysRemaining = (dueDate) => {
+  if (!dueDate) return "No due date";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+
+  const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+
+  if (diff < 0) return `Overdue by ${Math.abs(diff)} day${Math.abs(diff) > 1 ? "s" : ""}`;
+  if (diff === 0) return "Due Today";
+  if (diff === 1) return "Due Tomorrow";
+
+  return `Due in ${diff} days`;
+};
   const openProjectsModal = () => {
   setModalTitle("Total Projects");
   setModalData(projects);
@@ -171,24 +189,71 @@ const openCompletedTasksModal = () => {
         <WelcomeOverview />
 
         {/* Upcoming Deadlines */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+<div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 md:p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] h-[295px] flex flex-col">
           <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
   <CalendarClock size={20} className="text-purple-400" />
   Upcoming Deadlines
 </h2>
-          <ul className="space-y-3">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+  <ul className="space-y-4">
             {upcomingTasks.map((task) => (
               <li
   key={task.id}
-  className="flex items-center gap-2 text-sm md:text-base break-words text-slate-300"
+  className="relative flex gap-4 pb-5 last:pb-0 cursor-pointer"
 >
-  <AlarmClock size={16} className="text-red-400 shrink-0" />
-  <span>
-    {task.name} - {task.due_date}
-  </span>
+  {/* Timeline */}
+  <div className="flex flex-col items-center">
+    <div className="w-3 h-3 rounded-full bg-cyan-400 ring-4 ring-cyan-400/10"></div>
+
+    {upcomingTasks[upcomingTasks.length - 1].id !== task.id && (
+      <div className="w-px flex-1 bg-gradient-to-b from-cyan-400/30 to-transparent mt-2"></div>
+    )}
+  </div>
+
+  {/* Content */}
+<div className="flex-1">
+  <p className="text-xs uppercase tracking-wide text-purple-300">
+    {new Date(task.due_date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "2-digit",
+    })}
+  </p>
+
+  <p className="text-white font-semibold mt-1 leading-5">
+    {task.name}
+  </p>
+
+  <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+
+    <div className="flex items-center gap-1">
+      <Clock3 size={13} />
+      <span>{getDaysRemaining(task.due_date)}</span>
+    </div>
+
+    <div
+      className={`flex items-center gap-1 ${
+        task.priority === "High"
+          ? "text-red-400"
+          : task.priority === "Medium"
+          ? "text-yellow-400"
+          : "text-green-400"
+      }`}
+    >
+      <Circle
+        size={8}
+        fill="currentColor"
+      />
+
+      <span>{task.priority}</span>
+    </div>
+
+  </div>
+</div>
 </li>
+
             ))}
           </ul>
+          </div>
         </div>
       </div>
 
