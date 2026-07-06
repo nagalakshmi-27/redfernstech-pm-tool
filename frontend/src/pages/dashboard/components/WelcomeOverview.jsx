@@ -8,7 +8,6 @@ import {
   ClipboardList,
   CheckCircle2,
   AlertTriangle,
-  Lightbulb,
 } from "lucide-react";
 
 export default function WelcomeOverview() {
@@ -64,20 +63,6 @@ const completedProjects = projects.filter(
       t.status !== "Completed"
   ).length;
 
-  const tips = [
-    "Complete your highest priority task first.",
-    "Break large tasks into smaller ones.",
-    "Review overdue tasks before starting new work.",
-    "Keep task descriptions updated.",
-    "Finish one task before switching.",
-    "Update task status regularly.",
-    "Plan tomorrow before ending today.",
-    "Avoid multitasking on critical tasks.",
-    "Review completed work before closing the day.",
-    "Keep your board organized."
-  ];
-
-  const tip = tips[new Date().getDate() % tips.length];
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-lg">
@@ -144,29 +129,6 @@ const completedProjects = projects.filter(
           value={overdue}
           color="text-yellow-400"
         />
-
-      </div>
-
-      {/* Tip */}
-
-      <div className="mt-6 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-
-        <div className="flex items-center gap-2 mb-2">
-
-          <Lightbulb
-            size={18}
-            className="text-cyan-400"
-          />
-
-          <span className="text-cyan-300 font-semibold">
-            Tip of the Day
-          </span>
-
-        </div>
-
-        <p className="text-sm text-slate-300">
-          {tip}
-        </p>
 
       </div>
 
