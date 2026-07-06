@@ -178,74 +178,7 @@ if (currentUserRole === "Client") {
           </button>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-cyan-500">
-    <div className="flex justify-between items-center text-slate-200">
-      <div>
-        <p className="text-slate-400 text-base font-medium">
-          Total Members
-        </p>
-
-        <p className="text-3xl font-bold mt-2 text-white">
-          {totalMembers}
-        </p>
-      </div>
-
-      <Users size={22} className="text-cyan-400" />
-    </div>
-  </div>
-
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-green-400">
-    <div className="flex justify-between items-center text-slate-200">
-      <div>
-        <p className="text-slate-400 text-base font-medium">
-          Developers
-        </p>
-
-        <p className="text-3xl font-bold mt-2 text-white">
-          {developers}
-        </p>
-      </div>
-
-      <Code size={22} className="text-green-400" />
-    </div>
-  </div>
-
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-indigo-400">
-    <div className="flex justify-between items-center text-slate-200">
-      <div>
-        <p className="text-slate-400 text-base font-medium">
-          Designers
-        </p>
-
-        <p className="text-3xl font-bold mt-2 text-white">
-          {designers}
-        </p>
-      </div>
-
-      <Palette size={22} className="text-indigo-400" />
-    </div>
-  </div>
-
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-purple-400">
-    <div className="flex justify-between items-center text-slate-200">
-      <div>
-        <p className="text-slate-400 text-base font-medium">
-          Managers
-        </p>
-
-        <p className="text-3xl font-bold mt-2 text-white">
-          {managers}
-        </p>
-      </div>
-
-      <Briefcase size={22} className="text-purple-400" />
-    </div>
-  </div>
-
-</div>
-      
 
       <div>
         {Object.entries(
