@@ -282,7 +282,7 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
         return None
 
     # Increment project task counter atomically
-    project.task_counter += 1
+    project.task_counter = (project.task_counter or 0) + 1
     db.add(project)
     
     prefix = project.project_key if project.project_key else "".join([c for c in project.name if c.isalnum()]).upper()[:3]
