@@ -332,15 +332,6 @@ export default function Sidebar() {
           </li>
 
           <li>
-            <Link
-              to="/notifications"
-              className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
-            >
-              Notifications
-            </Link>
-          </li>
-
-          <li>
   <Link
     to="/reports"
     className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
@@ -348,6 +339,24 @@ export default function Sidebar() {
     Reports & Analytics
   </Link>
 </li>
+
+          <li>
+            <Link
+              to="/integrations"
+              className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
+            >
+              Apps
+            </Link>
+          </li>
+
+          <li>
+            <Link
+              to="/notifications"
+              className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
+            >
+              Notifications
+            </Link>
+          </li>
 
           <li>
             <Link

@@ -16,6 +16,7 @@ import Notifications from "../pages/notifications/Notifications";
 import Settings from "../pages/settings/Settings";
 import Reports from "../pages/reports/Reports";
 import Notebook from "../pages/notebook/Notebook";
+import Integrations from "../pages/integrations/Integrations";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRoutes() {
@@ -42,6 +43,7 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/notebook" element={<Notebook />} />
       </Routes>

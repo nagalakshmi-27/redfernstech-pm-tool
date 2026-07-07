@@ -51,6 +51,22 @@ export default function ProjectWorkspace() {
   // Edit Task State
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState(null);
+  
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    if (editingTaskId) {
+      setHighlightedTaskId(editingTaskId);
+      setTimeout(() => {
+        const el = document.getElementById(`task-card-${editingTaskId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+      }, 100);
+      setTimeout(() => setHighlightedTaskId(null), 4000);
+    }
+  };
+
   const [taskName, setTaskName] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
@@ -169,10 +185,24 @@ useEffect(() => {
     try {
       const taskToUpdate = tasks.find(t => t.id === taskId);
       if (!taskToUpdate) return;
+      const payload = {
+        name: taskToUpdate.name,
+        description: taskToUpdate.description,
+        status: newStatus,
+        priority: taskToUpdate.priority,
+        issue_type: taskToUpdate.issue_type,
+        severity: taskToUpdate.severity,
+        due_date: taskToUpdate.due_date,
+        project_id: taskToUpdate.project_id,
+        assignee_id: taskToUpdate.assignee_id,
+        position: newPosition !== undefined && newPosition !== null && !isNaN(newPosition) ? Number(newPosition) : null,
+        source_link: taskToUpdate.source_link
+      };
+
       const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/${taskId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-        body: JSON.stringify({ ...taskToUpdate, status: newStatus, position: newPosition })
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: taskToUpdate.status, position: taskToUpdate.position } : t));
@@ -284,7 +314,7 @@ useEffect(() => {
 
   await refreshProjects();
 
-  setShowEditModal(false);
+  closeEditModal();
 }
     } catch {
       alert("Error updating task.");
@@ -454,6 +484,7 @@ const getColumnColor = (column) => {
       setSourceLink(task.source_link || "");
       setShowEditModal(true);
     }}
+    highlightedTaskId={highlightedTaskId}
   />
 )}
 
@@ -484,6 +515,7 @@ const getColumnColor = (column) => {
     setSourceLink(task.source_link || "");
     setShowEditModal(true);
   }}
+  highlightedTaskId={highlightedTaskId}
 />
   )}
 
@@ -507,6 +539,7 @@ const getColumnColor = (column) => {
     setSourceLink(task.source_link || "");
     setShowEditModal(true);
   }}
+  highlightedTaskId={highlightedTaskId}
 />
   )}
 
@@ -527,7 +560,7 @@ const getColumnColor = (column) => {
       
       {/* Edit Details Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 text-left" onClick={() => setShowEditModal(false)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 text-left" onClick={closeEditModal}>
           <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-6 md:p-8 rounded-2xl w-[95%] max-w-[600px] max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(0,0,0,0.5)] text-slate-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-6 text-white">Edit Ticket</h2>
 
@@ -673,7 +706,7 @@ const getColumnColor = (column) => {
 
 <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
   <button
-    onClick={() => setShowEditModal(false)}
+    onClick={closeEditModal}
     className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition"
   >
     Cancel

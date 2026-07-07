@@ -21,10 +21,19 @@ export default function Tasks() {
 
   const isTaskCompleted = (task) => {
     const project = projects.find(p => p.id === task.project_id);
-    if (!project || !project.board_columns || project.board_columns.length === 0) {
+    if (!project || !project.board_columns) {
       return task.status === "Completed";
     }
-    return task.status === project.board_columns[project.board_columns.length - 1];
+    const columns = typeof project.board_columns === 'string' 
+      ? project.board_columns.split(',').map(c => c.trim())
+      : project.board_columns;
+      
+    if (columns.length === 0) return task.status === "Completed" || task.status?.toLowerCase() === "done";
+    
+    const lastCol = columns[columns.length - 1];
+    const lastColName = typeof lastCol === 'string' ? lastCol : lastCol.name;
+    
+    return task.status === lastColName;
   };
 
   const hasMissedDeadline = (task) => {

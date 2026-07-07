@@ -128,6 +128,8 @@ class TaskBase(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = "To Do"
     priority: Optional[str] = "Medium"
+    issue_type: Optional[str] = "Task"
+    severity: Optional[str] = None
     due_date: Optional[str] = None
     project_id: int
     assignee_id: Optional[int] = None
@@ -144,6 +146,8 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
+    issue_type: Optional[str] = None
+    severity: Optional[str] = None
     due_date: Optional[str] = None
     project_id: Optional[int] = None
     assignee_id: Optional[int] = None
@@ -331,5 +335,24 @@ class NotebookItemResponse(NotebookItemBase):
     created_at: datetime
     updated_at: datetime
 
+    class Config:
+        from_attributes = True
+
+# --- APP INTEGRATIONS ---
+class IntegrationBase(BaseModel):
+    provider: str
+    access_token: str
+    refresh_token: Optional[str] = None
+    config: Optional[Dict] = None
+    is_active: bool = True
+
+class IntegrationCreate(IntegrationBase):
+    workspace_id: int
+
+class IntegrationResponse(IntegrationBase):
+    id: int
+    workspace_id: int
+    created_at: datetime
+    
     class Config:
         from_attributes = True

@@ -19,6 +19,7 @@ export default function KanbanBoard({
   getColumnColor,
   handleDeleteTask,
   openTask,
+  highlightedTaskId,
 }) {
   return (
     <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
@@ -52,12 +53,13 @@ export default function KanbanBoard({
               .map((task) => (
                 <div
                   key={task.id}
+                  id={`task-card-${task.id}`}
                   draggable={currentUserRole !== "Client"}
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDropOnCard(e, task, column)}
                   onClick={() => openTask(task)}
-                  className={`bg-white/10 backdrop-blur-sm border border-white/10 border-l-4 p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group`}
+                  className={`backdrop-blur-sm border border-l-4 p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-white/20 transition-all relative group ${highlightedTaskId === task.id ? 'bg-cyan-500/10 ring-2 ring-cyan-400 ring-offset-2 ring-offset-[#0f172a] animate-[pulse_2s_ease-in-out_infinite]' : 'bg-white/10 border-white/10'}`}
                   style={{ borderLeftColor: getColumnColor(column) }}
                 >
                   <div className="flex justify-between items-start mb-2">

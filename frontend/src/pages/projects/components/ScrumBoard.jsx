@@ -13,6 +13,7 @@ export default function ScrumBoard({
   getColumnColor,
   handleDeleteTask,
   openTask,
+  highlightedTaskId,
 }) {
   return (
     <div className="space-y-6">
@@ -126,11 +127,12 @@ export default function ScrumBoard({
       return (
         <div
   key={task.id}
+  id={`task-card-${task.id}`}
   draggable={currentUserRole !== "Client"}
   onDragStart={(e) => handleDragStart(e, task.id)}
   onDragOver={handleDragOver}
   onDrop={(e) => handleDropOnCard(e, task, column)}
-  className={`rounded-xl border border-white/10 border-l-4 bg-white/10 p-3 hover:bg-white/15 transition cursor-pointer relative group`}
+  className={`rounded-xl border border-l-4 p-3 transition cursor-pointer relative group ${highlightedTaskId === task.id ? 'bg-cyan-500/10 ring-2 ring-cyan-400 ring-offset-2 ring-offset-[#0f172a] animate-[pulse_2s_ease-in-out_infinite]' : 'bg-white/10 border-white/10 hover:bg-white/15'}`}
   style={{ borderLeftColor: getColumnColor(column) }}
   onClick={() => openTask(task)}
 >

@@ -125,9 +125,11 @@ class Task(Base):
     
     project_id = Column(Integer, ForeignKey("projects.id"), index=True)
     assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     project = relationship("Project", back_populates="tasks")
-    assignee = relationship("User")
+    assignee = relationship("User", foreign_keys=[assignee_id])
+    creator = relationship("User", foreign_keys=[created_by_id])
 
     comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")
     attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
@@ -251,4 +253,17 @@ class NotebookItem(Base):
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), index=True)
     
     user = relationship("User")
+    workspace = relationship("Workspace")
+
+class AppIntegration(Base):
+    __tablename__ = "app_integrations"
+    id = Column(Integer, primary_key=True, index=True)
+    provider = Column(String, index=True) # e.g. 'github', 'slack'
+    access_token = Column(String)
+    refresh_token = Column(String, nullable=True)
+    config = Column(JSON, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), index=True)
     workspace = relationship("Workspace")

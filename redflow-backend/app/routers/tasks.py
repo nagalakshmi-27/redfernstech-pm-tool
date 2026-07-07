@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import crud, schemas, database, models
 from .users import get_current_user, get_db
+from ..services import calendar_service, notification_service
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -25,13 +26,30 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current
     new_task = crud.create_task(db=db, task=task, user_id=current_user.id)
     if not new_task:
         raise HTTPException(status_code=403, detail="Not authorized! Only project members can add tasks.")
+        
+    if new_task.project and new_task.project.workspace_id:
+        if new_task.due_date:
+            calendar_service.sync_task_due_date(new_task, new_task.project.workspace_id, db)
+        notification_service.notify_task_created(new_task, new_task.project.workspace_id, db)
+        
     return new_task
 
 @router.put("/{task_id}", response_model=schemas.TaskResponse)
 def update_task(task_id: int, task: schemas.TaskUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Fetch old state before updating
+    old_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    old_status = old_task.status if old_task else None
+
     updated_task = crud.update_task(db=db, task_id=task_id, task_update=task, user_id=current_user.id)
     if not updated_task:
         raise HTTPException(status_code=403, detail="Not authorized to edit this task.")
+        
+    if updated_task.project and updated_task.project.workspace_id:
+        if updated_task.due_date:
+            calendar_service.sync_task_due_date(updated_task, updated_task.project.workspace_id, db)
+        if old_status:
+            notification_service.notify_task_update(updated_task, old_status, updated_task.project.workspace_id, db)
+        
     return updated_task
 
 @router.delete("/{task_id}")

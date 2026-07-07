@@ -2,10 +2,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models
-from app.routers import users, projects, tasks, events, notifications, collaboration, workspaces, notebooks
+from app.routers import users, projects, tasks, events, notifications, collaboration, workspaces, notebooks, integrations, webhooks
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+from sqlalchemy import text
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE tasks ADD COLUMN created_by_id INTEGER REFERENCES users(id)"))
+except Exception:
+    pass
 
 app = FastAPI(title="RedFlow API")
 
@@ -35,6 +42,9 @@ app.include_router(events.router)
 app.include_router(notifications.router)
 app.include_router(collaboration.router)
 app.include_router(notebooks.router)
+app.include_router(integrations.router)
+app.include_router(integrations.public_router)
+app.include_router(webhooks.router)
 
 @app.get("/")
 def read_root():
