@@ -3,7 +3,7 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2, Users } from "lucide-react";
+import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2, Users, Trash2 } from "lucide-react";
 import ProjectTeamModal from "./components/ProjectTeamModal";
 import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
@@ -77,6 +77,147 @@ export default function ProjectWorkspace() {
   const [selectedProject, setSelectedProject] = useState(id);
   const [dueDate, setDueDate] = useState("");
   const [sourceLink, setSourceLink] = useState("");
+  const [subtasks, setSubtasks] = useState([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [workLogs, setWorkLogs] = useState([]);
+  const [newWorkLogHours, setNewWorkLogHours] = useState("");
+  const [newWorkLogDesc, setNewWorkLogDesc] = useState("");
+  const [activeTaskTab, setActiveTaskTab] = useState("subtasks");
+  
+  const handleOpenTask = (task) => {
+    setEditingTaskId(task.id);
+    setTaskName(task.name);
+    setTaskDescription(task.description || "");
+    setPriority(task.priority);
+    setStatus(task.status);
+    setIssueType(task.issue_type || "Task");
+    setSeverity(task.severity || "Medium");
+    setAssigneeId(task.assignee_id || "");
+    setSelectedProject(task.project_id);
+    setDueDate(task.due_date || "");
+    setSourceLink(task.source_link || "");
+    setSubtasks(task.subtasks || []);
+    setWorkLogs(task.work_logs || []);
+    setActiveTaskTab("subtasks");
+    setShowEditModal(true);
+  };
+
+  const handleAddSubtask = async () => {
+    if (!newSubtaskTitle.trim() || !editingTaskId) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/subtasks/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: newSubtaskTitle,
+          task_id: editingTaskId
+        }),
+      });
+      if (response.ok) {
+        const added = await response.json();
+        setSubtasks([...subtasks, added]);
+        setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, subtasks: [...(t.subtasks || []), added] } : t));
+        setNewSubtaskTitle("");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleSubtask = async (subtaskId, currentStatus) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/subtasks/${subtaskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          is_completed: !currentStatus
+        }),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        const newSubtasks = subtasks.map(st => st.id === subtaskId ? updated : st);
+        setSubtasks(newSubtasks);
+        setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, subtasks: newSubtasks } : t));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/subtasks/${subtaskId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const newSubtasks = subtasks.filter(st => st.id !== subtaskId);
+        setSubtasks(newSubtasks);
+        setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, subtasks: newSubtasks } : t));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddWorkLog = async () => {
+    if (!newWorkLogHours || isNaN(newWorkLogHours) || !editingTaskId) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/worklogs/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          hours_spent: parseFloat(newWorkLogHours),
+          description: newWorkLogDesc.trim() || null,
+          task_id: editingTaskId
+        }),
+      });
+      if (response.ok) {
+        const added = await response.json();
+        setWorkLogs([...workLogs, added]);
+        setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, work_logs: [...(t.work_logs || []), added] } : t));
+        setNewWorkLogHours("");
+        setNewWorkLogDesc("");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteWorkLog = async (worklogId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/worklogs/${worklogId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const newLogs = workLogs.filter(wl => wl.id !== worklogId);
+        setWorkLogs(newLogs);
+        setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, work_logs: newLogs } : t));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const [showCustomizeBoard, setShowCustomizeBoard] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [boardColumns, setBoardColumns] = useState(
@@ -382,7 +523,12 @@ const getColumnColor = (column) => {
       return "#4ade80";
 
     default:
-      return "#94a3b8";
+      const colors = ["#fb923c", "#f472b6", "#a78bfa", "#38bdf8", "#fb7185", "#c084fc", "#fde047", "#818cf8"];
+      let hash = 0;
+      for (let i = 0; i < colName.length; i++) {
+        hash = colName.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return colors[Math.abs(hash) % colors.length];
   }
 };
   return (
@@ -470,20 +616,7 @@ const getColumnColor = (column) => {
     getColumnIcon={getColumnIcon}
     getColumnColor={getColumnColor}
     handleDeleteTask={handleDeleteTask}
-    openTask={(task) => {
-      setEditingTaskId(task.id);
-      setTaskName(task.name);
-      setTaskDescription(task.description || "");
-      setPriority(task.priority);
-      setStatus(task.status);
-      setIssueType(task.issue_type || "Task");
-      setSeverity(task.severity || "Medium");
-      setAssigneeId(task.assignee_id || "");
-      setSelectedProject(task.project_id);
-      setDueDate(task.due_date || "");
-      setSourceLink(task.source_link || "");
-      setShowEditModal(true);
-    }}
+    openTask={handleOpenTask}
     highlightedTaskId={highlightedTaskId}
   />
 )}
@@ -501,20 +634,7 @@ const getColumnColor = (column) => {
   getColumnIcon={getColumnIcon}
   getColumnColor={getColumnColor}
   handleDeleteTask={handleDeleteTask}
-  openTask={(task) => {
-    setEditingTaskId(task.id);
-    setTaskName(task.name);
-    setTaskDescription(task.description || "");
-    setPriority(task.priority);
-    setStatus(task.status);
-    setIssueType(task.issue_type || "Task");
-    setSeverity(task.severity || "Medium");
-    setAssigneeId(task.assignee_id || "");
-    setSelectedProject(task.project_id);
-    setDueDate(task.due_date || "");
-    setSourceLink(task.source_link || "");
-    setShowEditModal(true);
-  }}
+  openTask={handleOpenTask}
   highlightedTaskId={highlightedTaskId}
 />
   )}
@@ -525,20 +645,7 @@ const getColumnColor = (column) => {
   members={members}
   currentUserRole={currentUserRole}
   handleDeleteTask={handleDeleteTask}
-  openTask={(task) => {
-    setEditingTaskId(task.id);
-    setTaskName(task.name);
-    setTaskDescription(task.description || "");
-    setPriority(task.priority);
-    setStatus(task.status);
-    setIssueType(task.issue_type || "Task");
-    setSeverity(task.severity || "Medium");
-    setAssigneeId(task.assignee_id || "");
-    setSelectedProject(task.project_id);
-    setDueDate(task.due_date || "");
-    setSourceLink(task.source_link || "");
-    setShowEditModal(true);
-  }}
+  openTask={handleOpenTask}
   highlightedTaskId={highlightedTaskId}
 />
   )}
@@ -701,27 +808,176 @@ const getColumnColor = (column) => {
 
 </div>
 
-              {/* Attachments Section */}
-<TaskAttachments taskId={editingTaskId} />
+              <div className="flex border-b border-white/10 mt-6 mb-4">
+                <button 
+                  onClick={() => setActiveTaskTab("subtasks")} 
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTaskTab === "subtasks" ? "border-cyan-500 text-cyan-400" : "border-transparent text-slate-400 hover:text-slate-300"}`}
+                >
+                  Subtasks
+                </button>
+                <button 
+                  onClick={() => setActiveTaskTab("timetracking")} 
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTaskTab === "timetracking" ? "border-cyan-500 text-cyan-400" : "border-transparent text-slate-400 hover:text-slate-300"}`}
+                >
+                  Time Tracking
+                </button>
+                <button 
+                  onClick={() => setActiveTaskTab("attachments")} 
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTaskTab === "attachments" ? "border-cyan-500 text-cyan-400" : "border-transparent text-slate-400 hover:text-slate-300"}`}
+                >
+                  Attachments
+                </button>
+                <button 
+                  onClick={() => setActiveTaskTab("comments")} 
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTaskTab === "comments" ? "border-cyan-500 text-cyan-400" : "border-transparent text-slate-400 hover:text-slate-300"}`}
+                >
+                  Comments
+                </button>
+              </div>
 
-<div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
-  <button
-    onClick={closeEditModal}
-    className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition"
-  >
-    Cancel
-  </button>
+              {activeTaskTab === "subtasks" && (
+              <div className="mb-2">
+                <label className="block mb-2 font-semibold text-slate-300">Subtasks</label>
+                
+                {subtasks.length > 0 && (
+                  <div className="mb-3 w-full bg-black/20 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-cyan-500 h-full transition-all duration-300"
+                      style={{ width: `${Math.round((subtasks.filter(s => s.is_completed).length / subtasks.length) * 100)}%` }}
+                    />
+                  </div>
+                )}
 
-  <button
-    onClick={handleUpdateTask}
-    className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
-  >
-    Save Changes
-  </button>
-</div>
+                <div className="space-y-2 mb-3">
+                  {subtasks.map((st) => (
+                    <div key={st.id} className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5 group">
+                      <label className="flex items-center gap-3 cursor-pointer flex-1">
+                        <input 
+                          type="checkbox" 
+                          checked={st.is_completed} 
+                          onChange={() => handleToggleSubtask(st.id, st.is_completed)}
+                          className="w-4 h-4 rounded border-white/20 bg-black/50 text-cyan-500 focus:ring-cyan-500/50 cursor-pointer"
+                        />
+                        <span className={`text-sm ${st.is_completed ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                          {st.title}
+                        </span>
+                      </label>
+                      <button 
+                        onClick={() => handleDeleteSubtask(st.id)}
+                        className="text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-300 transition"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
 
-{/* Comments Section */}
-<TaskComments taskId={editingTaskId} />
+                <div className="flex gap-2">
+                  <input 
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    onKeyDown={(e) => { if(e.key === 'Enter') handleAddSubtask(); }}
+                    placeholder="Add a subtask..."
+                    className="flex-1 bg-black/20 border border-white/10 text-white px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                  <button 
+                    onClick={handleAddSubtask}
+                    disabled={!newSubtaskTitle.trim()}
+                    className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 px-3 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+              )}
+
+              {activeTaskTab === "timetracking" && (
+              <div className="mb-2">
+                <label className="block mb-2 font-semibold text-slate-300">Time Tracking</label>
+                
+                {workLogs.length > 0 && (
+                  <div className="mb-4 text-sm text-slate-400">
+                    Total Logged: <span className="text-cyan-400 font-semibold">{workLogs.reduce((acc, log) => acc + log.hours_spent, 0)} hours</span>
+                  </div>
+                )}
+
+                <div className="space-y-2 mb-3">
+                  {workLogs.map((wl) => (
+                    <div key={wl.id} className="flex flex-col bg-black/20 p-3 rounded-lg border border-white/5 group">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-cyan-400">{wl.hours_spent} hours</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-500">{new Date(wl.created_at).toLocaleDateString()}</span>
+                          <button 
+                            onClick={() => handleDeleteWorkLog(wl.id)}
+                            className="text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-300 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                      {wl.description && (
+                        <span className="text-sm text-slate-300 mt-1">{wl.description}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input 
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={newWorkLogHours}
+                    onChange={(e) => setNewWorkLogHours(e.target.value)}
+                    placeholder="Hours"
+                    className="w-full sm:w-24 bg-black/20 border border-white/10 text-white px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                  <input 
+                    value={newWorkLogDesc}
+                    onChange={(e) => setNewWorkLogDesc(e.target.value)}
+                    onKeyDown={(e) => { if(e.key === 'Enter') handleAddWorkLog(); }}
+                    placeholder="What did you work on?"
+                    className="flex-1 bg-black/20 border border-white/10 text-white px-3 py-2 text-sm rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                  <button 
+                    onClick={handleAddWorkLog}
+                    disabled={!newWorkLogHours}
+                    className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 px-3 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                  >
+                    Log Time
+                  </button>
+                </div>
+              </div>
+              )}
+
+              {activeTaskTab === "attachments" && (
+              <div className="mb-2">
+                <TaskAttachments taskId={editingTaskId} />
+              </div>
+              )}
+
+              {activeTaskTab === "comments" && (
+              <div className="mb-2">
+                <TaskComments taskId={editingTaskId} />
+              </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-white/10">
+                <button
+                  onClick={closeEditModal}
+                  className="px-5 py-2.5 font-medium text-slate-300 hover:bg-white/10 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleUpdateTask}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white px-6 py-2.5 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
 
             </div>
           </div>

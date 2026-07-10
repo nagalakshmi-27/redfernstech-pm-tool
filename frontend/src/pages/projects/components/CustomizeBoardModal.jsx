@@ -56,6 +56,8 @@ function SortableColumn({
   tempBoardColumns,
   setTempBoardColumns,
 }) {
+  const isCompleted = (typeof column === 'string' ? column : (column?.name || "")) === "Completed";
+  
   const {
     attributes,
     listeners,
@@ -64,6 +66,7 @@ function SortableColumn({
     transition,
   } = useSortable({
   id: id,
+  disabled: isCompleted
 });
 
   const style = {
@@ -78,15 +81,16 @@ function SortableColumn({
       className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
     >
       <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab text-slate-500"
+        {...(!isCompleted ? attributes : {})}
+        {...(!isCompleted ? listeners : {})}
+        className={isCompleted ? "text-slate-700 cursor-not-allowed opacity-50" : "cursor-grab text-slate-500"}
       >
         <GripVertical size={18} />
       </div>
 
       <input
   value={typeof column === 'string' ? column : (column?.name || "")}
+  disabled={isCompleted}
   onChange={(e) => {
     const updated = [...tempBoardColumns];
     if (typeof updated[index] === 'string') {
@@ -96,24 +100,26 @@ function SortableColumn({
     }
     setTempBoardColumns(updated);
   }}
-  className="flex-1 bg-transparent outline-none text-white"
+  className={`flex-1 bg-transparent outline-none text-white ${isCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
 />
 
-      <button
-  onClick={() => {
-    if (tempBoardColumns.length === 1) {
-      alert("A board must have at least one column.");
-      return;
-    }
+      {!isCompleted && (
+        <button
+          onClick={() => {
+            if (tempBoardColumns.length === 1) {
+              alert("A board must have at least one column.");
+              return;
+            }
 
-    setTempBoardColumns(
-      tempBoardColumns.filter((_, i) => i !== index)
-    );
-  }}
-        className="text-red-400 hover:text-red-300"
-      >
-        <Trash2 size={18} />
-      </button>
+            setTempBoardColumns(
+              tempBoardColumns.filter((_, i) => i !== index)
+            );
+          }}
+          className="text-red-400 hover:text-red-300"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
     </div>
   );
 }
@@ -167,9 +173,19 @@ const handleDragEnd = (event) => {
   if (!over || active.id === over.id) return;
 
   setTempBoardColumns((items) => {
-    const oldIndex = items.indexOf(active.id);
-    const newIndex = items.indexOf(over.id);
-    return arrayMove(items, oldIndex, newIndex);
+    const oldIndex = items.findIndex(item => (typeof item === 'string' ? item : item.name) === active.id);
+    const newIndex = items.findIndex(item => (typeof item === 'string' ? item : item.name) === over.id);
+    
+    let result = arrayMove(items, oldIndex, newIndex);
+    
+    // Enforce Completed stays at the very end
+    const completedIdx = result.findIndex(item => (typeof item === 'string' ? item : item.name) === "Completed");
+    if (completedIdx !== -1 && completedIdx !== result.length - 1) {
+        const completedCol = result.splice(completedIdx, 1)[0];
+        result.push(completedCol);
+    }
+    
+    return result;
   });
 };
 
@@ -198,7 +214,7 @@ const handleDragEnd = (event) => {
   onDragEnd={handleDragEnd}
 >
   <SortableContext
-    items={tempBoardColumns}
+    items={tempBoardColumns.map(col => typeof col === 'string' ? col : col.name)}
     strategy={verticalListSortingStrategy}
   >
     <div className="space-y-3">
@@ -488,14 +504,21 @@ const handleDragEnd = (event) => {
     onClick={() => {
       if (!newColumnName.trim()) return;
 
-      setTempBoardColumns([
-        ...tempBoardColumns,
-        {
-          name: newColumnName,
-          icon: selectedIcon?.name || getRandomIcon(),
-          color: selectedColor || getRandomColor()
-        },
-      ]);
+      const newCol = {
+        name: newColumnName,
+        icon: selectedIcon?.name || getRandomIcon(),
+        color: selectedColor || getRandomColor()
+      };
+
+      const completedIndex = tempBoardColumns.findIndex(c => (typeof c === 'string' ? c : c.name) === "Completed");
+      
+      if (completedIndex !== -1) {
+        const newCols = [...tempBoardColumns];
+        newCols.splice(completedIndex, 0, newCol);
+        setTempBoardColumns(newCols);
+      } else {
+        setTempBoardColumns([...tempBoardColumns, newCol]);
+      }
 
       setNewColumnName("");
       setSelectedIcon(null);

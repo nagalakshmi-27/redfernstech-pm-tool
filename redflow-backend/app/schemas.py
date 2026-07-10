@@ -165,11 +165,54 @@ class TaskAttachmentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class SubtaskBase(BaseModel):
+    title: str
+    is_completed: Optional[bool] = False
+
+class SubtaskCreate(SubtaskBase):
+    task_id: int
+
+class SubtaskUpdate(BaseModel):
+    title: Optional[str] = None
+    is_completed: Optional[bool] = None
+
+class SubtaskResponse(SubtaskBase):
+    id: int
+    task_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class WorkLogBase(BaseModel):
+    hours_spent: float
+    description: Optional[str] = None
+
+class WorkLogCreate(WorkLogBase):
+    task_id: int
+
+class WorkLogUpdate(BaseModel):
+    hours_spent: Optional[float] = None
+    description: Optional[str] = None
+
+class WorkLogResponse(WorkLogBase):
+    id: int
+    task_id: int
+    user_id: int
+    created_at: datetime
+    # We will exclude user info for now to avoid circular import with TeammateResponse
+    # or we can import it if it's already defined
+
+    class Config:
+        from_attributes = True
+
 class TaskResponse(TaskBase):
     id: int
     created_at: datetime
     ticket_id: Optional[str] = None
     attachments: List[TaskAttachmentResponse] = []
+    subtasks: List[SubtaskResponse] = []
+    work_logs: List[WorkLogResponse] = []
     
     class Config:
         from_attributes = True

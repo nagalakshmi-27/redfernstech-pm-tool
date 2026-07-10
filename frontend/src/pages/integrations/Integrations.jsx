@@ -252,15 +252,22 @@ export default function Integrations() {
                       )}
                     </div>
                   ) : (
-                    isOwner && (
-                      <button
-                        onClick={() => handleConnect(app.provider)}
-                        disabled={isConnecting}
-                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2 rounded-lg text-sm font-bold transition disabled:opacity-50"
-                      >
-                        {isConnecting ? "Connecting..." : "Connect"}
-                      </button>
-                    )
+                    <div className="flex items-center gap-2">
+                      {app.provider !== "google_calendar" && (
+                        <span className="bg-slate-500/20 text-slate-400 border border-slate-500/30 px-3 py-1 rounded-full text-xs font-bold">
+                          Coming Soon
+                        </span>
+                      )}
+                      {isOwner && (
+                        <button
+                          onClick={() => handleConnect(app.provider)}
+                          disabled={isConnecting}
+                          className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2 rounded-lg text-sm font-bold transition disabled:opacity-50"
+                        >
+                          {isConnecting ? "Connecting..." : "Connect"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 
