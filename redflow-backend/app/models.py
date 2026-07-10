@@ -133,6 +133,8 @@ class Task(Base):
 
     comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")
     attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
+    subtasks = relationship("Subtask", back_populates="task", cascade="all, delete-orphan")
+    work_logs = relationship("WorkLog", back_populates="task", cascade="all, delete-orphan")
 
 class TaskAttachment(Base):
     __tablename__ = "task_attachments"
@@ -145,6 +147,29 @@ class TaskAttachment(Base):
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     
     task = relationship("Task", back_populates="attachments")
+    user = relationship("User")
+
+class Subtask(Base):
+    __tablename__ = "subtasks"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    is_completed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    task_id = Column(Integer, ForeignKey("tasks.id"), index=True)
+    task = relationship("Task", back_populates="subtasks")
+
+class WorkLog(Base):
+    __tablename__ = "work_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    hours_spent = Column(Float)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    task_id = Column(Integer, ForeignKey("tasks.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    
+    task = relationship("Task", back_populates="work_logs")
     user = relationship("User")
 
 class Notification(Base):
