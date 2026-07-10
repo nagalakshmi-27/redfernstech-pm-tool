@@ -7,7 +7,7 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your_super_secret_jwt_key")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 # Token expires in 1 hour
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080 # Token expires in 7 days
 
 def create_access_token(data: dict):
     to_encode = data.copy()
