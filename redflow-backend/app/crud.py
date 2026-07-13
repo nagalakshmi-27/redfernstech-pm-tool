@@ -298,7 +298,7 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
         return None
 
     # Increment project task counter atomically
-    project.task_counter += 1
+    project.task_counter = (project.task_counter or 0) + 1
     db.add(project)
     
     prefix = project.project_key if project.project_key else "".join([c for c in project.name if c.isalnum()]).upper()[:3]
@@ -335,15 +335,10 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     user = db.query(models.User).filter(models.User.id == user_id).first()
 
     update_data = task_update.model_dump(exclude_unset=True)
-    
-    status_changed = False
-    new_status = None
+    status_changed = "status" in update_data and update_data["status"] != db_task.status
+    new_status = update_data.get("status")
     
     for key, value in update_data.items():
-        if key == "status" and getattr(db_task, "status") != value:
-            status_changed = True
-            new_status = value
-            
         if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
             notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.")
             db.add(notif)
@@ -357,7 +352,6 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
                 message=f"Task '{db_task.name}' status updated to '{update_data['status']}'"
             )
             db.add(db_notification)
-            
             
     db.commit()
     db.refresh(db_task)
@@ -482,12 +476,3 @@ def delete_event(db: Session, event_id: int, user_id: int):
 
 def get_user_notifications(db: Session, user_id: int, limit: int = 10):
     return db.query(models.Notification).filter(models.Notification.user_id == user_id).order_by(models.Notification.created_at.desc()).limit(limit).all()
-
-def get_user_network(db: Session, user_id: int):
-    workspaces = db.query(models.Workspace).join(models.workspace_members).filter(models.workspace_members.c.user_id == user_id).all()
-    network_users = {}
-    for ws in workspaces:
-        for member in ws.members:
-            if member.id != user_id and member.id not in network_users:
-                network_users[member.id] = member
-    return list(network_users.values())
