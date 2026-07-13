@@ -312,12 +312,13 @@ const filteredMembers = members.filter((member) => {
     </label>
 
     <input
-      type="date"
-      value={dueDate}
-      min={new Date().toISOString().split("T")[0]}
-      onChange={(e) => setDueDate(e.target.value)}
-      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
-    />
+  type="date"
+  value={dueDate}
+  min={new Date().toISOString().split("T")[0]}
+  max="9999-12-31"
+  onChange={(e) => setDueDate(e.target.value)}
+  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition [color-scheme:dark]"
+/>
   </div>
 
 </div>

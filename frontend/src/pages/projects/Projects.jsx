@@ -456,8 +456,9 @@ setShowModal(true);
   type="date"
   value={startDate}
   min={new Date().toISOString().split("T")[0]}
+  max="9999-12-31"
   onChange={(e) => setStartDate(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:border-cyan-500"
+  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
 />
               </div>
 
@@ -467,8 +468,9 @@ setShowModal(true);
   type="date"
   value={endDate}
   min={startDate || new Date().toISOString().split("T")[0]}
+  max="9999-12-31"
   onChange={(e) => setEndDate(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:border-cyan-500"
+  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
 />
               </div>
 
