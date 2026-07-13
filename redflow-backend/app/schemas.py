@@ -220,6 +220,7 @@ class TaskResponse(TaskBase):
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
     email: EmailStr
+    full_name: Optional[str] = None
     role: str = "Standard"
     workspace_id: int
 class InviteAccept(BaseModel):

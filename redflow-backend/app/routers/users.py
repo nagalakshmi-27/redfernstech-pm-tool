@@ -197,7 +197,17 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="User not found")
     
     crud.update_password(db, user, request.new_password)
-    return {"message": "Password successfully reset!"}
+    
+    access_token = auth.create_access_token(data={"sub": user.email})
+    return {
+        "message": "Password successfully reset!",
+        "access_token": access_token,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "profile_image": user.profile_image
+        }
+    }
 
 # --- TEAMS & INVITATIONS LOGIC ---
 @router.post("/invite")
@@ -219,14 +229,34 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
     if invite.email == current_user.email:
         raise HTTPException(status_code=400, detail="You cannot invite yourself.")
         
-    token = auth.create_reset_token(invite.email) 
-    crud.create_invitation(db, invite.email, token, current_user.id, invite.role, invite.workspace_id)
-    
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
+    
+    # Check if a pending invitation already exists for this email and workspace
+    existing_invite = db.query(models.Invitation).filter(
+        models.Invitation.email == invite.email,
+        models.Invitation.workspace_id == invite.workspace_id,
+        models.Invitation.status == "Pending"
+    ).first()
+    
+    if existing_invite:
+        token = existing_invite.token
+    else:
+        token = uuid.uuid4().hex
+        db_invite = models.Invitation(
+            email=invite.email,
+            role=invite.role,
+            token=token,
+            status="Pending",
+            invited_by_id=current_user.id,
+            workspace_id=invite.workspace_id
+        )
+        db.add(db_invite)
+        db.commit()
+        
     invite_link = f"{frontend_url}/accept-invite?token={token}"
-    msg = MIMEText(f"You have been invited to join a team on RedFlow!\n\nClick here to accept:\n{invite_link}") # <--- Removed role
+    msg = MIMEText(f"You have been invited to join a team on RedFlow!\n\nClick here to review and accept the invitation:\n{invite_link}")
     msg["Subject"] = "You're invited to a RedFlow Team!"
     msg["From"] = sender_email
     msg["To"] = invite.email
@@ -237,43 +267,70 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
         with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
             server.login(sender_email, sender_password)
             server.send_message(msg)
-    except Exception as e:
+    except Exception:
         pass
         
     return {"message": "Invite sent successfully!"}
 
 @router.get("/invite/{token}")
-def get_invite_info(token: str, db: Session = Depends(get_db)):
-    invite = crud.get_invitation_by_token(db, token)
-    if not invite:
-        raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
-    return {"email": invite.email} # <--- Removed role/dept
+def get_invite(token: str, db: Session = Depends(get_db)):
+    invitation = db.query(models.Invitation).filter(models.Invitation.token == token).first()
+    if not invitation or invitation.status != "Pending":
+        raise HTTPException(status_code=404, detail="Invite not found or already processed.")
+        
+    workspace = db.query(models.Workspace).filter(models.Workspace.id == invitation.workspace_id).first()
+    return {
+        "email": invitation.email,
+        "role": invitation.role,
+        "department": workspace.name if workspace else "Unknown Workspace"
+    }
 
-@router.post("/invite/accept")
-def accept_team_invite(accept_data: schemas.InviteAccept, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    invite = crud.get_invitation_by_token(db, accept_data.token)
-    if not invite:
-        raise HTTPException(status_code=400, detail="Invalid or expired invite link.")
+@router.post("/invite/{token}/accept")
+def accept_invite(token: str, db: Session = Depends(get_db)):
+    invitation = db.query(models.Invitation).filter(models.Invitation.token == token).first()
+    if not invitation or invitation.status != "Pending":
+        raise HTTPException(status_code=404, detail="Invite not found or already processed.")
         
-    if invite.email != current_user.email:
-        raise HTTPException(status_code=403, detail=f"This invite was sent to {invite.email}, but you are logged in as {current_user.email}. Please log in with the correct account.")
-        
-    invite.status = "Accepted"
+    invitation.status = "Accepted"
     
-    if invite.workspace_id:
-        exists = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == invite.workspace_id, models.workspace_members.c.user_id == current_user.id).first()
-        if not exists:
-            stmt = models.workspace_members.insert().values(workspace_id=invite.workspace_id, user_id=current_user.id, role=invite.role)
+    # Check if user exists
+    existing_user = crud.get_user_by_email(db, email=invitation.email)
+    
+    if existing_user:
+        # Add to workspace
+        exists_in_ws = db.query(models.workspace_members).filter(
+            models.workspace_members.c.workspace_id == invitation.workspace_id, 
+            models.workspace_members.c.user_id == existing_user.id
+        ).first()
+        if not exists_in_ws:
+            stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=existing_user.id, role=invitation.role)
             db.execute(stmt)
-            
-    notif = models.Notification(
-        user_id=invite.invited_by_id, 
-        message=f"{current_user.email} has accepted your workspace invitation!"
-    )
-    db.add(notif)
-    
+        db.commit()
+        return {"status": "existing"}
+    else:
+        # Create user
+        new_user_data = schemas.UserCreate(
+            email=invitation.email,
+            password=str(uuid.uuid4())
+        )
+        new_user = crud.create_user(db=db, user=new_user_data)
+        
+        stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=new_user.id, role=invitation.role)
+        db.execute(stmt)
+        db.commit()
+        
+        reset_token = auth.create_reset_token(invitation.email)
+        return {"status": "new", "reset_token": reset_token}
+
+@router.post("/invite/{token}/decline")
+def decline_invite(token: str, db: Session = Depends(get_db)):
+    invitation = db.query(models.Invitation).filter(models.Invitation.token == token).first()
+    if not invitation or invitation.status != "Pending":
+        raise HTTPException(status_code=404, detail="Invite not found or already processed.")
+        
+    invitation.status = "Declined"
     db.commit()
-    return {"message": "Successfully joined the workspace!"}
+    return {"message": "Invite declined successfully."}
 
 @router.get("/me/owned-workspaces", response_model=list[schemas.OwnedWorkspaceResponse])
 def get_owned_workspaces(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

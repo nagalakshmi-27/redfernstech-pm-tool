@@ -56,11 +56,22 @@ if (newPassword !== confirmPassword) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Failed to reset password");
       }
-
-      setMessage("Password successfully reset! Redirecting to login...");
       
-      // Send them back to Login after 3 seconds!
-      setTimeout(() => navigate("/"), 3000);
+      const data = await response.json();
+      
+      if (data.access_token) {
+        localStorage.setItem("token", data.access_token);
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userEmail", data.user.email);
+        localStorage.setItem("userId", data.user.id);
+      }
+
+      setMessage("Password successfully set! Logging you in...");
+      
+      setTimeout(() => {
+        navigate("/dashboard");
+        window.location.reload();
+      }, 2000);
       
     } catch (err) {
       setError(err.message);

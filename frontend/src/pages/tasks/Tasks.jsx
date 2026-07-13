@@ -168,6 +168,18 @@ export default function Tasks() {
                         <span className="font-semibold text-white group-hover:text-cyan-400 transition-colors">
                           {task.name}
                         </span>
+                        {task.subtasks && task.subtasks.length > 0 && (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5 ml-2" title="Subtasks">
+                            <CheckSquare size={10} />
+                            {task.subtasks.filter(s => s.is_completed).length}/{task.subtasks.length}
+                          </span>
+                        )}
+                        {task.work_logs && task.work_logs.length > 0 && (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20" title="Time Logged">
+                            <Clock size={10} />
+                            {task.work_logs.reduce((acc, log) => acc + log.hours_spent, 0)}h
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="p-4 align-middle">

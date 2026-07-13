@@ -74,6 +74,7 @@ const memberRefs = useRef({});
         },
         body: JSON.stringify({
           email: memberEmail,
+          full_name: memberName,
           role: memberRole,
           workspace_id: parseInt(activeWorkspaceId)
         })

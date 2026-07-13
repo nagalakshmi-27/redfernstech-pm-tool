@@ -96,18 +96,32 @@ export default function KanbanBoard({
                   )}
 
                   <div className="flex justify-between items-end mt-4">
-                    <span
-  className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full border ${
-    task.priority === "High"
-      ? "bg-red-500/20 text-red-300 border-red-500/30"
-      : task.priority === "Medium"
-      ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
-      : "bg-green-500/20 text-green-300 border-green-500/30"
-  }`}
->
-  <Flag size={11} />
-  {task.priority}
-</span>
+                    <div className="flex gap-2 items-center">
+                      <span
+                        className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full border ${
+                          task.priority === "High"
+                            ? "bg-red-500/20 text-red-300 border-red-500/30"
+                            : task.priority === "Medium"
+                            ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                            : "bg-green-500/20 text-green-300 border-green-500/30"
+                        }`}
+                      >
+                        <Flag size={11} />
+                        {task.priority}
+                      </span>
+                      {task.subtasks && task.subtasks.length > 0 && (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5" title="Subtasks">
+                          <CheckSquare size={10} />
+                          {task.subtasks.filter(s => s.is_completed).length}/{task.subtasks.length}
+                        </span>
+                      )}
+                      {task.work_logs && task.work_logs.length > 0 && (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20" title="Time Logged">
+                          <Clock size={10} />
+                          {task.work_logs.reduce((acc, log) => acc + log.hours_spent, 0)}h
+                        </span>
+                      )}
+                    </div>
 
                     {(() => {
                       const assignee = members.find(

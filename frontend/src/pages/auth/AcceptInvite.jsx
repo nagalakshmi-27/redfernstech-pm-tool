@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -9,7 +10,7 @@ export default function AcceptInvite() {
   const [inviteDetails, setInviteDetails] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [wrongAccount, setWrongAccount] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchInvite = async () => {
@@ -29,64 +30,67 @@ export default function AcceptInvite() {
   }, [token]);
 
   const handleAccept = async () => {
-    const tokenStr = localStorage.getItem("token");
-    if (!tokenStr) {
-      // Not logged in! Redirect them to login where they can sign in or sign up
-      navigate(`/?redirect=accept-invite&token=${token}`);
-      return;
-    }
-
+    setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/accept`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/${token}/accept`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({ token })
       });
 
       if (response.ok) {
-        setMessage("Invite accepted! You are now part of the team.");
-        setTimeout(() => navigate("/"), 3000);
-      } else if (response.status === 401) {
-        // Auth token expired
-        localStorage.removeItem("token");
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("userId");
-        navigate(`/?redirect=accept-invite&token=${token}`);
+        const data = await response.json();
+        if (data.status === "new") {
+          setMessage("Invite accepted! Redirecting to set your password...");
+          setTimeout(() => navigate(`/reset-password?token=${data.reset_token}`), 2000);
+        } else if (data.status === "existing") {
+          setMessage("Invite accepted! Redirecting to sign in...");
+          setTimeout(() => navigate(`/`), 2000);
+        }
       } else {
         const errData = await response.json().catch(() => ({}));
         setError(errData.detail || "Failed to accept invite.");
-        if (response.status === 403) {
-          setWrongAccount(true);
-        }
       }
     } catch {
       setError("Failed to connect to server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/${token}/decline`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        setMessage("You have declined the invitation.");
+        setTimeout(() => navigate("/"), 3000);
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.detail || "Failed to decline invite.");
+      }
+    } catch {
+      setError("Failed to connect to server.");
+    } finally {
+      setLoading(false);
     }
   };
 
   if (error) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 px-4 py-6">
-  <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] text-center text-red-400">
-    <p className="leading-relaxed">{error}</p>
-    {wrongAccount && (
-      <button 
-        onClick={() => {
-          localStorage.removeItem("token");
-          localStorage.removeItem("isLoggedIn");
-          localStorage.removeItem("userEmail");
-          window.location.reload();
-        }}
-        className="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-lg font-semibold transition-all border border-white/10"
-      >
-        Switch Accounts
-      </button>
-    )}
-  </div>
-</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 px-4 py-6">
+        <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] text-center text-red-400">
+          <p className="leading-relaxed">{error}</p>
+          <button 
+            onClick={() => navigate("/")}
+            className="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-lg font-semibold transition-all border border-white/10"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -94,21 +98,37 @@ export default function AcceptInvite() {
       <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8 md:p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] text-center">
         <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-white">Team Invitation</h2>
         {message ? (
-          <p className="text-green-400 font-medium">{message}</p>
+          <p className="text-cyan-400 font-medium text-lg mt-4">{message}</p>
         ) : inviteDetails ? (
           <div>
-            <p className="text-sm sm:text-base text-slate-400 mb-6 leading-relaxed">
-              You have been invited to join the team as a <strong>{inviteDetails.role}</strong> in the <strong>{inviteDetails.department}</strong> department.
+            <p className="text-sm sm:text-base text-slate-400 mb-8 leading-relaxed">
+              You have been invited to join the team as a <strong>{inviteDetails.role}</strong> in the <strong>{inviteDetails.department}</strong> workspace.
             </p>
-            <button 
-              onClick={handleAccept}
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] text-white p-3 rounded-lg font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-            >
-              Accept Invitation
-            </button>
+            
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={handleAccept}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white p-3 rounded-lg font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] disabled:opacity-70"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
+                Accept Invitation
+              </button>
+              
+              <button 
+                onClick={handleDecline}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-red-500/10 text-slate-300 hover:text-red-400 border border-white/10 hover:border-red-500/30 p-3 rounded-lg font-semibold transition-all disabled:opacity-70"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <XCircle size={20} />}
+                Decline
+              </button>
+            </div>
           </div>
         ) : (
-          <p>Loading invite details...</p>
+          <div className="flex justify-center items-center py-8 text-cyan-500">
+            <Loader2 className="animate-spin" size={32} />
+          </div>
         )}
       </div>
     </div>
