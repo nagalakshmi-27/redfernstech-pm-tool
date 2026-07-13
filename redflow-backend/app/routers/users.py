@@ -246,6 +246,7 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
         token = uuid.uuid4().hex
         db_invite = models.Invitation(
             email=invite.email,
+            full_name=invite.full_name,
             role=invite.role,
             token=token,
             status="Pending",
@@ -309,9 +310,16 @@ def accept_invite(token: str, db: Session = Depends(get_db)):
         return {"status": "existing"}
     else:
         # Create user
+        # Parse first and last name from full_name
+        parts = invitation.full_name.split(" ", 1) if invitation.full_name else ["", ""]
+        first_name = parts[0] if len(parts) > 0 else ""
+        last_name = parts[1] if len(parts) > 1 else ""
+
         new_user_data = schemas.UserCreate(
             email=invitation.email,
-            password=str(uuid.uuid4())
+            password=str(uuid.uuid4()),
+            first_name=first_name,
+            last_name=last_name
         )
         new_user = crud.create_user(db=db, user=new_user_data)
         

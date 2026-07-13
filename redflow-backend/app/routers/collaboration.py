@@ -44,12 +44,25 @@ def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = D
 
 # --- WIKI ---
 @router.get("/projects/{project_id}/wikis", response_model=List[schemas.WikiResponse])
-def get_wikis(project_id: int, search: Optional[str] = None, category: Optional[str] = None, db: Session = Depends(get_db)):
+def get_wikis(project_id: int, search: Optional[str] = None, category: Optional[str] = None, sort: Optional[str] = "latest", db: Session = Depends(get_db)):
     query = db.query(models.WikiPage).filter(models.WikiPage.project_id == project_id)
     if search:
         query = query.filter(models.WikiPage.title.ilike(f"%{search}%"))
     if category:
-        query = query.filter(models.WikiPage.category == category)
+        if category.lower() == "others":
+            query = query.filter(
+                (models.WikiPage.category == "Others") | 
+                (models.WikiPage.category == None) | 
+                (models.WikiPage.category == "")
+            )
+        else:
+            query = query.filter(models.WikiPage.category == category)
+            
+    if sort == "oldest":
+        query = query.order_by(models.WikiPage.created_at.asc())
+    else:
+        query = query.order_by(models.WikiPage.created_at.desc())
+        
     return query.all()
 
 @router.post("/projects/{project_id}/wikis/upload", response_model=schemas.WikiResponse)

@@ -480,3 +480,19 @@ def get_user_notifications(db: Session, user_id: int, workspace_id: int = None, 
     if workspace_id:
         query = query.filter(models.Notification.workspace_id == workspace_id)
     return query.order_by(models.Notification.created_at.desc()).limit(limit).all()
+
+def get_user_network(db: Session, user_id: int):
+    # Get all workspace IDs the current user is a member of
+    user_workspaces = db.query(models.workspace_members.c.workspace_id).filter(
+        models.workspace_members.c.user_id == user_id
+    ).subquery()
+    
+    # Get all users who are members of those workspaces (excluding the current user)
+    network_users = db.query(models.User).join(
+        models.workspace_members, models.User.id == models.workspace_members.c.user_id
+    ).filter(
+        models.workspace_members.c.workspace_id.in_(user_workspaces),
+        models.User.id != user_id
+    ).distinct().all()
+    
+    return network_users
