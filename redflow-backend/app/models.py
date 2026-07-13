@@ -292,3 +292,17 @@ class AppIntegration(Base):
     
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), index=True)
     workspace = relationship("Workspace")
+
+class Activity(Base):
+    __tablename__ = "activities"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    action = Column(String) # e.g. "created_task", "deleted_task", "changed_status"
+    target_name = Column(String, nullable=True) # e.g. "Fix Navbar"
+    target_type = Column(String, nullable=True) # e.g. "Task", "Project"
+    ticket_id = Column(String, nullable=True) # e.g. "RED-1"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project")
+    user = relationship("User")

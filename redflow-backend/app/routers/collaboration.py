@@ -310,15 +310,63 @@ async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Session 
     except WebSocketDisconnect:
         manager.disconnect(websocket, project_id)
 
-@router.get("/projects/{project_id}/all-comments", response_model=List[schemas.CommentResponse])
-def get_all_project_comments(project_id: int, db: Session = Depends(get_db)):
+from typing import Any, Dict
+
+@router.get("/projects/{project_id}/activity", response_model=List[Dict[str, Any]])
+def get_project_activity(project_id: int, db: Session = Depends(get_db)):
     comments = db.query(models.Comment).outerjoin(models.Task, models.Comment.task_id == models.Task.id).filter(
         or_(
             models.Task.project_id == project_id,
             models.Comment.project_id == project_id
         )
-    ).order_by(models.Comment.created_at.desc()).all()
-    return comments
+    ).all()
+    
+    activities = db.query(models.Activity).filter(
+        models.Activity.project_id == project_id
+    ).all()
+    
+    feed = []
+    
+    for c in comments:
+        user_data = None
+        if c.user:
+            user_data = {"id": c.user.id, "full_name": c.user.full_name, "email": c.user.email}
+            
+        task_data = None
+        if c.task:
+            task_data = {"id": c.task.id, "ticket_id": c.task.ticket_id, "name": c.task.name}
+            
+        feed.append({
+            "type": "comment",
+            "id": c.id,
+            "content": c.content,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "user": user_data,
+            "task": task_data,
+            "project_id": c.project_id,
+            "task_id": c.task_id
+        })
+        
+    for a in activities:
+        user_data = None
+        if a.user:
+            user_data = {"id": a.user.id, "full_name": a.user.full_name, "email": a.user.email}
+            
+        feed.append({
+            "type": "event",
+            "id": a.id,
+            "action": a.action,
+            "target_name": a.target_name,
+            "target_type": a.target_type,
+            "ticket_id": a.ticket_id,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "user": user_data,
+            "project_id": a.project_id
+        })
+        
+    # Sort by created_at descending
+    feed.sort(key=lambda x: x["created_at"] or "", reverse=True)
+    return feed
 
 @router.post("/projects/{project_id}/comments", response_model=schemas.CommentResponse)
 def create_project_comment(project_id: int, comment: schemas.CommentCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

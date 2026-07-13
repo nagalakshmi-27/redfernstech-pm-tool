@@ -14,6 +14,12 @@ try:
 except Exception:
     pass
 
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE activities ADD COLUMN ticket_id VARCHAR"))
+except Exception:
+    pass
+
 app = FastAPI(title="RedFlow API")
 
 from fastapi.staticfiles import StaticFiles

@@ -397,6 +397,21 @@ class IntegrationResponse(IntegrationBase):
     id: int
     workspace_id: int
     created_at: datetime
-    
+
+    class Config:
+        from_attributes = True
+
+# --- ACTIVITY ---
+class ActivityResponse(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    action: str
+    target_name: Optional[str] = None
+    target_type: Optional[str] = None
+    ticket_id: Optional[str] = None
+    created_at: datetime
+    user: Optional[TeammateResponse] = None
+
     class Config:
         from_attributes = True

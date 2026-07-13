@@ -4,7 +4,7 @@ import AppContext from "../../context/AppContext";
 
 export default function ProjectComments({ projectId }) {
   const { members } = useContext(AppContext);
-  const [comments, setComments] = useState([]);
+  const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [showMentions, setShowMentions] = useState(false);
@@ -13,21 +13,21 @@ export default function ProjectComments({ projectId }) {
 
   useEffect(() => {
     if (projectId) {
-      fetchComments();
+      fetchActivity();
     }
   }, [projectId]);
 
-  const fetchComments = async () => {
+  const fetchActivity = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/all-comments`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/activity`, {
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       });
       if (response.ok) {
-        setComments(await response.json());
+        setFeed(await response.json());
       }
     } catch {
-      console.error("Error fetching project comments");
+      console.error("Error fetching project activity");
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function ProjectComments({ projectId }) {
       });
       if (response.ok) {
         setNewComment("");
-        fetchComments();
+        fetchActivity();
       }
     } catch {
       console.error("Failed to post project comment");
@@ -89,44 +89,57 @@ export default function ProjectComments({ projectId }) {
       <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4">
         {loading ? (
           <div className="text-center text-slate-500 py-10">Loading activity...</div>
-        ) : comments.length === 0 ? (
+        ) : feed.length === 0 ? (
           <div className="text-center text-slate-400 py-10">
-            No comments yet. Start the conversation!
+            No activity yet. Start the conversation!
           </div>
         ) : (
-          comments.map(comment => (
-            <div key={comment.id} className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0 text-cyan-400 font-bold text-sm">
-                {comment.user?.full_name ? comment.user.full_name[0].toUpperCase() : <User size={18}/>}
-              </div>
-              <div className="flex-1 bg-white/5 p-4 rounded-2xl rounded-tl-none border border-white/10">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold text-slate-200">{comment.user?.full_name}</span>
-                  {comment.task?.ticket_id ? (
-                    <span className="text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)] px-2 py-1 rounded-md">
-                      {comment.task.ticket_id}
-                    </span>
-                  ) : comment.task_id ? (
-                    <span className="text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)] px-2 py-1 rounded-md">
-                      Task #{comment.task_id}
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.2)] px-2 py-1 rounded-md">
-                      Project
-                    </span>
-                  )}
+          feed.map(item => {
+            const isEvent = item.type === "event";
+            const ticketId = isEvent ? item.ticket_id : (item.task?.ticket_id || null);
+            const displayTaskId = !isEvent && item.task_id;
+            
+            return (
+              <div key={`${item.type}-${item.id}`} className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center flex-shrink-0 text-cyan-400 font-bold text-sm">
+                  {item.user?.full_name ? item.user.full_name[0].toUpperCase() : <User size={18}/>}
                 </div>
-                <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {comment.content.split(/(@\w+)/g).map((part, i) => 
-                    part.startsWith("@") ? <span key={i} className="font-bold px-1.5 py-0.5 rounded-md text-xs mx-0.5 bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)] border border-cyan-500/30">{part}</span> : part
-                  )}
-                </p>
-                <div className="mt-3 text-xs text-slate-500">
-                  {new Date(comment.created_at).toLocaleDateString()} at {new Date(comment.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                <div className="flex-1 bg-white/5 p-4 rounded-2xl rounded-tl-none border border-white/10">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold text-slate-200">{item.user?.full_name || "Unknown User"}</span>
+                    {ticketId ? (
+                      <span className="text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)] px-2 py-1 rounded-md">
+                        {ticketId}
+                      </span>
+                    ) : displayTaskId ? (
+                      <span className="text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)] px-2 py-1 rounded-md">
+                        Task #{item.task_id}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.2)] px-2 py-1 rounded-md">
+                        Project
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {isEvent ? (
+                      <span>
+                        {item.action}{" "}
+                        {item.target_name && <span className="font-medium text-slate-200">'{item.target_name}'</span>}
+                      </span>
+                    ) : (
+                      item.content?.split(/(@\w+)/g).map((part, i) => 
+                        part.startsWith("@") ? <span key={i} className="font-bold px-1.5 py-0.5 rounded-md text-xs mx-0.5 bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)] border border-cyan-500/30">{part}</span> : part
+                      )
+                    )}
+                  </p>
+                  <div className="mt-3 text-xs text-slate-500">
+                    {new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

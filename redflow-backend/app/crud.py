@@ -11,6 +11,18 @@ def get_password_hash(password):
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
+def log_activity(db: Session, project_id: int, user_id: int, action: str, target_name: str = None, target_type: str = None, ticket_id: str = None):
+    activity = models.Activity(
+        project_id=project_id,
+        user_id=user_id,
+        action=action,
+        target_name=target_name,
+        target_type=target_type,
+        ticket_id=ticket_id
+    )
+    db.add(activity)
+    db.commit()
+
 def is_workspace_admin(db: Session, workspace_id: int, user_id: int):
     membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == user_id).first()
     return membership and membership.role == "Admin"
@@ -141,6 +153,10 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
+    
+    # Log project creation activity
+    log_activity(db, project_id=db_project.id, user_id=user_id, action="created project", target_name=db_project.name, target_type="Project")
+    
     return db_project
 
 from sqlalchemy import or_
@@ -295,8 +311,10 @@ def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
-    db.commit()
-    db.refresh(db_task)
+    
+    # Log task creation activity
+    log_activity(db, project_id=db_task.project_id, user_id=user_id, action="created task", target_name=db_task.name, target_type="Task", ticket_id=db_task.ticket_id)
+    
     return db_task
 
 def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user_id: int):
@@ -318,7 +336,14 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
 
     update_data = task_update.model_dump(exclude_unset=True)
     
+    status_changed = False
+    new_status = None
+    
     for key, value in update_data.items():
+        if key == "status" and getattr(db_task, "status") != value:
+            status_changed = True
+            new_status = value
+            
         if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
             notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.")
             db.add(notif)
@@ -333,8 +358,13 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
             )
             db.add(db_notification)
             
+            
     db.commit()
     db.refresh(db_task)
+    
+    if status_changed:
+        log_activity(db, project_id=db_task.project_id, user_id=user_id, action=f"moved task to {new_status}", target_name=db_task.name, target_type="Task", ticket_id=db_task.ticket_id)
+        
     return db_task
 
 def delete_task(db: Session, task_id: int, user_id: int):
@@ -346,6 +376,10 @@ def delete_task(db: Session, task_id: int, user_id: int):
     
     if not is_workspace_admin(db, project.workspace_id, user_id):
         return False
+        
+    # Log task deletion activity
+    log_activity(db, project_id=project.id, user_id=user_id, action="deleted task", target_name=db_task.name, target_type="Task", ticket_id=db_task.ticket_id)
+    
     db.delete(db_task)
     db.commit()
     return True
