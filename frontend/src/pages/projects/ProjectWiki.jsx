@@ -19,6 +19,7 @@ const [selectedFile, setSelectedFile] = useState(null);
 
 const [search, setSearch] = useState("");
 const [filterCategory, setFilterCategory] = useState("");
+const [sortOrder, setSortOrder] = useState("latest");
 const [showHistory, setShowHistory] = useState(false);
 const [versionHistory, setVersionHistory] = useState([]);
 const [selectedVersion, setSelectedVersion] = useState(null);
@@ -121,8 +122,14 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   const fetchWikis = async () => {
     try {
       const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (filterCategory) params.append("category", filterCategory);
+
+if (search)
+    params.append("search", search);
+
+if (filterCategory)
+    params.append("category", filterCategory);
+
+params.append("sort", sortOrder);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
       
       const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/wikis${queryStr}`, {
@@ -150,10 +157,17 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetchWikis();
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [projectId, search, filterCategory]);
+        fetchWikis();
+    },300);
+
+    return ()=>clearTimeout(delayDebounceFn);
+
+},[
+    projectId,
+    search,
+    filterCategory,
+    sortOrder
+]);
 
   const handleCreateNew = () => {
     setActiveWiki(null);
@@ -324,11 +338,11 @@ const [selectedVersion, setSelectedVersion] = useState(null);
   />
 
   <select
-    value={filterCategory}
-onChange={(e) => setFilterCategory(e.target.value)}
-    className="w-full bg-slate-900/70 border border-white/10 text-slate-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-  >
-    <option className="bg-slate-900 text-white" value="">
+  value={filterCategory}
+  onChange={(e) => setFilterCategory(e.target.value)}
+  className="w-full bg-slate-900/70 border border-white/10 text-slate-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none"
+>
+  <option className="bg-slate-900 text-white" value="">
   All Categories
 </option>
 
@@ -343,7 +357,24 @@ onChange={(e) => setFilterCategory(e.target.value)}
 <option className="bg-slate-900 text-white" value="Design">
   Design
 </option>
-  </select>
+
+<option className="bg-slate-900 text-white" value="Others">
+  Others
+</option>
+</select>
+<select
+  value={sortOrder}
+  onChange={(e) => setSortOrder(e.target.value)}
+  className="w-full bg-slate-900/70 border border-white/10 text-slate-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none"
+>
+  <option className="bg-slate-900 text-white" value="latest">
+    Latest First
+  </option>
+
+  <option className="bg-slate-900 text-white" value="oldest">
+    Latest Last
+  </option>
+</select>
 </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {wikis.length === 0 ? (
@@ -386,21 +417,23 @@ onChange={(e) => setFilterCategory(e.target.value)}
   onChange={(e) => setDocCategory(e.target.value)}
   className="w-full bg-slate-900/70 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none"
 >
-  <option className="bg-slate-900 text-white" value="">
-    Select Category
-  </option>
+  <option value="">Select Category</option>
 
-  <option className="bg-slate-900 text-white" value="Technical">
-    Technical
-  </option>
+<option value="Technical">
+Technical
+</option>
 
-  <option className="bg-slate-900 text-white" value="Meeting Notes">
-    Meeting Notes
-  </option>
+<option value="Meeting Notes">
+Meeting Notes
+</option>
 
-  <option className="bg-slate-900 text-white" value="Design">
-    Design
-  </option>
+<option value="Design">
+Design
+</option>
+
+<option value="Others">
+Others
+</option>
 </select>
 </div>
             

@@ -1,5 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FolderKanban,
   Briefcase,
@@ -17,6 +18,7 @@ import WelcomeOverview from "./components/WelcomeOverview";
 
 export default function Dashboard() {
   const { projects, tasks } = useContext(AppContext);
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState([]);
@@ -86,6 +88,10 @@ export default function Dashboard() {
   if (diff === 1) return "Due Tomorrow";
 
   return `Due in ${diff} days`;
+};
+
+const handleDeadlineClick = (task) => {
+  navigate(`/projects/${task.project_id}?taskId=${task.id}`);
 };
   const openProjectsModal = () => {
   setModalTitle("Total Projects");
@@ -199,7 +205,8 @@ const openCompletedTasksModal = () => {
             {upcomingTasks.map((task) => (
               <li
   key={task.id}
-  className="relative flex gap-4 pb-5 last:pb-0 cursor-pointer"
+  onClick={() => handleDeadlineClick(task)}
+  className="relative flex gap-4 pb-5 last:pb-0 cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-all"
 >
   {/* Timeline */}
   <div className="flex flex-col items-center">
