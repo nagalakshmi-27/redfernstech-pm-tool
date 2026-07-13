@@ -1,10 +1,11 @@
 import { useContext, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Plus, MoreVertical } from "lucide-react";
 import AppContext from "../context/AppContext";
 
 export default function Sidebar() {
+  const navigate = useNavigate();
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveError, setLeaveError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -211,7 +212,11 @@ export default function Sidebar() {
                     <div className="group flex items-center justify-between px-3 py-2 hover:bg-white/10 cursor-pointer">
                       <div 
                         className="flex-1 truncate text-sm text-slate-200"
-                        onClick={() => { setActiveWorkspaceId(ws.id); setWorkspaceDropdownOpen(false); setShowDropdown(false); }}
+                        onClick={() => { 
+                          setActiveWorkspaceId(ws.id);
+                          localStorage.setItem("activeWorkspaceId", ws.id);
+                          navigate("/dashboard");
+                        }}
                       >
                         {ws.name} {ws.owner_id === currentUserId ? "(Personal)" : ""}
                       </div>

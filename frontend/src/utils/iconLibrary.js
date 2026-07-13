@@ -24,4 +24,4 @@ export const iconLibrary = Object.entries(Icons)
     ],
   }));
 
-console.log("Icons:", iconLibrary.length);
+export default iconLibrary;

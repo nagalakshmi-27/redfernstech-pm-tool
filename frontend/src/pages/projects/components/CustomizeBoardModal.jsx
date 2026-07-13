@@ -161,9 +161,6 @@ const filteredIcons =
   search === ""
     ? matchedIcons
     : matchedIcons.slice(0, visibleCount);
-  console.log("Total Icons:", iconLibrary.length);
-console.log("First 10:", iconLibrary.slice(0, 10));
-console.log("Search:", search);
 
   if (!open) return null;
 

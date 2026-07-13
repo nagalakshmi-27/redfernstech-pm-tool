@@ -2,14 +2,22 @@ import MainLayout from "../../layouts/MainLayout";
 import { useState, useEffect } from "react";
 import { Bell, BellOff } from "lucide-react";
 
+import AppContext from "../../context/AppContext";
+import { useContext } from "react";
+
 export default function Notifications() {
   const [dbNotifications, setDbNotifications] = useState([]);
+  const { activeWorkspaceId } = useContext(AppContext);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/notifications/`, {
+        const url = activeWorkspaceId 
+            ? `${import.meta.env.VITE_API_URL}/notifications/?workspace_id=${activeWorkspaceId}` 
+            : `${import.meta.env.VITE_API_URL}/notifications/`;
+            
+        const response = await fetch(url, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {
@@ -20,8 +28,8 @@ export default function Notifications() {
         console.error("Failed to fetch notifications");
       }
     };
-    fetchNotifications();
-  }, []);
+    if (activeWorkspaceId) fetchNotifications();
+  }, [activeWorkspaceId]);
 
   return (
     <MainLayout>

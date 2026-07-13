@@ -14,7 +14,7 @@ export default function CreateIssueModal({
   hideTrigger = false,
   onSuccess = undefined
 }) {
-  const { tasks, setTasks, activities, setActivities, projects, members, activeWorkspaceRole } = useContext(AppContext);
+  const { tasks, setTasks, projects, members, activeWorkspaceRole } = useContext(AppContext);
   const currentUserRole = activeWorkspaceRole;
   
   const [internalShowModal, setInternalShowModal] = useState(false);
@@ -88,8 +88,7 @@ const filteredMembers = members.filter((member) => {
       });
       if (response.ok) {
         const newTask = await response.json();
-        setTasks([...tasks, newTask]);
-        setActivities([`📝 ${newTask.name} ticket created`, ...activities]);
+        setTasks([newTask, ...tasks]);
         
         // Reset form
         setTaskName("");

@@ -136,7 +136,6 @@ const handleDeleteMember = async (memberId) => {
       alert(errData.detail || "Failed to delete member");
     }
   } catch (error) {
-    console.error(error);
     alert("Error: " + error.message);
   }
 };
@@ -166,8 +165,6 @@ useEffect(() => {
   const id = location.state?.highlightMemberId;
 
   if (!id) return;
-
-  console.log("Highlight Member:", id);
 
   requestAnimationFrame(() => {
     memberRefs.current[id]?.scrollIntoView({

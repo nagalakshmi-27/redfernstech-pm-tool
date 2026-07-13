@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function Projects() {
-  const { projects, setProjects, activities, setActivities, members, activeWorkspaceId, workspaces, activeWorkspaceRole } = useContext(AppContext);
+  const { projects, setProjects, members, activeWorkspaceId, workspaces, activeWorkspaceRole } = useContext(AppContext);
   const navigate = useNavigate();
   const currentUserId = Number(localStorage.getItem("userId"));
   const currentUserRole = activeWorkspaceRole;
@@ -78,8 +78,7 @@ const [uploading, setUploading] = useState(false);
         });
         if (response.ok) {
           const newProject = await response.json();
-          setProjects([...projects, newProject]);
-          setActivities([`📁 ${newProject.name} project created`, ...activities]);
+          setProjects([newProject, ...projects]);
         }
       }
     } catch {

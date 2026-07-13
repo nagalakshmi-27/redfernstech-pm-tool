@@ -147,7 +147,7 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
         db_project.members = users
         for u in users:
             if u.id != user_id:
-                notif = models.Notification(user_id=u.id, message=f"You have been added to the project '{db_project.name}'.")
+                notif = models.Notification(user_id=u.id, message=f"You have been added to the project '{db_project.name}'.", workspace_id=db_project.workspace_id)
                 db.add(notif)
         
     db.add(db_project)
@@ -340,7 +340,7 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     
     for key, value in update_data.items():
         if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
-            notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.")
+            notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.", workspace_id=project.workspace_id)
             db.add(notif)
         setattr(db_task, key, value)
         
@@ -349,7 +349,8 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
         if not is_assignee and not is_creator:
             db_notification = models.Notification(
                 user_id=project.created_by_id,
-                message=f"Task '{db_task.name}' status updated to '{update_data['status']}'"
+                message=f"Task '{db_task.name}' status updated to '{update_data['status']}'",
+                workspace_id=project.workspace_id
             )
             db.add(db_notification)
             
@@ -474,5 +475,8 @@ def delete_event(db: Session, event_id: int, user_id: int):
     db.commit()
     return True
 
-def get_user_notifications(db: Session, user_id: int, limit: int = 10):
-    return db.query(models.Notification).filter(models.Notification.user_id == user_id).order_by(models.Notification.created_at.desc()).limit(limit).all()
+def get_user_notifications(db: Session, user_id: int, workspace_id: int = None, limit: int = 20):
+    query = db.query(models.Notification).filter(models.Notification.user_id == user_id)
+    if workspace_id:
+        query = query.filter(models.Notification.workspace_id == workspace_id)
+    return query.order_by(models.Notification.created_at.desc()).limit(limit).all()

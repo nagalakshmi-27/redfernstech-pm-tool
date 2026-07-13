@@ -154,10 +154,11 @@ def google_callback(state: str, code: str, request: Request, db: Session = Depen
         db.commit()
         
         # Redirect back to frontend
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0]
+        frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com").split(",")[0]
         return RedirectResponse(url=f"{frontend_url}/integrations")
         
     except Exception as e:
-        print(f"OAuth Error: {e}")
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0]
+        import logging
+        logging.getLogger(__name__).error(f"OAuth Error: {e}")
+        frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com").split(",")[0]
         return RedirectResponse(url=f"{frontend_url}/integrations?error=oauth_failed")

@@ -183,6 +183,7 @@ class Notification(Base):
     
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     user = relationship("User", back_populates="notifications")
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True)
 
 class Invitation(Base):
     __tablename__ = "invitations"

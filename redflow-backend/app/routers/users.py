@@ -154,7 +154,7 @@ def send_reset_email(to_email: str, token: str):
     sender_password = os.getenv("SMTP_PASSWORD")
     
     # Parse FRONTEND_URL to ensure it works in production
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
+    frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com").split(",")[0].strip()
     reset_link = f"{frontend_url}/reset-password?token={token}"
     
     msg = MIMEText(f"Click the link to reset your RedFlow password:\n\n{reset_link}\n\nThis link expires in 15 minutes.")
@@ -229,7 +229,7 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
     if invite.email == current_user.email:
         raise HTTPException(status_code=400, detail="You cannot invite yourself.")
         
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
+    frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com").split(",")[0].strip()
     sender_email = os.getenv("SMTP_USERNAME")
     sender_password = os.getenv("SMTP_PASSWORD")
     

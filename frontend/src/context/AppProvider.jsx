@@ -8,7 +8,6 @@ export function AppProvider({ children }) {
   // We keep this fake data for the Teams UI for now
   const [members, setMembers] = useState([]);
   const [currentUser, setCurrentUser] =useState(null);
-  const [activities, setActivities] = useState([]);
 
   const [workspaces, setWorkspaces] = useState([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(() => {
@@ -129,7 +128,7 @@ if (userRes.ok) {
         activeWorkspaceId,
         setActiveWorkspaceId,
         activeWorkspaceRole,
-        projects, setProjects, tasks, setTasks, members, setMembers, activities, setActivities, currentUser,
+        projects, setProjects, tasks, setTasks, members, setMembers, currentUser,
 setCurrentUser }}
     >
       {children}

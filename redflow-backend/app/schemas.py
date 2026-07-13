@@ -266,6 +266,7 @@ class NotificationResponse(BaseModel):
     is_read: bool
     created_at: datetime
     user_id: int
+    workspace_id: Optional[int] = None
     class Config:
         from_attributes = True
 

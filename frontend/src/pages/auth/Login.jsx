@@ -51,7 +51,6 @@ if (!isPasswordValid) {
       }
       // 3. Get the JWT token from the backend
       const data = await response.json();
-      console.log(data);
       
       // 4. Save the real token securely!
 localStorage.setItem("token", data.access_token);

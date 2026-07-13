@@ -29,11 +29,6 @@ export default function ProjectWorkspace() {
   activeWorkspaceId,
   activeWorkspaceRole,
 } = useContext(AppContext);
-  useEffect(() => {
-  if (projects.length > 0) {
-    console.log("First Project:", projects[0]);
-  }
-}, [projects]);
   const DEFAULT_COLUMNS = useMemo(
   () => [
     { name: "To Do", icon: "Clock3", color: "#facc15" },
@@ -418,7 +413,6 @@ useEffect(() => {
 
     if (response.ok) {
       const data = await response.json();
-      console.log("Updated Projects:", data);
       setProjects(data);
     }
   } catch (err) {

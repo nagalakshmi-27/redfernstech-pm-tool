@@ -24,6 +24,9 @@ def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = D
     mentions = re.findall(r'@(\w+)', comment.content)
     if mentions:
         task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        project = db.query(models.Project).filter(models.Project.id == task.project_id).first() if task else None
+        workspace_id = project.workspace_id if project else None
+        
         for m in mentions:
             mentioned_user = db.query(models.User).filter(func.replace(models.User.full_name, ' ', '').ilike(f"{m}%")).first()
             if mentioned_user and mentioned_user.id != current_user.id:
@@ -31,7 +34,8 @@ def create_comment(task_id: int, comment: schemas.CommentCreate, db: Session = D
                     user_id=mentioned_user.id,
                     message=f"{current_user.full_name or current_user.email} mentioned you in a comment on {task.ticket_id if task and task.ticket_id else f'Task #{task_id}'}: '{comment.content[:30]}...'",
                     type="Mention",
-                    link=f"/projects/{task.project_id}" if task else "/projects"
+                    link=f"/projects/{task.project_id}" if task else "/projects",
+                    workspace_id=workspace_id
                 )
                 db.add(notif)
         db.commit()
@@ -125,7 +129,8 @@ def delete_wiki(project_id: int, wiki_id: int, db: Session = Depends(get_db)):
             try:
                 os.remove(file_path)
             except Exception as e:
-                print(f"Error deleting file {file_path}: {e}")
+                import logging
+                logging.getLogger(__name__).error(f"Error deleting file {file_path}: {e}")
                 
     db.delete(db_wiki)
     db.commit()
@@ -283,6 +288,9 @@ async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Session 
                     import re
                     mentions = re.findall(r'@(\w+)', content)
                     if mentions:
+                        project = db.query(models.Project).filter(models.Project.id == project_id).first()
+                        workspace_id = project.workspace_id if project else None
+                        
                         for m in mentions:
                             mentioned_user = db.query(models.User).filter(func.replace(models.User.full_name, ' ', '').ilike(f"{m}%")).first()
                             if mentioned_user and mentioned_user.id != user_id:
@@ -290,7 +298,8 @@ async def websocket_endpoint(websocket: WebSocket, project_id: int, db: Session 
                                     user_id=mentioned_user.id,
                                     message=f"{user.full_name or user.email} mentioned you in Project #{project_id} Chat: '{content[:30]}...'",
                                     type="Mention",
-                                    link=f"/projects/{project_id}"
+                                    link=f"/projects/{project_id}",
+                                    workspace_id=workspace_id
                                 )
                                 db.add(notif)
                         db.commit()
@@ -378,6 +387,9 @@ def create_project_comment(project_id: int, comment: schemas.CommentCreate, db: 
     import re
     mentions = re.findall(r'@(\w+)', comment.content)
     if mentions:
+        project = db.query(models.Project).filter(models.Project.id == project_id).first()
+        workspace_id = project.workspace_id if project else None
+        
         for m in mentions:
             mentioned_user = db.query(models.User).filter(func.replace(models.User.full_name, ' ', '').ilike(f"{m}%")).first()
             if mentioned_user and mentioned_user.id != current_user.id:
@@ -385,7 +397,8 @@ def create_project_comment(project_id: int, comment: schemas.CommentCreate, db: 
                     user_id=mentioned_user.id,
                     message=f"{current_user.full_name or current_user.email} mentioned you in a project comment: '{comment.content[:30]}...'",
                     type="Mention",
-                    link=f"/projects/{project_id}"
+                    link=f"/projects/{project_id}",
+                    workspace_id=workspace_id
                 )
                 db.add(notif)
         db.commit()

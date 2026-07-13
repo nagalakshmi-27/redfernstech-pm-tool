@@ -20,6 +20,12 @@ try:
 except Exception:
     pass
 
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE notifications ADD COLUMN workspace_id INTEGER REFERENCES workspaces(id)"))
+except Exception:
+    pass
+
 app = FastAPI(title="RedFlow API")
 
 from fastapi.staticfiles import StaticFiles
@@ -28,7 +34,7 @@ import os
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173,http://127.0.0.1:5173")
+frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com,http://localhost:5173,http://127.0.0.1:5173")
 origins = [url.strip() for url in frontend_url.split(",") if url.strip()]
 
 app.add_middleware(

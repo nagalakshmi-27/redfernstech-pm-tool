@@ -17,22 +17,29 @@ import AppContext from "../../context/AppContext";
 import WelcomeOverview from "./components/WelcomeOverview";
 
 export default function Dashboard() {
-  const { projects, tasks } = useContext(AppContext);
+  const { projects, tasks, activeWorkspaceId } = useContext(AppContext);
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState([]);
 
   // Sticky Notes State
-  const [stickyNotes, setStickyNotes] = useState(() => {
-    const saved = localStorage.getItem("dashboardStickyNotes");
-    if (saved) return JSON.parse(saved);
-    return [];
-  });
+  const [stickyNotes, setStickyNotes] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem("dashboardStickyNotes", JSON.stringify(stickyNotes));
-  }, [stickyNotes]);
+    if (activeWorkspaceId) {
+      const saved = localStorage.getItem(`dashboardStickyNotes_${activeWorkspaceId}`);
+      if (saved) setStickyNotes(JSON.parse(saved));
+      else setStickyNotes([]);
+    }
+  }, [activeWorkspaceId]);
+
+  const saveNotes = (notes) => {
+    setStickyNotes(notes);
+    if (activeWorkspaceId) {
+      localStorage.setItem(`dashboardStickyNotes_${activeWorkspaceId}`, JSON.stringify(notes));
+    }
+  };
 
   const addStickyNote = () => {
     const newNote = {
@@ -41,15 +48,15 @@ export default function Dashboard() {
       color: ["bg-yellow-200", "bg-pink-200", "bg-blue-200", "bg-green-200"][Math.floor(Math.random() * 4)],
       rotation: Math.floor(Math.random() * 6) - 3
     };
-    setStickyNotes([newNote, ...stickyNotes]);
+    saveNotes([newNote, ...stickyNotes]);
   };
 
   const updateStickyNote = (id, text) => {
-    setStickyNotes(notes => notes.map(n => n.id === id ? { ...n, text } : n));
+    saveNotes(stickyNotes.map(n => n.id === id ? { ...n, text } : n));
   };
 
   const deleteStickyNote = (id) => {
-    setStickyNotes(notes => notes.filter(n => n.id !== id));
+    saveNotes(stickyNotes.filter(n => n.id !== id));
   };
 
   // Helper to dynamically calculate project status based on tasks!

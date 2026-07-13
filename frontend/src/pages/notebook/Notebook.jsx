@@ -11,6 +11,9 @@ const stripHtml = (html) => {
   return tmp.textContent || tmp.innerText || "";
 };
 
+import AppContext from "../../context/AppContext";
+import { useContext } from "react";
+
 export default function Notebook() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +21,7 @@ export default function Notebook() {
   const [editorType, setEditorType] = useState(null); // "note" or "scribble"
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const activeWorkspaceId = localStorage.getItem("activeWorkspaceId");
+  const { activeWorkspaceId } = useContext(AppContext);
   const token = localStorage.getItem("token");
 
   const fetchItems = async () => {
