@@ -39,6 +39,29 @@ const memberRefs = useRef({});
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState("Member");
+  
+  const [networkUsers, setNetworkUsers] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (showModal) {
+      fetch(`${import.meta.env.VITE_API_URL}/users/network`, {
+        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      })
+      .then(res => res.json())
+      .then(data => setNetworkUsers(data))
+      .catch(err => console.error("Failed to fetch network users", err));
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [showModal]);
+
+  const filteredNetworkUsers = networkUsers.filter(u => 
+    !members.some(m => m.email === u.email) && 
+    (u.email.toLowerCase().includes(memberEmail.toLowerCase()) || 
+     (u.full_name && u.full_name.toLowerCase().includes(memberEmail.toLowerCase())))
+  );
+
   const handleAddMember = async () => {
     if (!memberEmail.trim()) { alert("Email is required"); return; }
     if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
@@ -304,7 +327,7 @@ if (currentUserRole === "Client") {
 />
         </div>
 
-        <div>
+        <div className="relative">
           <label className="block mb-2 font-medium text-slate-300">
             Email
           </label>
@@ -312,9 +335,42 @@ if (currentUserRole === "Client") {
             type="email"
             placeholder="Enter Email"
             value={memberEmail}
-            onChange={(e) => setMemberEmail(e.target.value)}
+            onChange={(e) => {
+              setMemberEmail(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
           />
+          {showSuggestions && filteredNetworkUsers.length > 0 && (
+             <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+               {filteredNetworkUsers.map(user => (
+                 <div 
+                   key={user.id} 
+                   className="p-3 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0"
+                   onMouseDown={(e) => {
+                     e.preventDefault(); // Prevent focus from leaving input, stopping onBlur immediately
+                     setMemberEmail(user.email);
+                     setMemberName(user.full_name || user.first_name || "");
+                     setShowSuggestions(false);
+                   }}
+                 >
+                   {user.profile_image ? (
+                     <img src={user.profile_image.startsWith('http') ? user.profile_image : `${import.meta.env.VITE_API_URL}${user.profile_image}`} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
+                   ) : (
+                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-sm font-bold uppercase">
+                       {user.full_name ? user.full_name.charAt(0) : user.email.charAt(0)}
+                     </div>
+                   )}
+                   <div className="flex flex-col">
+                     <span className="text-white text-sm font-medium">{user.full_name || user.email.split('@')[0]}</span>
+                     <span className="text-xs text-slate-400">{user.email}</span>
+                   </div>
+                 </div>
+               ))}
+             </div>
+          )}
         </div>
 
         <div>
