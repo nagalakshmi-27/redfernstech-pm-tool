@@ -448,3 +448,12 @@ def delete_event(db: Session, event_id: int, user_id: int):
 
 def get_user_notifications(db: Session, user_id: int, limit: int = 10):
     return db.query(models.Notification).filter(models.Notification.user_id == user_id).order_by(models.Notification.created_at.desc()).limit(limit).all()
+
+def get_user_network(db: Session, user_id: int):
+    workspaces = db.query(models.Workspace).join(models.workspace_members).filter(models.workspace_members.c.user_id == user_id).all()
+    network_users = {}
+    for ws in workspaces:
+        for member in ws.members:
+            if member.id != user_id and member.id not in network_users:
+                network_users[member.id] = member
+    return list(network_users.values())

@@ -370,6 +370,11 @@ def delete_user_account(db: Session = Depends(get_db), current_user: models.User
 def get_my_teammates(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return crud.get_teammates(db, workspace_id)
 
+@router.get("/network", response_model=list[schemas.UserResponse])
+def get_user_network(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return crud.get_user_network(db, current_user.id)
+
+
 @router.delete("/teammates/{teammate_id}")
 def delete_teammate(teammate_id: int, workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # SECURITY: Prevent the user from deleting themselves!
