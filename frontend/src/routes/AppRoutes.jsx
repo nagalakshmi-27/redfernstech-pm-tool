@@ -5,7 +5,7 @@ import Signup from "../pages/auth/Signup";
 import ResetPassword from "../pages/auth/ResetPassword";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import AcceptInvite from "../pages/auth/AcceptInvite";
-
+import VerifyAccount from "../pages/auth/VerifyAccount";
 import Dashboard from "../pages/dashboard/Dashboard";
 import Projects from "../pages/projects/Projects";
 import ProjectWorkspace from "../pages/projects/ProjectWorkspace";
@@ -18,6 +18,8 @@ import Reports from "../pages/reports/Reports";
 import Notebook from "../pages/notebook/Notebook";
 import Integrations from "../pages/integrations/Integrations";
 import ProtectedRoute from "./ProtectedRoute";
+import CheckEmail from "../pages/auth/CheckEmail";
+import VerifyOTP from "../pages/auth/VerifyOTP";
 
 export default function AppRoutes() {
   return (
@@ -28,6 +30,9 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/accept-invite" element={<AcceptInvite />} />
+        <Route path="/verify-account" element={<VerifyAccount />} />
+        <Route path="/check-email" element={<CheckEmail />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:id" element={<ProjectWorkspace />} />

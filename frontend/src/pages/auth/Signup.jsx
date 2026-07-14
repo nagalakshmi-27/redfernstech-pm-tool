@@ -9,11 +9,13 @@ import {
 export default function Signup() {
   const navigate = useNavigate();
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountName, setAccountName] = useState("");
+
+const [firstName, setFirstName] = useState("");
+const [lastName, setLastName] = useState("");
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -32,10 +34,17 @@ export default function Signup() {
   const handleSignup = async (e) => {
     e.preventDefault();
 
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      setError("Please fill all fields");
-      return;
-    }
+    if (
+  !accountName ||
+  !firstName ||
+  !lastName ||
+  !email ||
+  !password ||
+  !confirmPassword
+) {
+  setError("Please fill all fields");
+  return;
+}
 
     if (!validateEmail(email)) {
       setError("Please enter a valid email address");
@@ -111,6 +120,14 @@ export default function Signup() {
             </div>
           )}
 
+          <input
+  type="text"
+  placeholder="Account Name"
+  value={accountName}
+  onChange={(e) => setAccountName(e.target.value)}
+  className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+/>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <input
               type="text"
@@ -131,7 +148,7 @@ export default function Signup() {
 
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder="User Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
