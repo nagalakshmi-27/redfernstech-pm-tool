@@ -1,46 +1,27 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import {
-  validateEmail,
-  validatePassword,
-} from "../../utils/validation";
+import { validateEmail } from "../../utils/validation";
 
 export default function Signup() {
   const navigate = useNavigate();
 
-  const [accountName, setAccountName] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
 
 const [firstName, setFirstName] = useState("");
 const [lastName, setLastName] = useState("");
 const [email, setEmail] = useState("");
-const [password, setPassword] = useState("");
-const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [error, setError] = useState("");
-  const [showPasswordRules, setShowPasswordRules] = useState(false);
-
-  const passwordChecks = {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /\d/.test(password),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
     if (
-  !accountName ||
+  !organizationName ||
   !firstName ||
   !lastName ||
-  !email ||
-  !password ||
-  !confirmPassword
+  !email
 ) {
   setError("Please fill all fields");
   return;
@@ -48,19 +29,6 @@ const [confirmPassword, setConfirmPassword] = useState("");
 
     if (!validateEmail(email)) {
       setError("Please enter a valid email address");
-      return;
-    }
-
-    const passwordError = validatePassword(password);
-
-    if (passwordError) {
-      setShowPasswordRules(true);
-      setError("");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
       return;
     }
 
@@ -75,12 +43,11 @@ const [confirmPassword, setConfirmPassword] = useState("");
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email,
-            password,
-            first_name: firstName,
-            last_name: lastName,
-            role: "team_mate",
-          }),
+  organization_name: organizationName,
+  email,
+  first_name: firstName,
+  last_name: lastName,
+}),
         }
       );
 
@@ -89,8 +56,7 @@ const [confirmPassword, setConfirmPassword] = useState("");
         throw new Error(errorData.detail || "Signup failed");
       }
 
-      alert("Account created successfully! Please sign in.");
-      navigate("/");
+      navigate("/check-email");
     } catch (err) {
       setError(err.message);
     }
@@ -106,7 +72,7 @@ const [confirmPassword, setConfirmPassword] = useState("");
         </h1>
 
         <p className="text-center text-sm sm:text-base text-slate-400 mb-8">
-          Sign up to get started
+          Create your organization account to get started
         </p>
 
         <form
@@ -122,9 +88,9 @@ const [confirmPassword, setConfirmPassword] = useState("");
 
           <input
   type="text"
-  placeholder="Account Name"
-  value={accountName}
-  onChange={(e) => setAccountName(e.target.value)}
+  placeholder="Organization Name"
+  value={organizationName}
+  onChange={(e) => setOrganizationName(e.target.value)}
   className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
 />
 
@@ -154,116 +120,12 @@ const [confirmPassword, setConfirmPassword] = useState("");
             className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
           />
 
-          {/* Password */}
-
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
-            >
-              {showPassword ? (
-                <EyeOff size={18} />
-              ) : (
-                <Eye size={18} />
-              )}
-            </button>
-          </div>
-
-          {showPasswordRules && (
-            <div className="text-xs sm:text-sm space-y-1">
-
-              <p
-                className={
-                  passwordChecks.length
-                    ? "text-green-500"
-                    : "text-red-500"
-                }
-              >
-                {passwordChecks.length ? "✓" : "✗"} At least 8 characters
-              </p>
-
-              <p
-                className={
-                  passwordChecks.uppercase
-                    ? "text-green-500"
-                    : "text-red-500"
-                }
-              >
-                {passwordChecks.uppercase ? "✓" : "✗"} One uppercase letter
-              </p>
-
-              <p
-                className={
-                  passwordChecks.lowercase
-                    ? "text-green-500"
-                    : "text-red-500"
-                }
-              >
-                {passwordChecks.lowercase ? "✓" : "✗"} One lowercase letter
-              </p>
-
-              <p
-                className={
-                  passwordChecks.number
-                    ? "text-green-500"
-                    : "text-red-500"
-                }
-              >
-                {passwordChecks.number ? "✓" : "✗"} One number
-              </p>
-
-              <p
-                className={
-                  passwordChecks.special
-                    ? "text-green-500"
-                    : "text-red-500"
-                }
-              >
-                {passwordChecks.special ? "✓" : "✗"} One special character
-              </p>
-
-            </div>
-          )}
-
-          {/* Confirm Password */}
-                    <div className="relative">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowConfirmPassword(!showConfirmPassword)
-              }
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
-            >
-              {showConfirmPassword ? (
-                <EyeOff size={18} />
-              ) : (
-                <Eye size={18} />
-              )}
-            </button>
-          </div>
 
           <button
             type="submit"
             className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 sm:py-3.5 rounded-lg font-semibold shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] transition-all"
           >
-            Sign Up
+            Create Account
           </button>
 
         </form>

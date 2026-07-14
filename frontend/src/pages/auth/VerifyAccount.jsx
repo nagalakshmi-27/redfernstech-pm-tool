@@ -4,9 +4,10 @@ export default function VerifyAccount() {
   const navigate = useNavigate();
 
   const handleVerify = () => {
-    console.log("Verify button clicked");
-    // API integration will be added later
-  };
+  // Temporary frontend flow
+  // Later this will call the Verify Account API
+  navigate("/set-password");
+};
 
   const handleCancel = () => {
     navigate("/");

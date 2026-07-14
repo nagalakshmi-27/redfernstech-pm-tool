@@ -20,6 +20,7 @@ import Integrations from "../pages/integrations/Integrations";
 import ProtectedRoute from "./ProtectedRoute";
 import CheckEmail from "../pages/auth/CheckEmail";
 import VerifyOTP from "../pages/auth/VerifyOTP";
+import SetPassword from "../pages/auth/SetPassword";
 
 export default function AppRoutes() {
   return (
@@ -33,6 +34,7 @@ export default function AppRoutes() {
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/check-email" element={<CheckEmail />} />
         <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/set-password" element={<SetPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:id" element={<ProjectWorkspace />} />
