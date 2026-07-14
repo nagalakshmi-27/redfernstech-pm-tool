@@ -23,51 +23,109 @@ def get_db():
     finally:
         db.close()
 
-# Sign Up Route
-@router.post("/", response_model=schemas.UserResponse)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
+import random
+
+def send_email(to_email: str, subject: str, body: str):
+    sender_email = os.getenv("SMTP_USERNAME")
+    sender_password = os.getenv("SMTP_PASSWORD")
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = to_email
+    try:
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", 465))
+        with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+    except Exception:
+        pass
+
+@router.post("/register")
+def register_account(request: schemas.RegisterRequest, db: Session = Depends(get_db)):
+    if crud.get_user_by_email(db, request.email) or crud.get_account_by_email(db, request.email):
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    invitation = db.query(models.Invitation).filter(
-        models.Invitation.email == user.email
-    ).order_by(models.Invitation.id.desc()).first()
+    account = crud.create_account(db, request.account_name, request.email)
+    user_data = request.model_dump()
+    token = auth.create_verification_token(account.id, user_data)
     
-    # Global roles are removed; workspace roles are assigned upon workspace creation or invite acceptance.
-        
-    new_user = crud.create_user(db=db, user=user)
-    
-    # Create personal workspace
-    workspace_name = f"{new_user.first_name}'s Workspace" if new_user.first_name else f"{new_user.email.split('@')[0]}'s Workspace"
-    crud.create_workspace(db, schemas.WorkspaceCreate(name=workspace_name), new_user.id)
-    
-    # Check if they had a pending invitation and add them
-    if invitation and invitation.workspace_id:
-        invitation.status = "Accepted"
-        stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=new_user.id, role=invitation.role)
-        db.execute(stmt)
-        db.commit()
-        
-    return new_user
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
+    verify_link = f"{frontend_url}/verify-account?token={token}"
+    send_email(request.email, "Verify Your RedFlow Account", f"Click here to verify: {verify_link}")
+    return {"message": "Verification email sent"}
 
-# Sign In (Login) Route
+@router.post("/verify")
+def verify_account(request: schemas.VerifyAccountRequest, db: Session = Depends(get_db)):
+    payload = auth.verify_account_token(request.token)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+        
+    account_id = payload["account_id"]
+    user_data = payload["user_data"]
+    
+    account = db.query(models.Account).filter(models.Account.id == account_id).first()
+    if not account: raise HTTPException(status_code=404)
+    account.is_verified = True
+    db.commit()
+    
+    user_create = schemas.UserCreate(**user_data)
+    new_user = crud.create_user(db, user_create, account_id, is_super_admin=True)
+    return {"message": "Account verified and user created successfully"}
+
 @router.post("/login")
 def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
     authenticated_user = crud.authenticate_user(db, user.email, user.password)
     if not authenticated_user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
+        
+    if user.device_id and crud.check_user_device(db, authenticated_user.id, user.device_id):
+        access_token = auth.create_access_token(data={"sub": authenticated_user.email})
+        return {
+            "message": "Login successful",
+            "access_token": access_token, 
+            "token_type": "bearer", 
+            "user": {
+                "id": authenticated_user.id, 
+                "email": authenticated_user.email, 
+                "is_super_admin": authenticated_user.is_super_admin,
+                "account_id": authenticated_user.account_id,
+                "profile_image": authenticated_user.profile_image
+            }
+        }
+        
+    otp_code = str(random.randint(100000, 999999))
+    from datetime import datetime, timedelta
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    crud.create_otp(db, user.email, otp_code, expires_at)
     
-    # Generate the JWT Token
-    access_token = auth.create_access_token(data={"sub": authenticated_user.email})
-    
+    send_email(user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.")
+    temp_token = auth.create_temp_login_token(authenticated_user.id)
+    return {"message": "OTP sent to email", "temp_token": temp_token}
+
+@router.post("/verify-otp")
+def verify_otp(request: schemas.VerifyOTPRequest, db: Session = Depends(get_db)):
+    user_id = auth.verify_temp_login_token(request.temp_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Session expired, please login again")
+        
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not crud.verify_and_consume_otp(db, user.email, request.otp_code):
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+        
+    if request.device_id:
+        crud.add_user_device(db, user_id, request.device_id)
+        
+    access_token = auth.create_access_token(data={"sub": user.email})
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
         "user": {
-            "id": authenticated_user.id, 
-            "email": authenticated_user.email, 
-            "profile_image": authenticated_user.profile_image
+            "id": user.id, 
+            "email": user.email, 
+            "is_super_admin": user.is_super_admin,
+            "account_id": user.account_id,
+            "profile_image": user.profile_image
         }
     }
 
@@ -212,31 +270,18 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 # --- TEAMS & INVITATIONS LOGIC ---
 @router.post("/invite")
 def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if not invite.workspace_id:
-        raise HTTPException(status_code=400, detail="Workspace ID is required to invite users.")
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Only super admins can invite users.")
         
-    workspace_membership = db.query(models.workspace_members).filter(
-        models.workspace_members.c.workspace_id == invite.workspace_id, 
-        models.workspace_members.c.user_id == current_user.id
-    ).first()
-    
-    if not workspace_membership or workspace_membership.role == "Client":
-        raise HTTPException(status_code=403, detail="Clients cannot invite new users.")
+    if not invite.is_super_admin:
+        if not invite.workspace_id or not invite.workspace_access:
+            raise HTTPException(status_code=400, detail="Workspace and Workspace Access are mandatory for non-super admins.")
         
-    if invite.role == "Admin" and workspace_membership.role != "Admin":
-        raise HTTPException(status_code=403, detail="Only Workspace Admins can invite someone as an Admin.")
-        
-    if invite.email == current_user.email:
-        raise HTTPException(status_code=400, detail="You cannot invite yourself.")
-        
-    frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com").split(",")[0].strip()
-    sender_email = os.getenv("SMTP_USERNAME")
-    sender_password = os.getenv("SMTP_PASSWORD")
-    
-    # Check if a pending invitation already exists for this email and workspace
+        if invite.workspace_access == "Client" and not invite.project_id:
+            raise HTTPException(status_code=400, detail="Project is mandatory when workspace access is Client.")
+            
     existing_invite = db.query(models.Invitation).filter(
         models.Invitation.email == invite.email,
-        models.Invitation.workspace_id == invite.workspace_id,
         models.Invitation.status == "Pending"
     ).first()
     
@@ -246,31 +291,22 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
         token = uuid.uuid4().hex
         db_invite = models.Invitation(
             email=invite.email,
-            full_name=invite.full_name,
-            role=invite.role,
+            full_name=f"{invite.first_name} {invite.last_name}",
+            is_super_admin=invite.is_super_admin,
+            role=invite.workspace_access,
             token=token,
             status="Pending",
             invited_by_id=current_user.id,
-            workspace_id=invite.workspace_id
+            workspace_id=invite.workspace_id,
+            project_id=invite.project_id
         )
         db.add(db_invite)
         db.commit()
         
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")[0].strip()
     invite_link = f"{frontend_url}/accept-invite?token={token}"
-    msg = MIMEText(f"You have been invited to join a team on RedFlow!\n\nClick here to review and accept the invitation:\n{invite_link}")
-    msg["Subject"] = "You're invited to a RedFlow Team!"
-    msg["From"] = sender_email
-    msg["To"] = invite.email
     
-    try:
-        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-        smtp_port = int(os.getenv("SMTP_PORT", 465))
-        with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
-            server.login(sender_email, sender_password)
-            server.send_message(msg)
-    except Exception:
-        pass
-        
+    send_email(invite.email, "You're invited to a RedFlow Team!", f"Click here to review and accept the invitation:\n{invite_link}")
     return {"message": "Invite sent successfully!"}
 
 @router.get("/invite/{token}")
@@ -283,52 +319,54 @@ def get_invite(token: str, db: Session = Depends(get_db)):
     return {
         "email": invitation.email,
         "role": invitation.role,
-        "department": workspace.name if workspace else "Unknown Workspace"
+        "department": workspace.name if workspace else "Organization Level"
     }
 
 @router.post("/invite/{token}/accept")
-def accept_invite(token: str, db: Session = Depends(get_db)):
-    invitation = db.query(models.Invitation).filter(models.Invitation.token == token).first()
+def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depends(get_db)):
+    invitation = db.query(models.Invitation).filter(models.Invitation.token == request.token).first()
     if not invitation or invitation.status != "Pending":
         raise HTTPException(status_code=404, detail="Invite not found or already processed.")
         
     invitation.status = "Accepted"
     
-    # Check if user exists
-    existing_user = crud.get_user_by_email(db, email=invitation.email)
-    
-    if existing_user:
-        # Add to workspace
-        exists_in_ws = db.query(models.workspace_members).filter(
-            models.workspace_members.c.workspace_id == invitation.workspace_id, 
-            models.workspace_members.c.user_id == existing_user.id
-        ).first()
-        if not exists_in_ws:
-            stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=existing_user.id, role=invitation.role)
-            db.execute(stmt)
-        db.commit()
-        return {"status": "existing"}
-    else:
-        # Create user
-        # Parse first and last name from full_name
-        parts = invitation.full_name.split(" ", 1) if invitation.full_name else ["", ""]
-        first_name = parts[0] if len(parts) > 0 else ""
-        last_name = parts[1] if len(parts) > 1 else ""
-
-        new_user_data = schemas.UserCreate(
-            email=invitation.email,
-            password=str(uuid.uuid4()),
-            first_name=first_name,
-            last_name=last_name
-        )
-        new_user = crud.create_user(db=db, user=new_user_data)
+    inviter = db.query(models.User).filter(models.User.id == invitation.invited_by_id).first()
+    if not inviter:
+        raise HTTPException(status_code=400, detail="Inviter no longer exists")
         
+    account_id = inviter.account_id
+    
+    parts = invitation.full_name.split(" ", 1) if invitation.full_name else ["", ""]
+    first_name = parts[0] if len(parts) > 0 else ""
+    last_name = parts[1] if len(parts) > 1 else ""
+
+    new_user_data = schemas.UserCreate(
+        email=invitation.email,
+        password=request.password,
+        first_name=first_name,
+        last_name=last_name
+    )
+    new_user = crud.create_user(db=db, user=new_user_data, account_id=account_id, is_super_admin=invitation.is_super_admin)
+    
+    if not invitation.is_super_admin and invitation.workspace_id:
         stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=new_user.id, role=invitation.role)
         db.execute(stmt)
-        db.commit()
         
-        reset_token = auth.create_reset_token(invitation.email)
-        return {"status": "new", "reset_token": reset_token}
+    if invitation.role == "Client" and invitation.project_id:
+        stmt = models.project_members.insert().values(project_id=invitation.project_id, user_id=new_user.id)
+        db.execute(stmt)
+        
+    db.commit()
+    
+    # Automatically log them in by generating OTP
+    otp_code = str(random.randint(100000, 999999))
+    from datetime import datetime, timedelta
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    crud.create_otp(db, new_user.email, otp_code, expires_at)
+    
+    send_email(new_user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.")
+    temp_token = auth.create_temp_login_token(new_user.id)
+    return {"message": "User created successfully. Check email for OTP to sign in.", "temp_token": temp_token}
 
 @router.post("/invite/{token}/decline")
 def decline_invite(token: str, db: Session = Depends(get_db)):

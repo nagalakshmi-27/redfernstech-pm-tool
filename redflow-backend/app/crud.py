@@ -11,6 +11,46 @@ def get_password_hash(password):
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
+def create_account(db: Session, name: str, email: str):
+    db_account = models.Account(name=name, email=email)
+    db.add(db_account)
+    db.commit()
+    db.refresh(db_account)
+    return db_account
+
+def get_account_by_email(db: Session, email: str):
+    return db.query(models.Account).filter(models.Account.email == email).first()
+
+def check_user_device(db: Session, user_id: int, device_id: str):
+    return db.query(models.UserDevice).filter(
+        models.UserDevice.user_id == user_id, 
+        models.UserDevice.device_id == device_id
+    ).first() is not None
+
+def add_user_device(db: Session, user_id: int, device_id: str):
+    if not check_user_device(db, user_id, device_id):
+        device = models.UserDevice(user_id=user_id, device_id=device_id)
+        db.add(device)
+        db.commit()
+
+def create_otp(db: Session, email: str, otp_code: str, expires_at):
+    db_otp = models.OTP(email=email, otp_code=otp_code, expires_at=expires_at)
+    db.add(db_otp)
+    db.commit()
+
+def verify_and_consume_otp(db: Session, email: str, otp_code: str):
+    from datetime import datetime
+    db_otp = db.query(models.OTP).filter(
+        models.OTP.email == email, 
+        models.OTP.otp_code == otp_code,
+        models.OTP.expires_at > datetime.utcnow()
+    ).first()
+    if db_otp:
+        db.delete(db_otp) # Consume it
+        db.commit()
+        return True
+    return False
+
 def log_activity(db: Session, project_id: int, user_id: int, action: str, target_name: str = None, target_type: str = None, ticket_id: str = None):
     activity = models.Activity(
         project_id=project_id,
@@ -24,21 +64,27 @@ def log_activity(db: Session, project_id: int, user_id: int, action: str, target
     db.commit()
 
 def is_workspace_admin(db: Session, workspace_id: int, user_id: int):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user and user.is_super_admin: return True
     membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == user_id).first()
     return membership and membership.role == "Admin"
 
 def is_client(db: Session, workspace_id: int, user_id: int):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user and user.is_super_admin: return False
     membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == user_id).first()
     return membership and membership.role == "Client"
 
-def create_user(db: Session, user: schemas.UserCreate):
+def create_user(db: Session, user: schemas.UserCreate, account_id: int, is_super_admin: bool = False):
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
         email=user.email, 
         hashed_password=hashed_password, 
         first_name=user.first_name,
         last_name=user.last_name,
-        full_name=f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else user.full_name
+        full_name=f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else user.full_name,
+        account_id=account_id,
+        is_super_admin=is_super_admin
     )
     db.add(db_user)
     db.commit()
@@ -46,17 +92,24 @@ def create_user(db: Session, user: schemas.UserCreate):
     return db_user
 
 # --- WORKSPACES ---
-def create_workspace(db: Session, workspace: schemas.WorkspaceCreate, user_id: int):
-    db_workspace = models.Workspace(name=workspace.name, owner_id=user_id)
+def create_workspace(db: Session, workspace: schemas.WorkspaceCreate, account_id: int, creator_id: int):
+    db_workspace = models.Workspace(name=workspace.name, account_id=account_id)
     db.add(db_workspace)
     db.commit()
     db.refresh(db_workspace)
-    # Add owner to workspace_members with Admin role
-    db.execute(models.workspace_members.insert().values(workspace_id=db_workspace.id, user_id=user_id, role="Admin"))
+    # Add creator to workspace_members with Admin role
+    db.execute(models.workspace_members.insert().values(workspace_id=db_workspace.id, user_id=creator_id, role="Admin"))
     db.commit()
     return db_workspace
 
 def get_user_workspaces(db: Session, user_id: int):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user and user.is_super_admin:
+        workspaces = db.query(models.Workspace).filter(models.Workspace.account_id == user.account_id).all()
+        for ws in workspaces:
+            ws.user_role = "Admin"
+        return workspaces
+        
     results = db.query(models.Workspace, models.workspace_members.c.role).join(
         models.workspace_members, 
         models.Workspace.id == models.workspace_members.c.workspace_id
@@ -162,16 +215,28 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
 from sqlalchemy import or_
 
 def get_user_projects(db: Session, user_id: int, workspace_id: int = None):
-    query = (
-        db.query(models.Project)
-        .options(selectinload(models.Project.tasks))
-        .filter(
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user: return []
+    
+    if user.is_super_admin:
+        query = db.query(models.Project).join(models.Workspace).filter(models.Workspace.account_id == user.account_id)
+    else:
+        workspace_ids_admin_member = [
+            wm.workspace_id for wm in 
+            db.query(models.workspace_members).filter(
+                models.workspace_members.c.user_id == user.id,
+                models.workspace_members.c.role.in_(["Admin", "Member"])
+            ).all()
+        ]
+        
+        query = db.query(models.Project).filter(
             or_(
-                models.Project.created_by_id == user_id,
-                models.Project.members.any(models.User.id == user_id)
+                models.Project.workspace_id.in_(workspace_ids_admin_member),
+                models.Project.members.any(models.User.id == user.id)
             )
         )
-    )
+        
+    query = query.options(selectinload(models.Project.tasks))
 
     if workspace_id:
         query = query.filter(models.Project.workspace_id == workspace_id)

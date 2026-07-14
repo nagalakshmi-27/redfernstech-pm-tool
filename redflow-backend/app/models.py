@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
-# Association Table for Many-to-Many relationship between Users and Teams
 project_members = Table(
     "project_members",
     Base.metadata,
@@ -16,26 +15,52 @@ workspace_members = Table(
     Base.metadata,
     Column("user_id", Integer, ForeignKey("users.id")),
     Column("workspace_id", Integer, ForeignKey("workspaces.id")),
-    Column("role", String, default="Member") # Admin, Member, Client within this workspace
+    Column("role", String, default="Member") # Admin, Member, Client
 )
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String, unique=True, index=True) # Account Email
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    users = relationship("User", back_populates="account", cascade="all, delete-orphan")
+    workspaces = relationship("Workspace", back_populates="account", cascade="all, delete-orphan")
+
+class OTP(Base):
+    __tablename__ = "otps"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    otp_code = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime)
+
+class UserDevice(Base):
+    __tablename__ = "user_devices"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    device_id = Column(String, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
-    full_name = Column(String, nullable=True) # Keeping for backwards compatibility
+    full_name = Column(String, nullable=True) 
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     hashed_password = Column(String)
-    company_role = Column(String, nullable=True) # Developer, Designer, etc
+    company_role = Column(String, nullable=True) 
     department = Column(String, nullable=True)
     profile_image = Column(String, nullable=True)
+    is_super_admin = Column(Boolean, default=False)
+    account_id = Column(Integer, ForeignKey("accounts.id"), index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships
-    owned_workspaces = relationship("Workspace", back_populates="owner")
+    account = relationship("Account", back_populates="users")
     workspaces = relationship("Workspace", secondary=workspace_members, back_populates="members")
-    
     projects = relationship("Project", back_populates="creator")
     assigned_projects = relationship("Project", secondary=project_members, back_populates="members")
     notifications = relationship("Notification", back_populates="user")
@@ -45,9 +70,9 @@ class Workspace(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    owner_id = Column(Integer, ForeignKey("users.id"), index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), index=True)
 
-    owner = relationship("User", back_populates="owned_workspaces")
+    account = relationship("Account", back_populates="workspaces")
     members = relationship("User", secondary=workspace_members, back_populates="workspaces")
     projects = relationship("Project", back_populates="workspace", cascade="all, delete-orphan")
     invitations = relationship("Invitation", back_populates="workspace", cascade="all, delete-orphan")
@@ -190,14 +215,17 @@ class Invitation(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, index=True)
     full_name = Column(String, nullable=True)
-    role = Column(String, default="Teammate")
+    is_super_admin = Column(Boolean, default=False)
+    role = Column(String, nullable=True) # Workspace Access: Admin, Member, Client
     token = Column(String, unique=True, index=True)
     status = Column(String, default="Pending")
     invited_by_id = Column(Integer, ForeignKey("users.id"), index=True)
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     workspace = relationship("Workspace", back_populates="invitations")
+    project = relationship("Project")
 
 class Event(Base):
     __tablename__ = "events"

@@ -30,3 +30,33 @@ def verify_reset_token(token: str):
         return payload.get("sub")
     except JWTError:
         return None
+
+def create_temp_login_token(user_id: int):
+    expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode = {"exp": expire, "sub": str(user_id), "type": "temp_login"}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_temp_login_token(token: str):
+    try:
+        from jose import JWTError
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "temp_login":
+            return None
+        return int(payload.get("sub"))
+    except JWTError:
+        return None
+
+def create_verification_token(account_id: int, user_data: dict):
+    expire = datetime.utcnow() + timedelta(hours=24)
+    to_encode = {"exp": expire, "account_id": account_id, "user_data": user_data, "type": "account_verify"}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_account_token(token: str):
+    try:
+        from jose import JWTError
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "account_verify":
+            return None
+        return payload
+    except JWTError:
+        return None

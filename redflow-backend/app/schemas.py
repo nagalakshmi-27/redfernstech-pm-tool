@@ -2,6 +2,34 @@ from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional, List, Dict
 
+# --- ACCOUNTS ---
+class AccountBase(BaseModel):
+    name: str
+    email: EmailStr
+
+class AccountResponse(AccountBase):
+    id: int
+    is_verified: bool
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+# --- AUTH & ONBOARDING ---
+class RegisterRequest(BaseModel):
+    account_name: str
+    first_name: str
+    last_name: str
+    email: EmailStr
+    password: str
+
+class VerifyAccountRequest(BaseModel):
+    token: str
+
+class VerifyOTPRequest(BaseModel):
+    temp_token: str
+    otp_code: str
+    device_id: Optional[str] = None
+
 # --- USERS ---
 class UserBase(BaseModel):
     email: EmailStr
@@ -27,6 +55,8 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    account_id: Optional[int] = None
+    is_super_admin: bool = False
     created_at: datetime
     class Config:
         from_attributes = True
@@ -49,7 +79,7 @@ class WorkspaceMemberRoleUpdate(BaseModel):
 
 class WorkspaceResponse(WorkspaceBase):
     id: int
-    owner_id: int
+    account_id: int
     created_at: datetime
     user_role: Optional[str] = None
     class Config:
@@ -121,6 +151,7 @@ class ProjectResponse(ProjectBase):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    device_id: Optional[str] = None
 
 # --- TASKS ---
 class TaskBase(BaseModel):
@@ -219,12 +250,17 @@ class TaskResponse(TaskBase):
     
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
+    first_name: str
+    last_name: str
     email: EmailStr
-    full_name: Optional[str] = None
-    role: str = "Standard"
-    workspace_id: int
+    is_super_admin: bool = False
+    workspace_id: Optional[int] = None
+    workspace_access: Optional[str] = None
+    project_id: Optional[int] = None
+
 class InviteAccept(BaseModel):
     token: str
+    password: str
 class TeammateResponse(BaseModel):
     id: int
     email: EmailStr
