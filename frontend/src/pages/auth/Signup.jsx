@@ -68,18 +68,18 @@ const [confirmPassword, setConfirmPassword] = useState("");
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/users/`,
+        `${import.meta.env.VITE_API_URL}/users/register`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email,
-            password,
+            account_name: accountName,
             first_name: firstName,
             last_name: lastName,
-            role: "team_mate",
+            email,
+            password,
           }),
         }
       );
@@ -89,8 +89,7 @@ const [confirmPassword, setConfirmPassword] = useState("");
         throw new Error(errorData.detail || "Signup failed");
       }
 
-      alert("Account created successfully! Please sign in.");
-      navigate("/");
+      navigate("/check-email");
     } catch (err) {
       setError(err.message);
     }

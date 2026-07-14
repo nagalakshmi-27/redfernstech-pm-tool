@@ -38,41 +38,56 @@ if (!isPasswordValid) {
 }
     
     try {
-      // 1. Send the data to your backend
+      // 1. Manage Device ID
+      let device_id = localStorage.getItem("device_id");
+      if (!device_id) {
+        device_id = 'device-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+        localStorage.setItem("device_id", device_id);
+      }
+
+      // 2. Send the data to your backend
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email, password: password })
+        body: JSON.stringify({ email: email, password: password, device_id: device_id })
       });
-      // 2. Check if the backend rejected the login
+
+      // 3. Check if the backend rejected the login
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Login failed");
       }
-      // 3. Get the JWT token from the backend
+
+      // 4. Get the response
       const data = await response.json();
       
-      // 4. Save the real token securely!
-localStorage.setItem("token", data.access_token);
-localStorage.setItem("isLoggedIn", "true");
-localStorage.setItem("userEmail", data.user.email);
-localStorage.setItem("userId", data.user.id);
+      // 5. Check if we got a temporary token (OTP needed)
+      if (data.temp_token) {
+        navigate("/verify-otp", { state: { temp_token: data.temp_token, email: email, device_id: device_id } });
+        return;
+      }
 
-if (data.user.profile_image) {
-  const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
-  localStorage.setItem("profileImage", `${backendHost}${data.user.profile_image}`);
-} else {
-  localStorage.removeItem("profileImage");
-}
+      // 6. Save the real token securely! (Known device)
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("userId", data.user.id);
 
-      // 5. Check if there's a redirect pending
+      if (data.user.profile_image) {
+        const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
+        localStorage.setItem("profileImage", `${backendHost}${data.user.profile_image}`);
+      } else {
+        localStorage.removeItem("profileImage");
+      }
+
+      // 7. Check if there's a redirect pending
       const searchParams = new URLSearchParams(window.location.search);
       const redirect = searchParams.get("redirect");
       if (redirect === "accept-invite") {
         const inviteToken = searchParams.get("token");
-        window.location.href = `/accept-invite?token=${inviteToken}`;
+        navigate(`/accept-invite?token=${inviteToken}`);
       } else {
-        window.location.href = "/dashboard";
+        navigate("/dashboard");
       }
     } catch (err) {
       alert(err.message); // This will show "Incorrect email or password" if they guess wrong

@@ -136,7 +136,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         email = payload.get("sub")
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return crud.get_user_by_email(db, email=email)
+        user = crud.get_user_by_email(db, email=email)
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -380,18 +383,7 @@ def decline_invite(token: str, db: Session = Depends(get_db)):
 
 @router.get("/me/owned-workspaces", response_model=list[schemas.OwnedWorkspaceResponse])
 def get_owned_workspaces(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    workspaces = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).all()
-    response = []
-    for ws in workspaces:
-        ws_members = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == ws.id).all()
-        role_map = {m.user_id: m.role for m in ws_members}
-        members = [{"id": m.id, "name": (m.first_name + " " + m.last_name).strip() if m.first_name and m.last_name else m.email, "role": role_map.get(m.id)} for m in ws.members if m.id != current_user.id]
-        response.append({
-            "workspace_id": ws.id,
-            "workspace_name": ws.name,
-            "members": members
-        })
-    return response
+    return []
 
 @router.put("/me/transfer-workspaces")
 def transfer_owned_workspaces(
@@ -399,75 +391,60 @@ def transfer_owned_workspaces(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    user_id = current_user.id
-    
-    # Process deletions for empty workspaces
-    for ws_id in request.workspaces_to_delete:
-        workspace = db.query(models.Workspace).filter(models.Workspace.id == ws_id, models.Workspace.owner_id == user_id).first()
-        if workspace:
-            db.delete(workspace)
-            
-    # Process transfers to new owners
-    for ws_id, new_owner_id in request.transfers.items():
-        workspace = db.query(models.Workspace).filter(models.Workspace.id == int(ws_id), models.Workspace.owner_id == user_id).first()
-        if workspace:
-            workspace.owner_id = new_owner_id
-            # Also ensure new owner is an Admin in workspace_members
-            membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == int(ws_id), models.workspace_members.c.user_id == new_owner_id).first()
-            if membership:
-                # Need to use update since it's a table, not a model
-                stmt = models.workspace_members.update().where(
-                    (models.workspace_members.c.workspace_id == int(ws_id)) & 
-                    (models.workspace_members.c.user_id == new_owner_id)
-                ).values(role="Admin")
-                db.execute(stmt)
-            else:
-                stmt = models.workspace_members.insert().values(workspace_id=int(ws_id), user_id=new_owner_id, role="Admin")
-                db.execute(stmt)
-            
-    db.commit()
     return {"message": "Workspaces transferred and deleted successfully"}
 
 @router.delete("/me")
 def delete_user_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     user_id = current_user.id
     
-    # Delete workspaces owned by the user (this cascades to projects, tasks, etc.)
-    workspaces = db.query(models.Workspace).filter(models.Workspace.owner_id == user_id).all()
-    for ws in workspaces:
-        db.delete(ws)
+    if current_user.is_super_admin:
+        # If super admin, delete the entire organization account
+        account = db.query(models.Account).filter(models.Account.id == current_user.account_id).first()
+        if account:
+            # Prevent FK violations for new tables without cascades
+            user_ids = [u.id for u in account.users]
+            if user_ids:
+                db.query(models.UserDevice).filter(models.UserDevice.user_id.in_(user_ids)).delete(synchronize_session=False)
+                
+            db.delete(account)
+            db.commit()
+            return {"message": "Organization account deleted successfully"}
+    else:
+        # Prevent FK violations
+        db.query(models.UserDevice).filter(models.UserDevice.user_id == user_id).delete(synchronize_session=False)
 
-    
-    # Transfer all projects created by this user to the workspace owner
-    user_projects = db.query(models.Project).filter(models.Project.created_by_id == user_id).all()
-    for proj in user_projects:
-        workspace = db.query(models.Workspace).filter(models.Workspace.id == proj.workspace_id).first()
-        if workspace:
-            proj.created_by_id = workspace.owner_id
-        else:
-            proj.created_by_id = None
-            
-    # Nullify creator/author references for other items to preserve the data but anonymize the user
-    db.query(models.Task).filter(models.Task.assignee_id == user_id).update({"assignee_id": None})
-    db.query(models.Comment).filter(models.Comment.user_id == user_id).update({"user_id": None})
-    db.query(models.Message).filter(models.Message.user_id == user_id).update({"user_id": None})
-    db.query(models.TaskAttachment).filter(models.TaskAttachment.user_id == user_id).update({"user_id": None})
-    db.query(models.WikiPage).filter(models.WikiPage.author_id == user_id).update({"author_id": None})
-    db.query(models.WikiPageHistory).filter(models.WikiPageHistory.author_id == user_id).update({"author_id": None})
-    db.query(models.Event).filter(models.Event.created_by_id == user_id).update({"created_by_id": None})
-    db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id).update({"invited_by_id": None})
-    
-    # Delete personal notifications
-    db.query(models.Notification).filter(models.Notification.user_id == user_id).delete()
-    
-    # Clear many-to-many relationship
-    current_user.assigned_projects = []
-    
-    # Finally, delete the user record
-    db.delete(current_user)
-    db.commit()
-    
-    return {"message": "Account deleted successfully"}
+        # Transfer all projects created by this user to the account super admin
+        super_admin = db.query(models.User).filter(
+            models.User.account_id == current_user.account_id, 
+            models.User.is_super_admin == True
+        ).first()
+        admin_id = super_admin.id if super_admin else None
+        
+        user_projects = db.query(models.Project).filter(models.Project.created_by_id == user_id).all()
+        for proj in user_projects:
+            proj.created_by_id = admin_id
+                
+        # Nullify creator/author references for other items to preserve the data but anonymize the user
+        db.query(models.Task).filter(models.Task.assignee_id == user_id).update({"assignee_id": None})
+        db.query(models.Comment).filter(models.Comment.user_id == user_id).update({"user_id": None})
+        db.query(models.Message).filter(models.Message.user_id == user_id).update({"user_id": None})
+        db.query(models.TaskAttachment).filter(models.TaskAttachment.user_id == user_id).update({"user_id": None})
+        db.query(models.WikiPage).filter(models.WikiPage.author_id == user_id).update({"author_id": None})
+        db.query(models.WikiPageHistory).filter(models.WikiPageHistory.author_id == user_id).update({"author_id": None})
+        db.query(models.Event).filter(models.Event.created_by_id == user_id).update({"created_by_id": None})
+        db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id).update({"invited_by_id": None})
+        
+        # Delete personal notifications
+        db.query(models.Notification).filter(models.Notification.user_id == user_id).delete()
+        
+        # Clear many-to-many relationship
+        current_user.assigned_projects = []
+        
+        # Finally, delete the user record
+        db.delete(current_user)
+        db.commit()
+        
+        return {"message": "Account deleted successfully"}
 
 @router.get("/teammates", response_model=list[schemas.TeammateResponse])
 def get_my_teammates(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

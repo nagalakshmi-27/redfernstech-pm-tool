@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -11,6 +11,8 @@ export default function AcceptInvite() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const fetchInvite = async () => {
@@ -30,21 +32,30 @@ export default function AcceptInvite() {
   }, [token]);
 
   const handleAccept = async () => {
+    if (!password || password.length < 8) {
+      setError("Please enter a password of at least 8 characters.");
+      return;
+    }
     setLoading(true);
+    setError("");
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite/${token}/accept`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token, password: password })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.status === "new") {
-          setMessage("Invite accepted! Redirecting to set your password...");
-          setTimeout(() => navigate(`/reset-password?token=${data.reset_token}`), 2000);
-        } else if (data.status === "existing") {
-          setMessage("Invite accepted! Redirecting to sign in...");
-          setTimeout(() => navigate(`/`), 2000);
+        
+        let device_id = localStorage.getItem("device_id");
+        if (!device_id) {
+          device_id = 'device-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+          localStorage.setItem("device_id", device_id);
         }
+        
+        setMessage("Invite accepted! Redirecting to verify your login...");
+        setTimeout(() => navigate("/verify-otp", { state: { temp_token: data.temp_token, email: inviteDetails?.email, device_id } }), 2000);
       } else {
         const errData = await response.json().catch(() => ({}));
         setError(errData.detail || "Failed to accept invite.");
@@ -106,13 +117,33 @@ export default function AcceptInvite() {
             </p>
             
             <div className="flex flex-col gap-4">
+              <div className="relative text-left">
+                <label className="block mb-2 font-medium text-slate-300">Set Your Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter a secure password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
               <button 
                 onClick={handleAccept}
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white p-3 rounded-lg font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] disabled:opacity-70"
               >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
-                Accept Invitation
+                Accept Invitation & Sign In
               </button>
               
               <button 

@@ -1,8 +1,20 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 
 export default function VerifyOTP() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { temp_token, email, device_id } = location.state || {};
+  
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!temp_token) {
+      navigate("/");
+    }
+  }, [temp_token, navigate]);
+
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef([]);
   const [timeLeft, setTimeLeft] = useState(15 * 60);
@@ -56,6 +68,43 @@ useEffect(() => {
 const minutes = String(Math.floor(timeLeft / 60)).padStart(2, "0");
 const seconds = String(timeLeft % 60).padStart(2, "0");
 const isOtpComplete = otp.every((digit) => digit !== "");
+
+const handleVerifyOTP = async () => {
+    setLoading(true);
+    setError("");
+    const otpCode = otp.join("");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ temp_token, otp_code: otpCode, device_id })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Verification failed");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("userId", data.user.id);
+      
+      if (data.user.profile_image) {
+        const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
+        localStorage.setItem("profileImage", `${backendHost}${data.user.profile_image}`);
+      } else {
+        localStorage.removeItem("profileImage");
+      }
+
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+};
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-slate-200 px-4 py-6">
       <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
@@ -65,8 +114,14 @@ const isOtpComplete = otp.every((digit) => digit !== "");
         </h1>
 
         <p className="text-center text-slate-400 mt-4">
-          Enter the 6-digit verification code sent to your email.
+          Enter the 6-digit verification code sent to {email ? <strong className="text-cyan-400">{email}</strong> : "your email"}.
         </p>
+
+        {error && (
+          <div className="mt-4 bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg text-center">
+            {error}
+          </div>
+        )}
 
         <div className="flex justify-center gap-3 mt-8">
   {otp.map((digit, index) => (
@@ -89,14 +144,15 @@ const isOtpComplete = otp.every((digit) => digit !== "");
 </div>
 
         <button
-  disabled={!isOtpComplete}
+  disabled={!isOtpComplete || loading}
+  onClick={handleVerifyOTP}
   className={`w-full mt-8 py-3 rounded-lg font-semibold transition-all ${
-    isOtpComplete
+    isOtpComplete && !loading
       ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)]"
       : "bg-slate-700 text-slate-500 cursor-not-allowed"
   }`}
 >
-  Verify OTP
+  {loading ? "Verifying..." : "Verify OTP"}
 </button>
 
         <button
