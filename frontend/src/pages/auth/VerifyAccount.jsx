@@ -1,12 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function VerifyAccount() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
 
   const handleVerify = () => {
   // Temporary frontend flow
   // Later this will call the Verify Account API
-  navigate("/set-password");
+  navigate(`/set-password?token=${token}`);
 };
 
   const handleCancel = () => {

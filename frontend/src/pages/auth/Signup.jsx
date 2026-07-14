@@ -36,7 +36,7 @@ const [email, setEmail] = useState("");
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/users/`,
+        `${import.meta.env.VITE_API_URL}/users/register`,
         {
           method: "POST",
           headers: {

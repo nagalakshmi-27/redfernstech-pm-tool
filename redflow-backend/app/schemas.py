@@ -16,14 +16,14 @@ class AccountResponse(AccountBase):
 
 # --- AUTH & ONBOARDING ---
 class RegisterRequest(BaseModel):
-    account_name: str
+    organization_name: str
     first_name: str
     last_name: str
     email: EmailStr
-    password: str
 
-class VerifyAccountRequest(BaseModel):
+class SetPasswordRequest(BaseModel):
     token: str
+    password: str
 
 class VerifyOTPRequest(BaseModel):
     temp_token: str

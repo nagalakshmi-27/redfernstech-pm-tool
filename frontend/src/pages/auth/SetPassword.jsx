@@ -1,10 +1,12 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { validatePassword } from "../../utils/validation";
 
 export default function SetPassword() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,7 +25,7 @@ export default function SetPassword() {
     special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
   };
 
-  const handleSetPassword = (e) => {
+  const handleSetPassword = async (e) => {
     e.preventDefault();
 
     if (!password || !confirmPassword) {
@@ -43,14 +45,30 @@ export default function SetPassword() {
       setError("Passwords do not match");
       return;
     }
+    
+    if (!token) {
+      setError("Invalid or missing verification token");
+      return;
+    }
 
     setError("");
 
-    // Backend integration will be added later
-    console.log("Password Created");
-
-    // Temporary navigation
-    navigate("/");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/set-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password })
+      });
+      
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.detail || "Failed to set password");
+      }
+      
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (

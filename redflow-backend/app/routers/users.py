@@ -46,7 +46,7 @@ def register_account(request: schemas.RegisterRequest, db: Session = Depends(get
     if crud.get_user_by_email(db, request.email) or crud.get_account_by_email(db, request.email):
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    account = crud.create_account(db, request.account_name, request.email)
+    account = crud.create_account(db, request.organization_name, request.email)
     user_data = request.model_dump()
     token = auth.create_verification_token(account.id, user_data)
     
@@ -55,8 +55,8 @@ def register_account(request: schemas.RegisterRequest, db: Session = Depends(get
     send_email(request.email, "Verify Your RedFlow Account", f"Click here to verify: {verify_link}")
     return {"message": "Verification email sent"}
 
-@router.post("/verify")
-def verify_account(request: schemas.VerifyAccountRequest, db: Session = Depends(get_db)):
+@router.post("/set-password")
+def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_db)):
     payload = auth.verify_account_token(request.token)
     if not payload:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
@@ -69,6 +69,7 @@ def verify_account(request: schemas.VerifyAccountRequest, db: Session = Depends(
     account.is_verified = True
     db.commit()
     
+    user_data["password"] = request.password
     user_create = schemas.UserCreate(**user_data)
     new_user = crud.create_user(db, user_create, account_id, is_super_admin=True)
     return {"message": "Account verified and user created successfully"}
