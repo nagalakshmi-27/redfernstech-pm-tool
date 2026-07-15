@@ -163,14 +163,19 @@ export default function Sidebar() {
   };
 
   const currentUserRole = activeWorkspaceRole;
+  const organizationName = "RedFerns Tech";
   return (
     <div className="w-56 min-h-screen bg-white/5 backdrop-blur-lg border-r border-white/10 text-white flex flex-col">
       {/* Logo / App Name */}
-      <div className="h-16 px-5 border-b border-white/10 flex items-center">
-        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
-          RedFerns PM
-        </h1>
-      </div>
+<div className="h-[72px] px-5 border-b border-white/10 flex flex-col justify-center">
+  <h1 className="text-2xl font-bold leading-none bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
+  RedFerns PM
+</h1>
+
+  <p className="text-sm text-slate-400 font-medium mt-1 truncate">
+  {organizationName}
+</p>
+</div>
 
       {/* Workspace Switcher */}
       {workspaces && workspaces.length > 0 && (

@@ -34,10 +34,14 @@ export default function VerifyOTP() {
 
 const handleKeyDown = (e, index) => {
   if (e.key === "Backspace") {
-    // If current box is empty, move to previous box
     if (!otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();
     }
+  }
+
+  // Verify OTP when Enter is pressed
+  if (e.key === "Enter" && isOtpComplete && !loading) {
+    handleVerifyOTP();
   }
 };
 
