@@ -31,6 +31,9 @@ class VerifyOTPRequest(BaseModel):
     device_id: Optional[str] = None
 
 # --- USERS ---
+class TransferOrgRequest(BaseModel):
+    new_super_admin_id: int
+
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
@@ -75,6 +78,10 @@ class WorkspaceTransfer(BaseModel):
     new_owner_id: int
 
 class WorkspaceMemberRoleUpdate(BaseModel):
+    role: str
+
+class WorkspaceMemberAdd(BaseModel):
+    user_id: int
     role: str
 
 class WorkspaceResponse(WorkspaceBase):
@@ -260,7 +267,7 @@ class InviteCreate(BaseModel):
 
 class InviteAccept(BaseModel):
     token: str
-    password: str
+    password: Optional[str] = None
 class TeammateResponse(BaseModel):
     id: int
     email: EmailStr

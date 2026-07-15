@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session, selectinload
+from typing import Optional
 from . import models, schemas
 from passlib.context import CryptContext
 
@@ -121,6 +122,27 @@ def get_user_workspaces(db: Session, user_id: int):
         workspaces.append(ws)
     return workspaces
 
+def get_user_workspace_role(db: Session, user_id: int, workspace_id: int) -> str:
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user and user.is_super_admin:
+        return "Admin"  # Super admins act as Admins everywhere
+        
+    result = db.query(models.workspace_members.c.role).filter(
+        models.workspace_members.c.workspace_id == workspace_id,
+        models.workspace_members.c.user_id == user_id
+    ).first()
+    
+    return result[0] if result else None
+
+def has_project_access(db: Session, project_id: int, user_id: int) -> bool:
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        return False
+    role = get_user_workspace_role(db, user_id, project.workspace_id)
+    if role == "Admin":
+        return True
+    return any(member.id == user_id for member in project.members)
+
 # --- PROJECTS ---
 def get_projects(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Project).offset(skip).limit(limit).all()
@@ -177,7 +199,8 @@ def generate_project_key(db: Session, name: str, workspace_id: int) -> str:
         counter += 1
 
 def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
-    if is_client(db, project.workspace_id, user_id):
+    role = get_user_workspace_role(db, user_id, project.workspace_id)
+    if role != "Admin":
         return None
     project_key = generate_project_key(db, project.name, project.workspace_id)
     
@@ -221,17 +244,17 @@ def get_user_projects(db: Session, user_id: int, workspace_id: int = None):
     if user.is_super_admin:
         query = db.query(models.Project).join(models.Workspace).filter(models.Workspace.account_id == user.account_id)
     else:
-        workspace_ids_admin_member = [
+        workspace_ids_admin = [
             wm.workspace_id for wm in 
             db.query(models.workspace_members).filter(
                 models.workspace_members.c.user_id == user.id,
-                models.workspace_members.c.role.in_(["Admin", "Member"])
+                models.workspace_members.c.role == "Admin"
             ).all()
         ]
         
         query = db.query(models.Project).filter(
             or_(
-                models.Project.workspace_id.in_(workspace_ids_admin_member),
+                models.Project.workspace_id.in_(workspace_ids_admin),
                 models.Project.members.any(models.User.id == user.id)
             )
         )
@@ -266,12 +289,13 @@ def get_user_projects(db: Session, user_id: int, workspace_id: int = None):
     return projects
 
 def update_project(db: Session, project_id: int, project_update: schemas.ProjectUpdate, user_id: int):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
     db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project: return None
     
-    if not db_project or not user: return None
-    
-    if not is_workspace_admin(db, db_project.workspace_id, user_id) and db_project.created_by_id != user_id:
+    role = get_user_workspace_role(db, user_id, db_project.workspace_id)
+    if role == "Client":
+        return None
+    if role == "Member" and not any(m.id == user_id for m in db_project.members):
         return None
     
     update_data = project_update.model_dump(exclude_unset=True) # or .dict() for older pydantic
@@ -322,11 +346,11 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
     return db_project
 
 def delete_project(db: Session, project_id: int, user_id: int):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
     db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
-    if not db_project or not user: return False
+    if not db_project: return False
     
-    if not is_workspace_admin(db, db_project.workspace_id, user_id) and db_project.created_by_id != user_id:
+    role = get_user_workspace_role(db, user_id, db_project.workspace_id)
+    if role != "Admin":
         return False
         
     db.delete(db_project)
@@ -353,13 +377,13 @@ def get_user_tasks(db: Session, user_id: int, workspace_id: int = None):
 def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
     # Fetch the project to get its name for the ticket ID prefix
     project = db.query(models.Project).filter(models.Project.id == task.project_id).first()
-    if not project or is_client(db, project.workspace_id, user_id):
+    if not project:
         return None
-    
-    # Security: Ensure only authorized users can add tasks
-    is_creator = project.created_by_id == user_id
-    is_member = any(m.id == user_id for m in project.members)
-    if not is_creator and not is_member:
+        
+    role = get_user_workspace_role(db, user_id, project.workspace_id)
+    if role == "Client":
+        return None
+    if role == "Member" and not any(m.id == user_id for m in project.members):
         return None
 
     # Increment project task counter atomically
@@ -387,14 +411,13 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     if not db_task: return None
     
     project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
-    if not project or is_client(db, project.workspace_id, user_id):
+    if not project:
         return None
-    
-    is_workspace_admin_user = is_workspace_admin(db, project.workspace_id, user_id)
-    is_assignee = db_task.assignee_id == user_id
-    is_creator = db_task.created_by_id == user_id
-    
-    if not is_workspace_admin_user and not is_assignee and not is_creator:
+        
+    role = get_user_workspace_role(db, user_id, project.workspace_id)
+    if role == "Client":
+        return None
+    if role == "Member" and not any(m.id == user_id for m in project.members):
         return None
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -428,13 +451,16 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     return db_task
 
 def delete_task(db: Session, task_id: int, user_id: int):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
     db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
-    if not db_task or not user: return False
+    if not db_task: return False
     
     project = db.query(models.Project).filter(models.Project.id == db_task.project_id).first()
+    if not project: return False
     
-    if not is_workspace_admin(db, project.workspace_id, user_id):
+    role = get_user_workspace_role(db, user_id, project.workspace_id)
+    if role == "Client":
+        return False
+    if role == "Member" and not any(m.id == user_id for m in project.members):
         return False
         
     # Log task deletion activity
@@ -444,26 +470,66 @@ def delete_task(db: Session, task_id: int, user_id: int):
     db.commit()
     return True
 
-def get_teammates(db: Session, workspace_id: int):
-    workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
-    if not workspace:
-        return []
-    
+def get_teammates(db: Session, workspace_id: Optional[int], account_id: int):
     users_dict = {}
-    for member in workspace.members:
-        ws_assoc = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == member.id).first()
-        role = ws_assoc.role if ws_assoc else "Member"
-        
-        users_dict[member.id] = {
-            "id": member.id,
-            "email": member.email,
-            "full_name": member.full_name or "Pending...",
-            "role": role,
-            "company_role": member.company_role,
-            "department": member.department or "Member",
-            "profile_image": member.profile_image,
+    
+    # 1. Add all Super Admins for this account
+    super_admins = db.query(models.User).filter(
+        models.User.account_id == account_id,
+        models.User.is_super_admin == True
+    ).all()
+    
+    for admin in super_admins:
+        users_dict[admin.id] = {
+            "id": admin.id,
+            "email": admin.email,
+            "full_name": admin.full_name or "Pending...",
+            "role": "Super Admin",
+            "company_role": admin.company_role,
+            "department": admin.department or "Admin",
+            "profile_image": admin.profile_image,
             "shared_projects": []
         }
+        
+    if workspace_id:
+        workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
+        if workspace:
+            # 2. Add explicit workspace members
+            for member in workspace.members:
+                if member.id in users_dict: continue # Skip if already added as Super Admin
+                
+                ws_assoc = db.query(models.workspace_members).filter(
+                    models.workspace_members.c.workspace_id == workspace_id, 
+                    models.workspace_members.c.user_id == member.id
+                ).first()
+                role = ws_assoc.role if ws_assoc else "Member"
+                
+                users_dict[member.id] = {
+                    "id": member.id,
+                    "email": member.email,
+                    "full_name": member.full_name or "Pending...",
+                    "role": role,
+                    "company_role": member.company_role,
+                    "department": member.department or "Member",
+                    "profile_image": member.profile_image,
+                    "shared_projects": []
+                }
+    else:
+        # If no workspace is selected, return all users in the entire account
+        all_users = db.query(models.User).filter(models.User.account_id == account_id).all()
+        for user in all_users:
+            if user.id in users_dict: continue
+            
+            users_dict[user.id] = {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name or "Pending...",
+                "role": "Organization Member",
+                "company_role": user.company_role,
+                "department": user.department or "Member",
+                "profile_image": user.profile_image,
+                "shared_projects": []
+            }
 
     return list(users_dict.values())
 

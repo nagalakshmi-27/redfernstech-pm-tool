@@ -40,12 +40,15 @@ const memberRefs = useRef({});
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState("Member");
   
+  const [addMode, setAddMode] = useState("existing");
+  const [selectedExistingUser, setSelectedExistingUser] = useState(null);
+  
   const [networkUsers, setNetworkUsers] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (showModal) {
-      fetch(`${import.meta.env.VITE_API_URL}/users/network`, {
+      fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       })
       .then(res => res.json())
@@ -57,38 +60,70 @@ const memberRefs = useRef({});
   }, [showModal]);
 
   const filteredNetworkUsers = networkUsers.filter(u => 
+    u.id !== currentUserId &&
     !members.some(m => m.email === u.email) && 
     (u.email.toLowerCase().includes(memberEmail.toLowerCase()) || 
      (u.full_name && u.full_name.toLowerCase().includes(memberEmail.toLowerCase())))
   );
 
   const handleAddMember = async () => {
-    if (!memberEmail.trim()) { alert("Email is required"); return; }
-    if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify({
-          email: memberEmail,
-          full_name: memberName,
-          role: memberRole,
-          workspace_id: parseInt(activeWorkspaceId)
-        })
-      });
-      if (response.ok) {
-        alert("Invitation sent successfully to " + memberEmail + "!");
-        setMemberName("");
-        setMemberEmail("");
-        setMemberRole("Teammate");
-        setShowModal(false);
+      if (addMode === "existing" && activeWorkspaceId) {
+        if (!selectedExistingUser) { alert("Please select a user"); return; }
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/workspaces/${activeWorkspaceId}/members`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          },
+          body: JSON.stringify({
+            user_id: selectedExistingUser.id,
+            role: memberRole
+          })
+        });
+        
+        if (response.ok) {
+          alert("Member added directly to workspace!");
+          setSelectedExistingUser(null);
+          setMemberRole("Member");
+          setShowModal(false);
+          window.location.reload(); 
+        } else {
+          const errData = await response.json();
+          alert("Failed to add member: " + JSON.stringify(errData));
+        }
       } else {
-        const errData = await response.json();
-console.log(errData);
-alert("Failed to send invite: " + JSON.stringify(errData));
+        if (!memberEmail.trim()) { alert("Email is required"); return; }
+        if (!validateEmail(memberEmail)) { alert("Please enter a valid email"); return; }
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/invite`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          },
+          body: JSON.stringify({
+            first_name: memberName.split(" ")[0] || "Unknown",
+            last_name: memberName.split(" ").slice(1).join(" ") || "User",
+            email: memberEmail,
+            is_super_admin: false,
+            workspace_access: memberRole,
+            workspace_id: activeWorkspaceId ? parseInt(activeWorkspaceId) : null
+          })
+        });
+        
+        if (response.ok) {
+          alert("Invitation sent successfully to " + memberEmail + "!");
+          setMemberName("");
+          setMemberEmail("");
+          setMemberRole("Teammate");
+          setShowModal(false);
+        } else {
+          const errData = await response.json();
+          console.log(errData);
+          alert("Failed to send invite: " + JSON.stringify(errData));
+        }
       }
     } catch (error) {
       console.error(error);
@@ -312,64 +347,133 @@ if (currentUserRole === "Client") {
 
       <div className="space-y-4">
 
-        <div>
-          <label className="block mb-2 font-medium text-slate-300">
-            Name
-          </label>
-          <input
-  type="text"
-  placeholder="Enter Name"
-  value={memberName}
-  onChange={(e) => setMemberName(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
-/>
-        </div>
+        {activeWorkspaceId && (
+          <div className="flex gap-4 mb-6 border-b border-white/10 pb-2">
+            <button
+              onClick={() => setAddMode("existing")}
+              className={`pb-2 px-1 font-medium text-sm transition-all border-b-2 ${
+                addMode === "existing" ? "border-cyan-500 text-cyan-400" : "border-transparent text-slate-400 hover:text-white"
+              }`}
+            >
+              Add Existing Member
+            </button>
+            <button
+              onClick={() => setAddMode("new")}
+              className={`pb-2 px-1 font-medium text-sm transition-all border-b-2 ${
+                addMode === "new" ? "border-cyan-500 text-cyan-400" : "border-transparent text-slate-400 hover:text-white"
+              }`}
+            >
+              Invite New User
+            </button>
+          </div>
+        )}
 
-        <div className="relative">
-          <label className="block mb-2 font-medium text-slate-300">
-            Email
-          </label>
-          <input
-            type="email"
-            placeholder="Enter Email"
-            value={memberEmail}
-            onChange={(e) => {
-              setMemberEmail(e.target.value);
-              setShowSuggestions(true);
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
-          />
-          {showSuggestions && filteredNetworkUsers.length > 0 && (
-             <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-               {filteredNetworkUsers.map(user => (
-                 <div 
-                   key={user.id} 
-                   className="p-3 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0"
-                   onMouseDown={(e) => {
-                     e.preventDefault(); // Prevent focus from leaving input, stopping onBlur immediately
-                     setMemberEmail(user.email);
-                     setMemberName(user.full_name || user.first_name || "");
-                     setShowSuggestions(false);
-                   }}
-                 >
-                   {user.profile_image ? (
-                     <img src={user.profile_image.startsWith('http') ? user.profile_image : `${import.meta.env.VITE_API_URL}${user.profile_image}`} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
-                   ) : (
-                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-sm font-bold uppercase">
-                       {user.full_name ? user.full_name.charAt(0) : user.email.charAt(0)}
+        {(addMode === "new" || !activeWorkspaceId) ? (
+          <>
+            <div className="mb-4">
+              <label className="block mb-2 font-medium text-slate-300">
+                Name <span className="text-slate-500 text-sm font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter Name"
+                value={memberName}
+                onChange={(e) => setMemberName(e.target.value)}
+                className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              />
+            </div>
+
+            <div className="relative">
+              <label className="block mb-2 font-medium text-slate-300">
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="Enter Email"
+                value={memberEmail}
+                onChange={(e) => {
+                  setMemberEmail(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              />
+              {showSuggestions && filteredNetworkUsers.length > 0 && (
+                 <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                   {filteredNetworkUsers.map(user => (
+                     <div 
+                       key={user.id} 
+                       className="p-3 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0"
+                       onMouseDown={(e) => {
+                         e.preventDefault();
+                         setMemberEmail(user.email);
+                         setMemberName(user.full_name || user.first_name || "");
+                         setShowSuggestions(false);
+                       }}
+                     >
+                       {user.profile_image ? (
+                         <img src={user.profile_image.startsWith('http') ? user.profile_image : `${import.meta.env.VITE_API_URL}${user.profile_image}`} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
+                       ) : (
+                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center text-sm font-bold uppercase">
+                           {user.full_name ? user.full_name.charAt(0) : user.email.charAt(0)}
+                         </div>
+                       )}
+                       <div className="flex flex-col">
+                         <span className="text-white text-sm font-medium">{user.full_name || user.email.split('@')[0]}</span>
+                         <span className="text-xs text-slate-400">{user.email}</span>
+                       </div>
                      </div>
-                   )}
-                   <div className="flex flex-col">
-                     <span className="text-white text-sm font-medium">{user.full_name || user.email.split('@')[0]}</span>
-                     <span className="text-xs text-slate-400">{user.email}</span>
-                   </div>
+                   ))}
                  </div>
-               ))}
-             </div>
-          )}
-        </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="mb-4 relative">
+            <label className="block mb-2 font-medium text-slate-300">Select Member</label>
+            <div 
+              className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg cursor-pointer flex justify-between items-center"
+              onClick={() => setShowSuggestions(!showSuggestions)}
+            >
+              {selectedExistingUser ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xs">
+                    {(selectedExistingUser.full_name || selectedExistingUser.email).charAt(0).toUpperCase()}
+                  </div>
+                  <span>{selectedExistingUser.full_name || selectedExistingUser.email}</span>
+                </div>
+              ) : (
+                <span className="text-slate-500">Select an organization member...</span>
+              )}
+              <span className="text-slate-400">▼</span>
+            </div>
+            
+            {showSuggestions && (
+              <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                {filteredNetworkUsers.length === 0 ? (
+                  <div className="p-4 text-center text-slate-400 text-sm">No eligible members found in the organization. (Pending invites must be accepted first).</div>
+                ) : (
+                  filteredNetworkUsers.map(user => (
+                    <div 
+                      key={user.id} 
+                      className="p-3 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0"
+                      onClick={() => {
+                        setSelectedExistingUser(user);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-white text-sm font-medium">{user.full_name || user.email.split('@')[0]}</span>
+                        <span className="text-xs text-slate-400">{user.email}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <label className="block mb-2 font-medium text-slate-300">Role</label>

@@ -32,7 +32,7 @@ export default function AcceptInvite() {
   }, [token]);
 
   const handleAccept = async () => {
-    if (!password || password.length < 8) {
+    if (!inviteDetails?.user_exists && (!password || password.length < 8)) {
       setError("Please enter a password of at least 8 characters.");
       return;
     }
@@ -117,25 +117,31 @@ export default function AcceptInvite() {
             </p>
             
             <div className="flex flex-col gap-4">
-              <div className="relative text-left">
-                <label className="block mb-2 font-medium text-slate-300">Set Your Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter a secure password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              {inviteDetails.user_exists ? (
+                <div className="mb-4 p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
+                  <p>You already have a RedFlow account. Click below to accept the invitation.</p>
                 </div>
-              </div>
+              ) : (
+                <div className="relative text-left">
+                  <label className="block mb-2 font-medium text-slate-300">Set Your Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter a secure password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg pr-12 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button 
                 onClick={handleAccept}
@@ -143,7 +149,7 @@ export default function AcceptInvite() {
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white p-3 rounded-lg font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] disabled:opacity-70"
               >
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
-                Accept Invitation & Sign In
+                {inviteDetails.user_exists ? "Accept Invitation" : "Accept Invitation & Sign In"}
               </button>
               
               <button 

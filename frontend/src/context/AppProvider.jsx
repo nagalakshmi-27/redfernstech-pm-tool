@@ -11,7 +11,8 @@ export function AppProvider({ children }) {
 
   const [workspaces, setWorkspaces] = useState([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(() => {
-    return localStorage.getItem("activeWorkspaceId") || null;
+    const saved = localStorage.getItem("activeWorkspaceId");
+    return saved === "null" ? null : (saved || null);
   });
   const [activeWorkspaceRole, setActiveWorkspaceRole] = useState(null);
 
@@ -45,8 +46,10 @@ export function AppProvider({ children }) {
 
   // Save activeWorkspaceId
   useEffect(() => {
-    if (activeWorkspaceId) {
+    if (activeWorkspaceId && activeWorkspaceId !== "null") {
       localStorage.setItem("activeWorkspaceId", activeWorkspaceId);
+    } else {
+      localStorage.removeItem("activeWorkspaceId");
     }
   }, [activeWorkspaceId]);
 
@@ -63,34 +66,29 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
-      if (!token || !activeWorkspaceId) return; 
+      if (!token) return; 
+
       try {
-      const userRes = await fetch(
-  `${import.meta.env.VITE_API_URL}/users/me`,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
+        const userRes = await fetch(
+          `${import.meta.env.VITE_API_URL}/users/me`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-if (userRes.ok) {
-  const userData = await userRes.json();
-  setCurrentUser(userData);
-}
-
-      
-        // Fetch Projects
-        const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (projRes.ok) {
-          const projData = await projRes.json();
-          setProjects(projData);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setCurrentUser(userData);
         }
 
-        // Fetch Tasks!
-        const teamRes = await fetch(`${import.meta.env.VITE_API_URL}/users/teammates?workspace_id=${activeWorkspaceId}`, {
+        // Fetch teammates for the current context (either active workspace or entire account)
+        const teamUrl = activeWorkspaceId 
+          ? `${import.meta.env.VITE_API_URL}/users/teammates?workspace_id=${activeWorkspaceId}`
+          : `${import.meta.env.VITE_API_URL}/users/teammates`;
+          
+        const teamRes = await fetch(teamUrl, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (teamRes.ok) {
@@ -98,6 +96,17 @@ if (userRes.ok) {
           // We map full_name to 'name' so your UI cards work perfectly!
           const formattedMembers = teamData.map(m => ({ ...m, name: m.full_name || m.email }));
           setMembers(formattedMembers);
+        }
+
+        if (!activeWorkspaceId) return;
+        
+        // Fetch Projects
+        const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (projRes.ok) {
+          const projData = await projRes.json();
+          setProjects(projData);
         }
         const taskRes = await fetch(
   `${import.meta.env.VITE_API_URL}/tasks/?workspace_id=${activeWorkspaceId}`,

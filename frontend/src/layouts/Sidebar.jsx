@@ -31,7 +31,7 @@ export default function Sidebar() {
   const portalRef = useRef(null);
 
   const currentUserId = Number(localStorage.getItem("userId"));
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, activeWorkspaceRole, members } = useContext(AppContext);
+  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, activeWorkspaceRole, members, currentUser } = useContext(AppContext);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -56,7 +56,7 @@ export default function Sidebar() {
 
   const activeWorkspace = workspaces?.find(w => w.id === Number(activeWorkspaceId));
   const actionWorkspace = workspaces?.find(w => w.id === Number(actionWorkspaceId));
-  const isOwner = activeWorkspace?.owner_id === currentUserId;
+  const isOwner = activeWorkspaceRole === "Admin";
   const eligibleMembers = members?.filter(m => m.role !== "Client" && m.id !== currentUserId) || [];
   
   const handleLeaveWorkspace = async () => {
@@ -173,13 +173,13 @@ export default function Sidebar() {
       </div>
 
       {/* Workspace Switcher */}
-      {workspaces && workspaces.length > 0 && (
-        <div className="px-5 py-4 border-b border-white/10">
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-xs text-gray-400 uppercase tracking-wider block">
-              Workspace
-            </label>
-            <div className="flex gap-2">
+      <div className="px-5 py-4 border-b border-white/10">
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-xs text-gray-400 uppercase tracking-wider block">
+            Workspace
+          </label>
+          <div className="flex gap-2">
+            {currentUser?.is_super_admin && (
               <button 
                 onClick={() => setShowCreateModal(true)}
                 className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
@@ -187,6 +187,8 @@ export default function Sidebar() {
               >
                 <Plus size={14} /> New
               </button>
+            )}
+            {workspaces && workspaces.length > 0 && (
               <button 
                 onClick={() => setShowLeaveModal(true)}
                 className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
@@ -194,8 +196,22 @@ export default function Sidebar() {
               >
                 <LogOut size={14} /> Leave
               </button>
-            </div>
+            )}
           </div>
+        </div>
+        
+        {(!workspaces || workspaces.length === 0) ? (
+          currentUser?.is_super_admin ? (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white border border-white/10 rounded px-3 py-2 text-sm font-medium text-center focus:outline-none focus:ring-1 focus:ring-cyan-500 transition shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+            >
+              Create First Workspace
+            </button>
+          ) : (
+            <div className="text-center text-sm text-slate-400 italic py-2">No workspaces available</div>
+          )
+        ) : (
           <div className="relative flex-1" ref={dropdownRef}>
             <button
               onClick={() => setWorkspaceDropdownOpen(!workspaceDropdownOpen)}
@@ -218,10 +234,10 @@ export default function Sidebar() {
                           navigate("/dashboard");
                         }}
                       >
-                        {ws.name} {ws.owner_id === currentUserId ? "(Personal)" : ""}
+                        {ws.name}
                       </div>
                       
-                      {ws.owner_id === currentUserId && (
+                      {currentUser?.is_super_admin && (
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation();
@@ -240,7 +256,7 @@ export default function Sidebar() {
                         </button>
                       )}
                     </div>
-                    {actionWorkspaceId === ws.id && showDropdown && ws.owner_id === currentUserId && createPortal(
+                    {actionWorkspaceId === ws.id && showDropdown && currentUser?.is_super_admin && createPortal(
                       <div 
                         ref={portalRef}
                         className="fixed z-[100] w-48 bg-slate-800 border border-white/10 shadow-2xl rounded-lg py-1 flex flex-col"
@@ -251,12 +267,6 @@ export default function Sidebar() {
                           className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
                         >
                           Rename
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setShowTransferModal(true); setShowDropdown(false); setWorkspaceDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
-                        >
-                          Transfer
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); setShowDeleteWorkspaceModal(true); setDeleteWorkspaceConfirm(""); setShowDropdown(false); setWorkspaceDropdownOpen(false); }}
@@ -272,9 +282,8 @@ export default function Sidebar() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
+        )}
+      </div>
       {/* Navigation Menu */}
       <nav className="p-4">
         <ul className="space-y-4">
