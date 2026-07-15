@@ -5,8 +5,8 @@ import AppContext from "../../context/AppContext";
 import ImageCropModal from "../../components/ImageCropModal";
 
 export default function Settings() {
-  const { activeWorkspaceRole } = useContext(AppContext);
-  const currentUserRole = activeWorkspaceRole;
+  const { activeWorkspaceRole, currentUser } = useContext(AppContext);
+  const currentUserRole = currentUser?.is_super_admin ? "Super Admin" : activeWorkspaceRole;
   // Profile States
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -30,9 +30,10 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-const [ownedWorkspaces, setOwnedWorkspaces] = useState([]);
-const [workspaceTransfers, setWorkspaceTransfers] = useState({});
-const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+const [eligibleAdmins, setEligibleAdmins] = useState([]);
+const [loadingAdmins, setLoadingAdmins] = useState(false);
+const [deleteOrTransfer, setDeleteOrTransfer] = useState("transfer");
+const [selectedAdminId, setSelectedAdminId] = useState("");
 const [showFinalDeleteModal, setShowFinalDeleteModal] = useState(false);
 const [deleteConfirmation, setDeleteConfirmation] = useState("");
 const [finalConfirmation, setFinalConfirmation] = useState(false);
@@ -75,22 +76,28 @@ const userInitial = userEmail
         
 
         
-        setLoadingWorkspaces(true);
-        const workspacesResponse = await fetch(`${import.meta.env.VITE_API_URL}/users/me/owned-workspaces`, {
-          headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if (workspacesResponse.ok) {
-          const workspacesData = await workspacesResponse.json();
-          setOwnedWorkspaces(workspacesData);
+        if (currentUser?.is_super_admin) {
+          setLoadingAdmins(true);
+          const adminsRes = await fetch(`${import.meta.env.VITE_API_URL}/users/eligible-super-admins`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          });
+          if (adminsRes.ok) {
+            const adminsData = await adminsRes.json();
+            setEligibleAdmins(adminsData);
+            if (adminsData.length > 0) {
+              setSelectedAdminId(adminsData[0].id);
+            } else {
+              setDeleteOrTransfer("delete");
+            }
+          }
+          setLoadingAdmins(false);
         }
       } catch (err) {
         console.error("Failed to load settings", err);
-      } finally {
-        setLoadingWorkspaces(false);
       }
     };
     fetchMyData();
-  }, []);
+  }, [currentUser]);
   useEffect(() => {
   const handleProfileImageUpdate = () => {
     const latestImage = localStorage.getItem("profileImage");
@@ -174,18 +181,18 @@ const userInitial = userEmail
 
   const handleDeleteAccount = async () => {
     try {
-      const workspacesToDelete = ownedWorkspaces.filter(ws => ws.members.length === 0).map(ws => ws.workspace_id);
-      const wsTransferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-workspaces`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-        body: JSON.stringify({ workspaces_to_delete: workspacesToDelete, transfers: workspaceTransfers })
-      });
-      if (!wsTransferRes.ok) {
-         setMessage("Failed to transfer workspaces. Please try again.");
-         resetDeleteFlow();
-         return;
+      if (currentUser?.is_super_admin && deleteOrTransfer === "transfer" && selectedAdminId) {
+        const transferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-organization`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
+          body: JSON.stringify({ new_super_admin_id: parseInt(selectedAdminId) })
+        });
+        if (!transferRes.ok) {
+           setMessage("Failed to transfer organization. Please try again.");
+           resetDeleteFlow();
+           return;
+        }
       }
-
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
         method: "DELETE",
@@ -285,12 +292,7 @@ const capturePhoto = () => {
   special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
 };
 
-const allWorkspacesAssigned =
-  ownedWorkspaces.length === 0 ||
-  ownedWorkspaces.every(
-    (ws) => ws.members.length === 0 || workspaceTransfers[ws.workspace_id]
-  );
-const allAssigned = allWorkspacesAssigned;
+const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete" || (deleteOrTransfer === "transfer" && selectedAdminId)) : true;
   const resetDeleteFlow = () => {
   setShowDeleteModal(false);
   setShowFinalDeleteModal(false);
@@ -298,7 +300,7 @@ const allAssigned = allWorkspacesAssigned;
   setConfirmDelete(false);
   setDeleteConfirmation("");
   setFinalConfirmation(false);
-  setWorkspaceTransfers({});
+  setSelectedAdminId("");
 };
   return (
     <MainLayout>
@@ -583,52 +585,79 @@ const allAssigned = allWorkspacesAssigned;
   </ul>
 </div>
   <div className="mt-6">
-  <h3 className="text-lg font-semibold text-white mb-4 mt-6">
-    Workspace Ownership
-  </h3>
-  {loadingWorkspaces ? (
-    <div className="text-slate-400">Loading your workspaces...</div>
-  ) : ownedWorkspaces.length === 0 ? (
-    <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-slate-400">
-      No owned workspaces found.
-    </div>
-  ) : (
-    <div className="space-y-4">
-      {ownedWorkspaces.map((ws) => (
-        <div key={ws.workspace_id} className="rounded-xl border border-white/10 bg-black/20 p-3 sm:p-4">
-          <h4 className="font-semibold text-base sm:text-lg text-white">{ws.workspace_name}</h4>
-          {ws.members.filter(m => m.role !== "Client").length === 0 ? (
-            <p className="text-sm text-red-400 mt-1">No eligible members to transfer to. This workspace will be permanently deleted.</p>
-          ) : (
-            <>
-              <p className="text-sm text-slate-400 mt-1 mb-3">Select a new owner for this workspace.</p>
-              <select
-                value={workspaceTransfers[ws.workspace_id] || ""}
-                onChange={(e) => setWorkspaceTransfers((prev) => ({ ...prev, [ws.workspace_id]: e.target.value }))}
-                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm sm:text-base"
-              >
-                <option value="" className="text-slate-900 bg-slate-100">Select teammate</option>
-                {ws.members.filter(m => m.role !== "Client").map((member) => (
-                  <option key={member.id} value={member.id} className="text-slate-900 bg-slate-100">{member.name}</option>
-                ))}
-              </select>
-            </>
-          )}
-        </div>
-      ))}
-    </div>
-  )}
-
-  <h3 className="text-lg font-semibold text-white mb-4 mt-6">
-    Project Ownership
-  </h3>
-
-  <div className="mt-4 p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
-    <p className="text-cyan-200 text-sm">
-      <span className="font-semibold text-cyan-400">Note:</span> Any projects you created will automatically be transferred to their respective workspace owners.
-    </p>
+    {currentUser?.is_super_admin ? (
+      <>
+        <h3 className="text-lg font-semibold text-white mb-4 mt-6">
+          Organization Transfer
+        </h3>
+        {loadingAdmins ? (
+          <div className="text-slate-400">Checking for eligible admins...</div>
+        ) : eligibleAdmins.length === 0 ? (
+          <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
+            You are the only Admin. If you proceed, the entire organization and all its data will be permanently deleted.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                <input
+                  type="radio"
+                  name="org_action"
+                  value="transfer"
+                  checked={deleteOrTransfer === "transfer"}
+                  onChange={() => setDeleteOrTransfer("transfer")}
+                  className="accent-cyan-500"
+                />
+                Transfer Organization to a new Super Admin
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                <input
+                  type="radio"
+                  name="org_action"
+                  value="delete"
+                  checked={deleteOrTransfer === "delete"}
+                  onChange={() => setDeleteOrTransfer("delete")}
+                  className="accent-red-500"
+                />
+                Delete the entire Organization permanently
+              </label>
+            </div>
+            
+            {deleteOrTransfer === "transfer" && (
+              <div className="mt-4 p-4 border border-white/10 bg-black/20 rounded-xl">
+                <p className="text-sm text-slate-400 mb-2">Select a workspace admin to become the new Super Admin.</p>
+                <select
+                  value={selectedAdminId}
+                  onChange={(e) => setSelectedAdminId(e.target.value)}
+                  className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm"
+                >
+                  {eligibleAdmins.map((admin) => (
+                    <option key={admin.id} value={admin.id} className="text-slate-900 bg-slate-100">
+                      {admin.full_name} ({admin.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {deleteOrTransfer === "delete" && (
+              <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
+                <p className="text-red-200 text-sm">
+                  <span className="font-semibold text-red-400">WARNING:</span> This will permanently delete all workspaces, projects, and users in this organization.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </>
+    ) : (
+      <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
+        <p className="text-cyan-200 text-sm">
+          <span className="font-semibold text-cyan-400">Note:</span> Your account will be removed, but the organization and your projects will remain intact.
+        </p>
+      </div>
+    )}
   </div>
-</div>
 </div>
       <div className="mt-6">
   <label className="flex items-center gap-3 text-slate-300 cursor-pointer">

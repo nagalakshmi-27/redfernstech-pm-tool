@@ -23,7 +23,7 @@ def get_db():
     finally:
         db.close()
 
-import random
+import secrets
 
 def send_email(to_email: str, subject: str, body: str):
     sender_email = os.getenv("SMTP_USERNAME")
@@ -72,6 +72,11 @@ def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_
     user_data["password"] = request.password
     user_create = schemas.UserCreate(**user_data)
     new_user = crud.create_user(db, user_create, account_id, is_super_admin=True)
+    
+    # Create default workspace
+    default_ws = schemas.WorkspaceCreate(name=f"{account.name} Workspace")
+    crud.create_workspace(db, default_ws, account.id, new_user.id)
+    
     return {"message": "Account verified and user created successfully"}
 
 @router.post("/login")
@@ -95,7 +100,7 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
             }
         }
         
-    otp_code = str(random.randint(100000, 999999))
+    otp_code = str(secrets.choice(range(100000, 1000000)))
     from datetime import datetime, timedelta
     expires_at = datetime.utcnow() + timedelta(minutes=15)
     crud.create_otp(db, user.email, otp_code, expires_at)
@@ -278,9 +283,6 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=403, detail="Only super admins can invite users.")
         
     if not invite.is_super_admin:
-        if not invite.workspace_id or not invite.workspace_access:
-            raise HTTPException(status_code=400, detail="Workspace and Workspace Access are mandatory for non-super admins.")
-        
         if invite.workspace_access == "Client" and not invite.project_id:
             raise HTTPException(status_code=400, detail="Project is mandatory when workspace access is Client.")
             
@@ -320,10 +322,12 @@ def get_invite(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invite not found or already processed.")
         
     workspace = db.query(models.Workspace).filter(models.Workspace.id == invitation.workspace_id).first()
+    user_exists = db.query(models.User).filter(models.User.email == invitation.email).first() is not None
     return {
         "email": invitation.email,
         "role": invitation.role,
-        "department": workspace.name if workspace else "Organization Level"
+        "department": workspace.name if workspace else "Organization Level",
+        "user_exists": user_exists
     }
 
 @router.post("/invite/{token}/accept")
@@ -340,37 +344,60 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
         
     account_id = inviter.account_id
     
-    parts = invitation.full_name.split(" ", 1) if invitation.full_name else ["", ""]
-    first_name = parts[0] if len(parts) > 0 else ""
-    last_name = parts[1] if len(parts) > 1 else ""
+    existing_user = crud.get_user_by_email(db, invitation.email)
+    
+    if existing_user:
+        new_user = existing_user
+        # If they are invited to the organization (no workspace), they join the inviter's organization
+        if not invitation.workspace_id:
+            new_user.account_id = account_id
+            db.add(new_user)
+    else:
+        if not request.password:
+            raise HTTPException(status_code=400, detail="Password is required for new users")
+            
+        parts = invitation.full_name.split(" ", 1) if invitation.full_name else ["", ""]
+        first_name = parts[0] if len(parts) > 0 else ""
+        last_name = parts[1] if len(parts) > 1 else ""
 
-    new_user_data = schemas.UserCreate(
-        email=invitation.email,
-        password=request.password,
-        first_name=first_name,
-        last_name=last_name
-    )
-    new_user = crud.create_user(db=db, user=new_user_data, account_id=account_id, is_super_admin=invitation.is_super_admin)
+        new_user_data = schemas.UserCreate(
+            email=invitation.email,
+            password=request.password,
+            first_name=first_name,
+            last_name=last_name
+        )
+        new_user = crud.create_user(db=db, user=new_user_data, account_id=account_id, is_super_admin=invitation.is_super_admin)
     
     if not invitation.is_super_admin and invitation.workspace_id:
-        stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=new_user.id, role=invitation.role)
-        db.execute(stmt)
+        # Check if they are already in the workspace to prevent duplicate key error
+        existing_ws_member = db.query(models.workspace_members).filter(
+            models.workspace_members.c.workspace_id == invitation.workspace_id,
+            models.workspace_members.c.user_id == new_user.id
+        ).first()
+        if not existing_ws_member:
+            stmt = models.workspace_members.insert().values(workspace_id=invitation.workspace_id, user_id=new_user.id, role=invitation.role)
+            db.execute(stmt)
         
     if invitation.role == "Client" and invitation.project_id:
-        stmt = models.project_members.insert().values(project_id=invitation.project_id, user_id=new_user.id)
-        db.execute(stmt)
+        existing_proj_member = db.query(models.project_members).filter(
+            models.project_members.c.project_id == invitation.project_id,
+            models.project_members.c.user_id == new_user.id
+        ).first()
+        if not existing_proj_member:
+            stmt = models.project_members.insert().values(project_id=invitation.project_id, user_id=new_user.id)
+            db.execute(stmt)
         
     db.commit()
     
-    # Automatically log them in by generating OTP
-    otp_code = str(random.randint(100000, 999999))
+    # Generate OTP for seamless login after accepting
+    otp_code = str(secrets.choice(range(100000, 1000000)))
     from datetime import datetime, timedelta
     expires_at = datetime.utcnow() + timedelta(minutes=15)
     crud.create_otp(db, new_user.email, otp_code, expires_at)
     
     send_email(new_user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.")
     temp_token = auth.create_temp_login_token(new_user.id)
-    return {"message": "User created successfully. Check email for OTP to sign in.", "temp_token": temp_token}
+    return {"message": "Invite accepted successfully. Check email for OTP to sign in.", "temp_token": temp_token}
 
 @router.post("/invite/{token}/decline")
 def decline_invite(token: str, db: Session = Depends(get_db)):
@@ -382,17 +409,55 @@ def decline_invite(token: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Invite declined successfully."}
 
-@router.get("/me/owned-workspaces", response_model=list[schemas.OwnedWorkspaceResponse])
-def get_owned_workspaces(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return []
+@router.get("/eligible-super-admins")
+def get_eligible_super_admins(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Only super admins can view this")
+    
+    # Find users who are Admins in ANY workspace in this account
+    eligible_users = db.query(models.User).join(
+        models.workspace_members, models.User.id == models.workspace_members.c.user_id
+    ).join(
+        models.Workspace, models.Workspace.id == models.workspace_members.c.workspace_id
+    ).filter(
+        models.Workspace.account_id == current_user.account_id,
+        models.workspace_members.c.role == "Admin",
+        models.User.id != current_user.id
+    ).distinct().all()
+    
+    return [{"id": u.id, "email": u.email, "full_name": u.full_name or "Pending..."} for u in eligible_users]
 
-@router.put("/me/transfer-workspaces")
-def transfer_owned_workspaces(
-    request: schemas.TransferWorkspacesRequest, 
+@router.put("/me/transfer-organization")
+def transfer_organization(
+    request: schemas.TransferOrgRequest, 
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    return {"message": "Workspaces transferred and deleted successfully"}
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Only super admins can transfer the organization")
+        
+    target_user = db.query(models.User).filter(models.User.id == request.new_super_admin_id, models.User.account_id == current_user.account_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+        
+    # Verify they are an admin in some workspace
+    is_admin = db.query(models.workspace_members).join(models.Workspace, models.Workspace.id == models.workspace_members.c.workspace_id).filter(
+        models.Workspace.account_id == current_user.account_id,
+        models.workspace_members.c.user_id == target_user.id,
+        models.workspace_members.c.role == "Admin"
+    ).first()
+    
+    if not is_admin:
+        raise HTTPException(status_code=400, detail="Target user must be an Admin in at least one workspace")
+        
+    # Promote target user
+    target_user.is_super_admin = True
+    
+    # Demote current user
+    current_user.is_super_admin = False
+    
+    db.commit()
+    return {"message": "Organization transferred successfully"}
 
 @router.delete("/me")
 def delete_user_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -448,8 +513,8 @@ def delete_user_account(db: Session = Depends(get_db), current_user: models.User
         return {"message": "Account deleted successfully"}
 
 @router.get("/teammates", response_model=list[schemas.TeammateResponse])
-def get_my_teammates(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return crud.get_teammates(db, workspace_id)
+def get_my_teammates(workspace_id: Optional[int] = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return crud.get_teammates(db, workspace_id, current_user.account_id)
 
 @router.get("/network", response_model=list[schemas.UserResponse])
 def get_user_network(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -471,3 +536,18 @@ def delete_teammate(teammate_id: int, workspace_id: int, db: Session = Depends(g
     if not success:
         raise HTTPException(status_code=404, detail="Teammate not found or they are not on your team.")
     return {"message": "Teammate removed successfully!"}
+
+@router.get("/fix_teammates_sync")
+def fix_teammates_sync(db: Session = Depends(get_db)):
+    # Find all accepted invitations without a workspace
+    accepted = db.query(models.Invitation).filter(
+        models.Invitation.status == "Accepted",
+        models.Invitation.workspace_id == None
+    ).all()
+    for inv in accepted:
+        inviter = db.query(models.User).filter(models.User.id == inv.invited_by_id).first()
+        target = db.query(models.User).filter(models.User.email == inv.email).first()
+        if inviter and target:
+            target.account_id = inviter.account_id
+    db.commit()
+    return {"message": "Sync complete"}
