@@ -14,6 +14,7 @@ export default function Settings() {
   const [role, setRole] = useState("");
   const [companyRole, setCompanyRole] = useState("");
   const [department, setDepartment] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [message, setMessage] = useState("");
 
   // Security (Password) States that were missing!
@@ -70,6 +71,7 @@ const userInitial = userEmail
           setRole(data.role || "");
           setCompanyRole(data.company_role || "");
           setDepartment(data.department || "");
+          setOrganizationName(data.organization_name || "RedFerns Tech");
         }
         
 
@@ -121,7 +123,7 @@ const userInitial = userEmail
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, company_role: companyRole, department: department })
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, company_role: companyRole, department: department, organization_name: organizationName })
       });
 
       if (response.ok) {
@@ -340,6 +342,18 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
   onChange={handleImageSelect}
   className="hidden"
 />
+</div>
+<div>
+  <label className="block font-medium mb-2 text-slate-300">
+    Organization Name
+  </label>
+
+  <input
+    type="text"
+    value={organizationName}
+    readOnly
+    className="w-full md:w-2/3 border p-3 rounded-lg bg-white/5 text-slate-300 border-white/10 cursor-not-allowed"
+  />
 </div>
 
         <div className="flex flex-col md:flex-row gap-4 md:w-2/3">

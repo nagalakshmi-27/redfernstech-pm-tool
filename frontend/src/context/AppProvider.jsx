@@ -17,32 +17,42 @@ export function AppProvider({ children }) {
   const [activeWorkspaceRole, setActiveWorkspaceRole] = useState(null);
 
   // Fetch Workspaces once
-  useEffect(() => {
-    const fetchWorkspaces = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/workspaces/`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setWorkspaces(data);
-          if (data.length > 0) {
-            const currentValid = data.some(ws => ws.id.toString() === activeWorkspaceId?.toString());
-            if (!activeWorkspaceId || !currentValid) {
-              setActiveWorkspaceId(data[0].id.toString());
-            }
-          } else {
-            setActiveWorkspaceId(null);
-          }
+  const fetchWorkspaces = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/workspaces/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+
+      setWorkspaces(data);
+
+      if (data.length > 0) {
+        const currentValid = data.some(
+          (ws) => ws.id.toString() === activeWorkspaceId?.toString()
+        );
+
+        if (!activeWorkspaceId || !currentValid) {
+          setActiveWorkspaceId(data[0].id.toString());
         }
-      } catch (err) {
-        console.error("Failed to load workspaces", err);
+      } else {
+        setActiveWorkspaceId(null);
       }
-    };
-    fetchWorkspaces();
-  }, []);
+    }
+  } catch (err) {
+    console.error("Failed to load workspaces", err);
+  }
+};
+
+useEffect(() => {
+  fetchWorkspaces();
+}, []);
 
   // Save activeWorkspaceId
   useEffect(() => {
@@ -131,15 +141,23 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider
-      value={{
-        workspaces,
-        setWorkspaces,
-        activeWorkspaceId,
-        setActiveWorkspaceId,
-        activeWorkspaceRole,
-        projects, setProjects, tasks, setTasks, members, setMembers, currentUser,
-setCurrentUser }}
-    >
+  value={{
+    workspaces,
+    setWorkspaces,
+    fetchWorkspaces,
+    activeWorkspaceId,
+    setActiveWorkspaceId,
+    activeWorkspaceRole,
+    projects,
+    setProjects,
+    tasks,
+    setTasks,
+    members,
+    setMembers,
+    currentUser,
+    setCurrentUser,
+  }}
+>
       {children}
     </AppContext.Provider>
   );

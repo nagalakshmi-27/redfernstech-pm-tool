@@ -34,10 +34,14 @@ export default function VerifyOTP() {
 
 const handleKeyDown = (e, index) => {
   if (e.key === "Backspace") {
-    // If current box is empty, move to previous box
     if (!otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();
     }
+  }
+
+  // Verify OTP when Enter is pressed
+  if (e.key === "Enter" && isOtpComplete && !loading) {
+    handleVerifyOTP();
   }
 };
 
@@ -98,7 +102,26 @@ const handleVerifyOTP = async () => {
         localStorage.removeItem("profileImage");
       }
 
-      navigate("/dashboard");
+      const workspaceRes = await fetch(
+  `${import.meta.env.VITE_API_URL}/workspaces/`,
+  {
+    headers: {
+      Authorization: `Bearer ${data.access_token}`,
+    },
+  }
+);
+
+if (workspaceRes.ok) {
+  const workspaces = await workspaceRes.json();
+
+  if (workspaces.length === 0) {
+    navigate("/organization");
+  } else {
+    navigate("/dashboard");
+  }
+} else {
+  navigate("/dashboard");
+}
     } catch (err) {
       setError(err.message);
     } finally {

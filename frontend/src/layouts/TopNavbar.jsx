@@ -220,7 +220,7 @@ const handleSearchClick = (item) => {
 
   return (
     <>
-    <div className="h-16 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-6 relative z-50">
+    <div className="h-[72px] bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-6 relative z-50">
       <div className="relative flex items-center gap-3">
   <button
     onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -245,7 +245,7 @@ const handleSearchClick = (item) => {
     setShowSearchResults(true);
   }
 }}
-  className="hidden md:block bg-black/20 border border-white/10 text-white placeholder-slate-400 rounded-lg px-4 py-2 w-80 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+  className="hidden md:block bg-black/20 border border-white/10 text-white placeholder-slate-400 rounded-lg px-4 py-2.5 w-80 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
 />
 {showSearchResults && (
   <div className="absolute top-14 left-0 w-full md:w-80 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-[9999]">

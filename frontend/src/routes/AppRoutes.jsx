@@ -21,6 +21,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import CheckEmail from "../pages/auth/CheckEmail";
 import VerifyOTP from "../pages/auth/VerifyOTP";
 import SetPassword from "../pages/auth/SetPassword";
+import Organization from "../pages/organization/Organization";
 
 export default function AppRoutes() {
   return (
@@ -53,6 +54,14 @@ export default function AppRoutes() {
         <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/notebook" element={<Notebook />} />
+<Route
+  path="/organization"
+  element={
+    <ProtectedRoute>
+      <Organization />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </BrowserRouter>
   );
