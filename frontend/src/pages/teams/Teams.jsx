@@ -107,7 +107,7 @@ const memberRefs = useRef({});
             first_name: memberName.split(" ")[0] || "Unknown",
             last_name: memberName.split(" ").slice(1).join(" ") || "User",
             email: memberEmail,
-            is_super_admin: false,
+            is_owner: false,
             workspace_access: memberRole,
             workspace_id: activeWorkspaceId ? parseInt(activeWorkspaceId) : null
           })

@@ -69,17 +69,17 @@ def log_activity(db: Session, project_id: int, user_id: int, action: str, target
 
 def is_workspace_admin(db: Session, workspace_id: int, user_id: int):
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user and user.is_super_admin: return True
+    if user and user.is_owner: return True
     membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == user_id).first()
     return membership and membership.role == "Admin"
 
 def is_client(db: Session, workspace_id: int, user_id: int):
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user and user.is_super_admin: return False
+    if user and user.is_owner: return False
     membership = db.query(models.workspace_members).filter(models.workspace_members.c.workspace_id == workspace_id, models.workspace_members.c.user_id == user_id).first()
     return membership and membership.role == "Client"
 
-def create_user(db: Session, user: schemas.UserCreate, account_id: int, is_super_admin: bool = False):
+def create_user(db: Session, user: schemas.UserCreate, account_id: int, is_owner: bool = False):
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
         username=user.username,
@@ -89,7 +89,7 @@ def create_user(db: Session, user: schemas.UserCreate, account_id: int, is_super
         last_name=user.last_name,
         full_name=f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else user.full_name,
         account_id=account_id,
-        is_super_admin=is_super_admin
+        is_owner=is_owner
     )
     db.add(db_user)
     db.commit()
@@ -109,7 +109,7 @@ def create_workspace(db: Session, workspace: schemas.WorkspaceCreate, account_id
 
 def get_user_workspaces(db: Session, user_id: int):
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user and user.is_super_admin:
+    if user and user.is_owner:
         workspaces = db.query(models.Workspace).filter(models.Workspace.account_id == user.account_id).all()
         for ws in workspaces:
             ws.user_role = "Admin"
@@ -128,7 +128,7 @@ def get_user_workspaces(db: Session, user_id: int):
 
 def get_user_workspace_role(db: Session, user_id: int, workspace_id: int) -> str:
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user and user.is_super_admin:
+    if user and user.is_owner:
         return "Admin"  # Super admins act as Admins everywhere
         
     result = db.query(models.workspace_members.c.role).filter(
@@ -245,7 +245,7 @@ def get_user_projects(db: Session, user_id: int, workspace_id: int = None):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: return []
     
-    if user.is_super_admin:
+    if user.is_owner:
         query = db.query(models.Project).join(models.Workspace).filter(models.Workspace.account_id == user.account_id)
     else:
         workspace_ids_admin = [
@@ -478,12 +478,12 @@ def get_teammates(db: Session, workspace_id: Optional[int], account_id: int):
     users_dict = {}
     
     # 1. Add all Super Admins for this account
-    super_admins = db.query(models.User).filter(
+    owners = db.query(models.User).filter(
         models.User.account_id == account_id,
-        models.User.is_super_admin == True
+        models.User.is_owner == True
     ).all()
     
-    for admin in super_admins:
+    for admin in owners:
         users_dict[admin.id] = {
             "id": admin.id,
             "email": admin.email,

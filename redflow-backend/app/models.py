@@ -56,7 +56,7 @@ class User(Base):
     company_role = Column(String, nullable=True) 
     department = Column(String, nullable=True)
     profile_image = Column(String, nullable=True)
-    is_super_admin = Column(Boolean, default=False)
+    is_owner = Column(Boolean, default=False)
     account_id = Column(Integer, ForeignKey("accounts.id"), index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -216,7 +216,7 @@ class Invitation(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, index=True)
     full_name = Column(String, nullable=True)
-    is_super_admin = Column(Boolean, default=False)
+    is_owner = Column(Boolean, default=False)
     role = Column(String, nullable=True) # Workspace Access: Admin, Member, Client
     token = Column(String, unique=True, index=True)
     status = Column(String, default="Pending")

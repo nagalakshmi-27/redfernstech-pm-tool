@@ -6,7 +6,7 @@ import ImageCropModal from "../../components/ImageCropModal";
 
 export default function Settings() {
   const { activeWorkspaceRole, currentUser } = useContext(AppContext);
-  const currentUserRole = currentUser?.is_super_admin ? "Super Admin" : activeWorkspaceRole;
+  const currentUserRole = currentUser?.is_owner ? "Owner" : activeWorkspaceRole;
   // Profile States
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -33,8 +33,9 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 const [eligibleAdmins, setEligibleAdmins] = useState([]);
 const [loadingAdmins, setLoadingAdmins] = useState(false);
 const [deleteOrTransfer, setDeleteOrTransfer] = useState("transfer");
-const [selectedAdminId, setSelectedAdminId] = useState("");
+const [selectedOwnerId, setSelectedOwnerId] = useState("");
 const [showFinalDeleteModal, setShowFinalDeleteModal] = useState(false);
+const [passwordForDelete, setPasswordForDelete] = useState("");
 const [deleteConfirmation, setDeleteConfirmation] = useState("");
 const [finalConfirmation, setFinalConfirmation] = useState(false);
 const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -74,24 +75,30 @@ const userInitial = userEmail
           setOrganizationName(data.organization_name || "RedFerns Tech");
         }
         
-
-        
-        if (currentUser?.is_super_admin) {
-          setLoadingAdmins(true);
-          const adminsRes = await fetch(`${import.meta.env.VITE_API_URL}/users/eligible-super-admins`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-          });
-          if (adminsRes.ok) {
-            const adminsData = await adminsRes.json();
-            setEligibleAdmins(adminsData);
-            if (adminsData.length > 0) {
-              setSelectedAdminId(adminsData[0].id);
-            } else {
-              setDeleteOrTransfer("delete");
+        const fetchAdmins = async () => {
+          if (currentUser?.is_owner) {
+            try {
+              setLoadingAdmins(true);
+              const adminsRes = await fetch(`${import.meta.env.VITE_API_URL}/users/eligible-owners`, {
+                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+              });
+              if (adminsRes.ok) {
+                const adminsData = await adminsRes.json();
+                setEligibleAdmins(adminsData);
+                if (adminsData.length > 0) {
+                  setSelectedOwnerId(adminsData[0].id);
+                } else {
+                  setDeleteOrTransfer("delete");
+                }
+              }
+              setLoadingAdmins(false);
+            } catch (err) {
+              console.error("Failed to load eligible owners", err);
+              setLoadingAdmins(false);
             }
           }
-          setLoadingAdmins(false);
-        }
+        };
+        fetchAdmins();
       } catch (err) {
         console.error("Failed to load settings", err);
       }
@@ -180,12 +187,13 @@ const userInitial = userEmail
   };
 
   const handleDeleteAccount = async () => {
+    const token = localStorage.getItem("token");
     try {
-      if (currentUser?.is_super_admin && deleteOrTransfer === "transfer" && selectedAdminId) {
-        const transferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-organization`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
-          body: JSON.stringify({ new_super_admin_id: parseInt(selectedAdminId) })
+      if (currentUser?.is_owner && deleteOrTransfer === "transfer" && selectedOwnerId) {
+        const transferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/transfer-organization`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ new_owner_id: parseInt(selectedOwnerId) })
         });
         if (!transferRes.ok) {
            setMessage("Failed to transfer organization. Please try again.");
@@ -197,8 +205,9 @@ const userInitial = userEmail
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
         method: "DELETE",
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        }
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: passwordForDelete })
       });
       
       if (response.ok) {
@@ -292,15 +301,18 @@ const capturePhoto = () => {
   special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
 };
 
-const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete" || (deleteOrTransfer === "transfer" && selectedAdminId)) : true;
+const allAssigned = currentUser?.is_owner ? (deleteOrTransfer === "delete" || (deleteOrTransfer === "transfer" && selectedOwnerId)) : true;
+const canProceed = passwordForDelete && allAssigned;
+
   const resetDeleteFlow = () => {
   setShowDeleteModal(false);
   setShowFinalDeleteModal(false);
 
   setConfirmDelete(false);
   setDeleteConfirmation("");
-  setFinalConfirmation(false);
-  setSelectedAdminId("");
+  setDeleteOrTransfer("delete");
+  setSelectedOwnerId("");
+  setPasswordForDelete("");
 };
   return (
     <MainLayout>
@@ -384,6 +396,16 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
           <input
             type="email"
             value={email}
+            readOnly
+            className="w-full md:w-2/3 border p-3 rounded-lg bg-white/5 text-slate-300 border-white/10 cursor-not-allowed"
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium mb-2 text-slate-300">User-Name</label>
+          <input
+            type="text"
+            value={currentUser?.username || "Loading..."}
             readOnly
             className="w-full md:w-2/3 border p-3 rounded-lg bg-white/5 text-slate-300 border-white/10 cursor-not-allowed"
           />
@@ -585,7 +607,7 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
   </ul>
 </div>
   <div className="mt-6">
-    {currentUser?.is_super_admin ? (
+    {currentUser?.is_owner ? (
       <>
         <h3 className="text-lg font-semibold text-white mb-4 mt-6">
           Organization Transfer
@@ -594,7 +616,7 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
           <div className="text-slate-400">Checking for eligible admins...</div>
         ) : eligibleAdmins.length === 0 ? (
           <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
-            You are the only Admin. If you proceed, the entire organization and all its data will be permanently deleted.
+            You are the only Owner. If you proceed, the entire organization and all its data will be permanently deleted.
           </div>
         ) : (
           <div className="space-y-4">
@@ -608,7 +630,9 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
                   onChange={() => setDeleteOrTransfer("transfer")}
                   className="accent-cyan-500"
                 />
-                Transfer Organization to a new Super Admin
+                <h3 className="font-medium text-white">
+                  Transfer Organization to a new Owner
+                </h3>
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-slate-300">
                 <input
@@ -624,15 +648,15 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
             </div>
             
             {deleteOrTransfer === "transfer" && (
-              <div className="mt-4 p-4 border border-white/10 bg-black/20 rounded-xl">
-                <p className="text-sm text-slate-400 mb-2">Select a workspace admin to become the new Super Admin.</p>
+              <div className="mt-4 p-4 border border-white/10 bg-black/20 rounded-xl" onClick={(e) => e.stopPropagation()}>
+                <p className="text-sm text-slate-400 mb-2">Select a workspace admin to become the new Owner.</p>
                 <select
-                  value={selectedAdminId}
-                  onChange={(e) => setSelectedAdminId(e.target.value)}
-                  className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm"
+                  value={selectedOwnerId}
+                  onChange={(e) => setSelectedOwnerId(e.target.value)}
+                  className="w-full bg-slate-900 border border-white/10 text-white rounded-lg p-3 focus:outline-none focus:border-cyan-400"
                 >
                   {eligibleAdmins.map((admin) => (
-                    <option key={admin.id} value={admin.id} className="text-slate-900 bg-slate-100">
+                    <option key={admin.id} value={admin.id}>
                       {admin.full_name} ({admin.email})
                     </option>
                   ))}
@@ -660,6 +684,13 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
   </div>
 </div>
       <div className="mt-6">
+        <input
+            type="password"
+            placeholder="Confirm with your password to delete"
+            value={passwordForDelete}
+            onChange={(e) => setPasswordForDelete(e.target.value)}
+            className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white mb-4"
+        />
   <label className="flex items-center gap-3 text-slate-300 cursor-pointer">
     <input
       type="checkbox"
@@ -682,15 +713,15 @@ const allAssigned = currentUser?.is_super_admin ? (deleteOrTransfer === "delete"
         </button>
 
         <button
-  disabled={!confirmDelete || !allAssigned}
+  disabled={!confirmDelete || !allAssigned || !passwordForDelete}
   onClick={() => {
-    if (confirmDelete && allAssigned) {
+    if (confirmDelete && allAssigned && passwordForDelete) {
       setShowDeleteModal(false);
       setShowFinalDeleteModal(true);
     }
   }}
   className={`px-5 py-2 rounded-lg text-white font-semibold transition ${
-    confirmDelete && allAssigned
+    confirmDelete && allAssigned && passwordForDelete
       ? "bg-red-600 hover:bg-red-700"
       : "bg-red-900/40 cursor-not-allowed"
   }`}

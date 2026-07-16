@@ -79,19 +79,7 @@ useEffect(() => {
       if (!token) return; 
 
       try {
-        const userRes = await fetch(
-          `${import.meta.env.VITE_API_URL}/users/me`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setCurrentUser(userData);
-        }
+        await fetchCurrentUser();
 
         // Fetch teammates for the current context (either active workspace or entire account)
         const teamUrl = activeWorkspaceId 
@@ -139,6 +127,27 @@ useEffect(() => {
     fetchData();
   }, [activeWorkspaceId]);
 
+  const fetchCurrentUser = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const userRes = await fetch(
+        `${import.meta.env.VITE_API_URL}/users/me`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setCurrentUser(userData);
+      }
+    } catch (err) {
+      console.error("Failed to load current user", err);
+    }
+  };
+
   return (
     <AppContext.Provider
   value={{
@@ -156,6 +165,7 @@ useEffect(() => {
     setMembers,
     currentUser,
     setCurrentUser,
+    fetchCurrentUser,
   }}
 >
       {children}

@@ -16,8 +16,8 @@ def get_db():
 
 @router.post("/", response_model=schemas.WorkspaceResponse)
 def create_workspace(workspace: schemas.WorkspaceCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Only super admins can create workspaces")
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can create workspaces")
     return crud.create_workspace(db=db, workspace=workspace, account_id=current_user.account_id, creator_id=current_user.id)
 
 @router.get("/", response_model=List[schemas.WorkspaceResponse])
@@ -32,8 +32,8 @@ def leave_workspace(workspace_id: int, db: Session = Depends(get_db), current_us
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
         
-    if current_user.is_super_admin:
-        raise HTTPException(status_code=400, detail="Super Admins cannot leave workspaces. Delete the workspace instead.")
+    if current_user.is_owner:
+        raise HTTPException(status_code=400, detail="Owners cannot leave workspaces. Delete the workspace instead.")
         
     # Projects stay in the workspace. We don't transfer them.
     
@@ -58,8 +58,8 @@ def rename_workspace(workspace_id: int, update_data: schemas.WorkspaceUpdate, db
     workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Only super admins can rename workspaces")
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can rename workspaces")
     
     workspace.name = update_data.name
     db.commit()
@@ -72,8 +72,8 @@ def delete_workspace(workspace_id: int, db: Session = Depends(get_db), current_u
     workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Only super admins can delete workspaces")
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can delete workspaces")
         
     db.delete(workspace)
     db.commit()
@@ -108,8 +108,8 @@ def update_workspace_member_role(
         raise HTTPException(status_code=404, detail="User is not a member of this workspace")
         
     target_user = db.query(models.User).filter(models.User.id == user_id).first()
-    if target_user and target_user.is_super_admin:
-        raise HTTPException(status_code=400, detail="Cannot change the role of a Super Admin")
+    if target_user and target_user.is_owner:
+        raise HTTPException(status_code=400, detail="Cannot change the role of an Owner")
         
     if role_data.role not in ["Admin", "Member", "Client"]:
         raise HTTPException(status_code=400, detail="Invalid role")
@@ -130,7 +130,7 @@ def add_member_to_workspace(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    if not current_user.is_super_admin:
+    if not current_user.is_owner:
         ws_membership = db.query(models.workspace_members).filter(
             models.workspace_members.c.workspace_id == workspace_id, 
             models.workspace_members.c.user_id == current_user.id

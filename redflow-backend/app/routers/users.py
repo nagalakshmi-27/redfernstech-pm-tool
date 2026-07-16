@@ -84,13 +84,9 @@ def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_
     user_data["username"] = username
     
     user_create = schemas.UserCreate(**user_data)
-    new_user = crud.create_user(db, user_create, account_id, is_super_admin=True)
+    new_user = crud.create_user(db, user_create, account_id, is_owner=True)
     
-    # Create default workspace
-    default_ws = schemas.WorkspaceCreate(name=f"{account.name} Workspace")
-    crud.create_workspace(db, default_ws, account.id, new_user.id)
-    
-    return {"message": "Account verified and user created successfully"}
+    return {"message": "Account verified and user created successfully", "username": username}
 
 @router.post("/login")
 def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
@@ -100,14 +96,16 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
         
     if user.device_id and crud.check_user_device(db, authenticated_user.id, user.device_id):
         access_token = auth.create_access_token(data={"sub": authenticated_user.username})
+        workspaces_count = db.query(models.Workspace).filter(models.Workspace.account_id == authenticated_user.account_id).count()
         return {
             "message": "Login successful",
             "access_token": access_token, 
             "token_type": "bearer", 
+            "workspaces_count": workspaces_count,
             "user": {
                 "id": authenticated_user.id, 
                 "email": authenticated_user.email, 
-                "is_super_admin": authenticated_user.is_super_admin,
+                "is_owner": authenticated_user.is_owner,
                 "account_id": authenticated_user.account_id,
                 "profile_image": authenticated_user.profile_image
             }
@@ -136,13 +134,15 @@ def verify_otp(request: schemas.VerifyOTPRequest, db: Session = Depends(get_db))
         crud.add_user_device(db, user_id, request.device_id)
         
     access_token = auth.create_access_token(data={"sub": user.username})
+    workspaces_count = db.query(models.Workspace).filter(models.Workspace.account_id == user.account_id).count()
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
+        "workspaces_count": workspaces_count,
         "user": {
             "id": user.id, 
             "email": user.email, 
-            "is_super_admin": user.is_super_admin,
+            "is_owner": user.is_owner,
             "account_id": user.account_id,
             "profile_image": user.profile_image
         }
@@ -163,8 +163,12 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Invalid token")
 
 @router.get("/me", response_model=schemas.UserResponse)
-def get_my_settings(current_user: models.User = Depends(get_current_user)):
-    return current_user
+def get_my_settings(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    user_response = schemas.UserResponse.model_validate(current_user)
+    account = db.query(models.Account).filter(models.Account.id == current_user.account_id).first()
+    if account:
+        user_response.organization_name = account.name
+    return user_response
 
 @router.put("/me", response_model=schemas.UserResponse)
 def update_my_settings(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -292,10 +296,10 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 # --- TEAMS & INVITATIONS LOGIC ---
 @router.post("/invite")
 def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Only super admins can invite users.")
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can invite users.")
         
-    if not invite.is_super_admin:
+    if not invite.is_owner:
         if invite.workspace_access == "Client" and not invite.project_id:
             raise HTTPException(status_code=400, detail="Project is mandatory when workspace access is Client.")
             
@@ -311,7 +315,7 @@ def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db)
         db_invite = models.Invitation(
             email=invite.email,
             full_name=f"{invite.first_name} {invite.last_name}",
-            is_super_admin=invite.is_super_admin,
+            is_owner=invite.is_owner,
             role=invite.workspace_access,
             token=token,
             status="Pending",
@@ -393,9 +397,9 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
             first_name=first_name,
             last_name=last_name
         )
-        new_user = crud.create_user(db=db, user=new_user_data, account_id=account_id, is_super_admin=invitation.is_super_admin)
+        new_user = crud.create_user(db=db, user=new_user_data, account_id=account_id, is_owner=invitation.is_owner)
     
-    if not invitation.is_super_admin and invitation.workspace_id:
+    if not invitation.is_owner and invitation.workspace_id:
         # Check if they are already in the workspace to prevent duplicate key error
         existing_ws_member = db.query(models.workspace_members).filter(
             models.workspace_members.c.workspace_id == invitation.workspace_id,
@@ -436,10 +440,10 @@ def decline_invite(token: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Invite declined successfully."}
 
-@router.get("/eligible-super-admins")
-def get_eligible_super_admins(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Only super admins can view this")
+@router.get("/eligible-owners")
+def get_eligible_owners(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can view this")
     
     # Find users who are Admins in ANY workspace in this account
     eligible_users = db.query(models.User).join(
@@ -456,14 +460,14 @@ def get_eligible_super_admins(db: Session = Depends(get_db), current_user: model
 
 @router.put("/me/transfer-organization")
 def transfer_organization(
-    request: schemas.TransferOrgRequest, 
+    request: schemas.ChangeOwnerRequest, 
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Only super admins can transfer the organization")
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can transfer the organization")
         
-    target_user = db.query(models.User).filter(models.User.id == request.new_super_admin_id, models.User.account_id == current_user.account_id).first()
+    target_user = db.query(models.User).filter(models.User.id == request.new_owner_id, models.User.account_id == current_user.account_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="Target user not found")
         
@@ -478,10 +482,10 @@ def transfer_organization(
         raise HTTPException(status_code=400, detail="Target user must be an Admin in at least one workspace")
         
     # Promote target user
-    target_user.is_super_admin = True
+    target_user.is_owner = True
     
     # Demote current user
-    current_user.is_super_admin = False
+    current_user.is_owner = False
     
     db.commit()
     return {"message": "Organization transferred successfully"}
@@ -490,14 +494,29 @@ def transfer_organization(
 def delete_user_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     user_id = current_user.id
     
-    if current_user.is_super_admin:
-        # If super admin, delete the entire organization account
+    if current_user.is_owner:
+        # If owner, delete the entire organization account
         account = db.query(models.Account).filter(models.Account.id == current_user.account_id).first()
         if account:
             # Prevent FK violations for new tables without cascades
             user_ids = [u.id for u in account.users]
             if user_ids:
                 db.query(models.UserDevice).filter(models.UserDevice.user_id.in_(user_ids)).delete(synchronize_session=False)
+                
+                # Nullify references to prevent FK errors when users are deleted before projects/tasks
+                db.query(models.Project).filter(models.Project.created_by_id.in_(user_ids)).update({"created_by_id": None}, synchronize_session=False)
+                db.query(models.Task).filter(models.Task.assignee_id.in_(user_ids)).update({"assignee_id": None}, synchronize_session=False)
+                db.query(models.Task).filter(models.Task.created_by_id.in_(user_ids)).update({"created_by_id": None}, synchronize_session=False)
+                db.query(models.Comment).filter(models.Comment.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
+                db.query(models.Message).filter(models.Message.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
+                db.query(models.TaskAttachment).filter(models.TaskAttachment.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
+                db.query(models.WikiPage).filter(models.WikiPage.author_id.in_(user_ids)).update({"author_id": None}, synchronize_session=False)
+                db.query(models.WikiPageHistory).filter(models.WikiPageHistory.author_id.in_(user_ids)).update({"author_id": None}, synchronize_session=False)
+                db.query(models.Event).filter(models.Event.created_by_id.in_(user_ids)).update({"created_by_id": None}, synchronize_session=False)
+                db.query(models.Invitation).filter(models.Invitation.invited_by_id.in_(user_ids)).update({"invited_by_id": None}, synchronize_session=False)
+                
+                # Delete notifications for these users
+                db.query(models.Notification).filter(models.Notification.user_id.in_(user_ids)).delete(synchronize_session=False)
                 
             db.delete(account)
             db.commit()
@@ -506,16 +525,16 @@ def delete_user_account(db: Session = Depends(get_db), current_user: models.User
         # Prevent FK violations
         db.query(models.UserDevice).filter(models.UserDevice.user_id == user_id).delete(synchronize_session=False)
 
-        # Transfer all projects created by this user to the account super admin
-        super_admin = db.query(models.User).filter(
+        # Transfer all projects created by this user to the account owner
+        owner = db.query(models.User).filter(
             models.User.account_id == current_user.account_id, 
-            models.User.is_super_admin == True
+            models.User.is_owner == True
         ).first()
-        admin_id = super_admin.id if super_admin else None
+        owner_id = owner.id if owner else None
         
         user_projects = db.query(models.Project).filter(models.Project.created_by_id == user_id).all()
         for proj in user_projects:
-            proj.created_by_id = admin_id
+            proj.created_by_id = owner_id
                 
         # Nullify creator/author references for other items to preserve the data but anonymize the user
         db.query(models.Task).filter(models.Task.assignee_id == user_id).update({"assignee_id": None})

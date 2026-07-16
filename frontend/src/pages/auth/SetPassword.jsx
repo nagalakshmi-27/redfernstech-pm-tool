@@ -16,6 +16,7 @@ export default function SetPassword() {
 
   const [error, setError] = useState("");
   const [showPasswordRules, setShowPasswordRules] = useState(false);
+  const [successUsername, setSuccessUsername] = useState("");
 
   const passwordChecks = {
     length: password.length >= 8,
@@ -65,7 +66,8 @@ export default function SetPassword() {
         throw new Error(errData.detail || "Failed to set password");
       }
       
-      navigate("/");
+      const data = await response.json();
+      setSuccessUsername(data.username);
     } catch (err) {
       setError(err.message);
     }
@@ -76,13 +78,31 @@ export default function SetPassword() {
       <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8 md:p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
 
         <h1 className="text-3xl font-bold text-center text-white">
-          Set Password
+          {successUsername ? "Account Ready!" : "Set Password"}
         </h1>
 
         <p className="text-center text-sm text-slate-400 mt-2 mb-8">
           Create a password to activate your account.
         </p>
 
+        {successUsername ? (
+          <div className="text-center">
+            <p className="text-lg text-slate-300 mb-6">
+              Your account has been successfully created.
+            </p>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 text-left inline-block w-full">
+              <p className="text-sm text-slate-400 mb-1">Your unique User-Name is:</p>
+              <p className="text-2xl font-bold text-cyan-400 select-all font-mono tracking-wide">{successUsername}</p>
+              <p className="text-xs text-slate-500 mt-3">You will use this to log in instead of your email. Make sure to remember it!</p>
+            </div>
+            <button
+              onClick={() => navigate("/")}
+              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-3 rounded-lg transition-colors"
+            >
+              Go to Login
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSetPassword} className="space-y-5">
 
           {error && (
@@ -167,9 +187,8 @@ export default function SetPassword() {
           >
             Create Password
           </button>
-
         </form>
-
+        )}
       </div>
     </div>
   );

@@ -185,7 +185,7 @@ export default function Sidebar() {
             Workspace
           </label>
           <div className="flex gap-2">
-            {currentUser?.is_super_admin && (
+            {currentUser?.is_owner && (
               <button 
                 onClick={() => setShowCreateModal(true)}
                 className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
@@ -207,7 +207,7 @@ export default function Sidebar() {
         </div>
         
         {(!workspaces || workspaces.length === 0) ? (
-          currentUser?.is_super_admin ? (
+          currentUser?.is_owner ? (
             <button
               onClick={() => setShowCreateModal(true)}
               className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white border border-white/10 rounded px-3 py-2 text-sm font-medium text-center focus:outline-none focus:ring-1 focus:ring-cyan-500 transition shadow-[0_0_10px_rgba(6,182,212,0.4)]"
@@ -223,7 +223,7 @@ export default function Sidebar() {
               onClick={() => setWorkspaceDropdownOpen(!workspaceDropdownOpen)}
               className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-left text-white focus:outline-none focus:ring-1 focus:ring-purple-500 flex justify-between items-center transition hover:bg-white/10"
             >
-              <span className="truncate">{activeWorkspace?.name || "Select Workspace"} {isOwner ? "(Personal)" : ""}</span>
+              <span className="truncate">{activeWorkspace?.name || "Select Workspace"}</span>
               <span className="ml-2 text-slate-400 text-xs">▼</span>
             </button>
 
@@ -243,7 +243,7 @@ export default function Sidebar() {
                         {ws.name}
                       </div>
                       
-                      {currentUser?.is_super_admin && (
+                      {currentUser?.is_owner && (
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation();
@@ -262,7 +262,7 @@ export default function Sidebar() {
                         </button>
                       )}
                     </div>
-                    {actionWorkspaceId === ws.id && showDropdown && currentUser?.is_super_admin && createPortal(
+                    {actionWorkspaceId === ws.id && showDropdown && currentUser?.is_owner && createPortal(
                       <div 
                         ref={portalRef}
                         className="fixed z-[100] w-48 bg-slate-800 border border-white/10 shadow-2xl rounded-lg py-1 flex flex-col"

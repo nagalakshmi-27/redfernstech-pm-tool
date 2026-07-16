@@ -1,10 +1,19 @@
 import { Building2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateWorkspaceModal from "../../components/CreateWorkspaceModal";
+import AppContext from "../../context/AppContext";
 
 export default function Organization() {
-  const organizationName = "RedFerns Tech"; // Later this will come from backend
+  const { currentUser, fetchCurrentUser } = useContext(AppContext);
+  
+  useEffect(() => {
+    if (!currentUser && fetchCurrentUser) {
+      fetchCurrentUser();
+    }
+  }, [currentUser, fetchCurrentUser]);
+
+  const organizationName = currentUser?.organization_name || "Loading...";
   const [showCreateModal, setShowCreateModal] = useState(false);
   const navigate = useNavigate();
 

@@ -31,8 +31,8 @@ class VerifyOTPRequest(BaseModel):
     device_id: Optional[str] = None
 
 # --- USERS ---
-class TransferOrgRequest(BaseModel):
-    new_super_admin_id: int
+class ChangeOwnerRequest(BaseModel):
+    new_owner_id: int
 
 class UserBase(BaseModel):
     username: Optional[str] = None
@@ -60,8 +60,9 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     account_id: Optional[int] = None
-    is_super_admin: bool = False
+    is_owner: bool = False
     created_at: datetime
+    organization_name: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -261,7 +262,7 @@ class InviteCreate(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
-    is_super_admin: bool = False
+    is_owner: bool = False
     workspace_id: Optional[int] = None
     workspace_access: Optional[str] = None
     project_id: Optional[int] = None
