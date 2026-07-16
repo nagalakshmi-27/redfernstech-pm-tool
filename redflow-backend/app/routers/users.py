@@ -70,6 +70,18 @@ def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_
     db.commit()
     
     user_data["password"] = request.password
+    
+    email_prefix = user_data["email"].split("@")[0]
+    org_name = "".join(e for e in account.name if e.isalnum())
+    base_username = f"{email_prefix}.{org_name}"
+    username = base_username
+    counter = 1
+    while crud.get_user_by_username(db, username):
+        username = f"{base_username}{counter}"
+        counter += 1
+    
+    user_data["username"] = username
+    
     user_create = schemas.UserCreate(**user_data)
     new_user = crud.create_user(db, user_create, account_id, is_super_admin=True)
     
@@ -81,12 +93,12 @@ def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_
 
 @router.post("/login")
 def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    authenticated_user = crud.authenticate_user(db, user.email, user.password)
+    authenticated_user = crud.authenticate_user(db, user.username, user.password)
     if not authenticated_user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=400, detail="Incorrect User-Name or password")
         
     if user.device_id and crud.check_user_device(db, authenticated_user.id, user.device_id):
-        access_token = auth.create_access_token(data={"sub": authenticated_user.email})
+        access_token = auth.create_access_token(data={"sub": authenticated_user.username})
         return {
             "message": "Login successful",
             "access_token": access_token, 
@@ -103,9 +115,9 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
     otp_code = str(secrets.choice(range(100000, 1000000)))
     from datetime import datetime, timedelta
     expires_at = datetime.utcnow() + timedelta(minutes=15)
-    crud.create_otp(db, user.email, otp_code, expires_at)
+    crud.create_otp(db, authenticated_user.email, otp_code, expires_at)
     
-    send_email(user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.")
+    send_email(authenticated_user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.\nYour User-Name is: {authenticated_user.username}")
     temp_token = auth.create_temp_login_token(authenticated_user.id)
     return {"message": "OTP sent to email", "temp_token": temp_token}
 
@@ -122,7 +134,7 @@ def verify_otp(request: schemas.VerifyOTPRequest, db: Session = Depends(get_db))
     if request.device_id:
         crud.add_user_device(db, user_id, request.device_id)
         
-    access_token = auth.create_access_token(data={"sub": user.email})
+    access_token = auth.create_access_token(data={"sub": user.username})
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
@@ -139,10 +151,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     token = credentials.credentials
     try:
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        email = payload.get("sub")
-        if email is None:
+        username = payload.get("sub")
+        if username is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        user = crud.get_user_by_email(db, email=email)
+        user = crud.get_user_by_username(db, username=username)
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
         return user
@@ -322,7 +334,11 @@ def get_invite(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Invite not found or already processed.")
         
     workspace = db.query(models.Workspace).filter(models.Workspace.id == invitation.workspace_id).first()
-    user_exists = db.query(models.User).filter(models.User.email == invitation.email).first() is not None
+    inviter = db.query(models.User).filter(models.User.id == invitation.invited_by_id).first()
+    user_exists = db.query(models.User).filter(
+        models.User.email == invitation.email, 
+        models.User.account_id == inviter.account_id
+    ).first() is not None
     return {
         "email": invitation.email,
         "role": invitation.role,
@@ -343,15 +359,15 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
         raise HTTPException(status_code=400, detail="Inviter no longer exists")
         
     account_id = inviter.account_id
+    account = db.query(models.Account).filter(models.Account.id == account_id).first()
     
-    existing_user = crud.get_user_by_email(db, invitation.email)
+    existing_org_user = db.query(models.User).filter(
+        models.User.email == invitation.email,
+        models.User.account_id == account_id
+    ).first()
     
-    if existing_user:
-        new_user = existing_user
-        # If they are invited to the organization (no workspace), they join the inviter's organization
-        if not invitation.workspace_id:
-            new_user.account_id = account_id
-            db.add(new_user)
+    if existing_org_user:
+        new_user = existing_org_user
     else:
         if not request.password:
             raise HTTPException(status_code=400, detail="Password is required for new users")
@@ -360,7 +376,17 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
         first_name = parts[0] if len(parts) > 0 else ""
         last_name = parts[1] if len(parts) > 1 else ""
 
+        email_prefix = invitation.email.split("@")[0]
+        org_name = "".join(e for e in account.name if e.isalnum())
+        base_username = f"{email_prefix}.{org_name}"
+        username = base_username
+        counter = 1
+        while crud.get_user_by_username(db, username):
+            username = f"{base_username}{counter}"
+            counter += 1
+
         new_user_data = schemas.UserCreate(
+            username=username,
             email=invitation.email,
             password=request.password,
             first_name=first_name,
@@ -395,9 +421,9 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
     expires_at = datetime.utcnow() + timedelta(minutes=15)
     crud.create_otp(db, new_user.email, otp_code, expires_at)
     
-    send_email(new_user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.")
+    send_email(new_user.email, "Your RedFlow Login OTP", f"Your OTP is: {otp_code}. It expires in 15 minutes.\nYour User-Name is: {new_user.username}")
     temp_token = auth.create_temp_login_token(new_user.id)
-    return {"message": "Invite accepted successfully. Check email for OTP to sign in.", "temp_token": temp_token}
+    return {"message": "Invite accepted successfully. Check email for OTP to sign in.", "temp_token": temp_token, "username": new_user.username}
 
 @router.post("/invite/{token}/decline")
 def decline_invite(token: str, db: Session = Depends(get_db)):

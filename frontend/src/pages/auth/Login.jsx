@@ -5,7 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 export default function Login() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordRules, setShowPasswordRules] =
@@ -13,7 +13,7 @@ export default function Login() {
 
   const handleLogin = async (e) => { // <-- We added "async" here!
     e.preventDefault();
-    if (!email || !password) {
+    if (!username || !password) {
   alert("Please fill all fields");
   return;
 }
@@ -49,7 +49,7 @@ if (!isPasswordValid) {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email, password: password, device_id: device_id })
+        body: JSON.stringify({ username: username, password: password, device_id: device_id })
       });
 
       // 3. Check if the backend rejected the login
@@ -63,7 +63,7 @@ if (!isPasswordValid) {
       
       // 5. Check if we got a temporary token (OTP needed)
       if (data.temp_token) {
-        navigate("/verify-otp", { state: { temp_token: data.temp_token, email: email, device_id: device_id } });
+        navigate("/verify-otp", { state: { temp_token: data.temp_token, device_id: device_id } });
         return;
       }
 
@@ -116,14 +116,14 @@ if (!isPasswordValid) {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block mb-2 font-medium text-slate-300">
-              Email Address
+              User-Name
             </label>
 
             <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              placeholder="Enter your User-Name"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />
           </div>

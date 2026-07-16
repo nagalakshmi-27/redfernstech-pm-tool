@@ -12,6 +12,9 @@ def get_password_hash(password):
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
 def create_account(db: Session, name: str, email: str):
     db_account = models.Account(name=name, email=email)
     db.add(db_account)
@@ -79,6 +82,7 @@ def is_client(db: Session, workspace_id: int, user_id: int):
 def create_user(db: Session, user: schemas.UserCreate, account_id: int, is_super_admin: bool = False):
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
+        username=user.username,
         email=user.email, 
         hashed_password=hashed_password, 
         first_name=user.first_name,
@@ -150,8 +154,8 @@ def get_projects(db: Session, skip: int = 0, limit: int = 100):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def authenticate_user(db: Session, email: str, password: str):
-    user = get_user_by_email(db, email)
+def authenticate_user(db: Session, username: str, password: str):
+    user = get_user_by_username(db, username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):

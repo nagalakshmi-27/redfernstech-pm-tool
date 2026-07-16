@@ -35,6 +35,7 @@ class TransferOrgRequest(BaseModel):
     new_super_admin_id: int
 
 class UserBase(BaseModel):
+    username: Optional[str] = None
     email: EmailStr
     full_name: Optional[str] = None
     first_name: Optional[str] = None
@@ -156,7 +157,7 @@ class ProjectResponse(ProjectBase):
         from_attributes = True
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    username: str
     password: str
     device_id: Optional[str] = None
 
@@ -270,6 +271,7 @@ class InviteAccept(BaseModel):
     password: Optional[str] = None
 class TeammateResponse(BaseModel):
     id: int
+    username: Optional[str] = None
     email: EmailStr
     full_name: Optional[str] = None
     role: str

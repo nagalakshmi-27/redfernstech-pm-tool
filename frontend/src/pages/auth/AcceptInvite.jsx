@@ -54,8 +54,8 @@ export default function AcceptInvite() {
           localStorage.setItem("device_id", device_id);
         }
         
-        setMessage("Invite accepted! Redirecting to verify your login...");
-        setTimeout(() => navigate("/verify-otp", { state: { temp_token: data.temp_token, email: inviteDetails?.email, device_id } }), 2000);
+        setMessage(`Invite accepted! Your User-Name is: ${data.username}. Redirecting...`);
+        setTimeout(() => navigate("/verify-otp", { state: { temp_token: data.temp_token, device_id } }), 5000);
       } else {
         const errData = await response.json().catch(() => ({}));
         setError(errData.detail || "Failed to accept invite.");
