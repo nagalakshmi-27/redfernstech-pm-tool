@@ -8,8 +8,8 @@ import DeleteOrganizationModal from "./components/DeleteOrganizationModal";
 export default function OrganizationSettings() {
   const { activeWorkspaceRole, currentUser } = useContext(AppContext);
 
-  const currentUserRole = currentUser?.is_super_admin
-    ? "Super Admin"
+  const currentUserRole = currentUser?.is_owner
+    ? "Owner"
     : activeWorkspaceRole;
 
   const [firstName, setFirstName] = useState("");

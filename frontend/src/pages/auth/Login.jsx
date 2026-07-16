@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import AppContext from "../../context/AppContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { fetchWorkspaces } = useContext(AppContext);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -111,8 +113,14 @@ if (redirect === "accept-invite") {
     console.log("Workspaces:", workspaces);
     console.log("Length:", workspaces.length);
 
+    await fetchWorkspaces();
+
     if (workspaces.length === 0) {
-      navigate("/organization");
+      if (data.user?.is_owner) {
+        navigate("/organization");
+      } else {
+        navigate("/workspace-pending");
+      }
     } else {
       navigate("/dashboard");
     }

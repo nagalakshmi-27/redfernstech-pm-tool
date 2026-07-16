@@ -259,8 +259,8 @@ class TaskResponse(TaskBase):
     
 # --- INVITATIONS ---
 class InviteCreate(BaseModel):
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     email: EmailStr
     is_owner: bool = False
     workspace_id: Optional[int] = None

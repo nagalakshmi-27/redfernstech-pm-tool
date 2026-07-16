@@ -164,7 +164,7 @@ export default function Sidebar() {
   };
 
   const currentUserRole = activeWorkspaceRole;
-  const organizationName = "RedFerns Tech";
+  const organizationName = currentUser?.organization_name || "Your Organization";
   return (
     <div className="w-56 min-h-screen bg-white/5 backdrop-blur-lg border-r border-white/10 text-white flex flex-col">
       {/* Logo / App Name */}
@@ -378,7 +378,7 @@ export default function Sidebar() {
             </Link>
           </li>
 
-          {currentUser?.is_super_admin && (
+          {currentUser?.is_owner && (
   <li>
     <Link
       to="/organization-settings"

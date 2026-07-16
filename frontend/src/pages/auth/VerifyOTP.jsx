@@ -1,9 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
+import AppContext from "../../context/AppContext";
 
 export default function VerifyOTP() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { fetchWorkspaces } = useContext(AppContext);
   const { temp_token, email, device_id } = location.state || {};
   
   const [error, setError] = useState("");
@@ -113,9 +115,15 @@ const handleVerifyOTP = async () => {
 
 if (workspaceRes.ok) {
   const workspaces = await workspaceRes.json();
+  
+  await fetchWorkspaces();
 
   if (workspaces.length === 0) {
-    navigate("/organization");
+    if (data.user?.is_owner) {
+      navigate("/organization");
+    } else {
+      navigate("/workspace-pending");
+    }
   } else {
     navigate("/dashboard");
   }
