@@ -378,14 +378,16 @@ export default function Sidebar() {
             </Link>
           </li>
 
-          <li>
-            <Link
-              to="/settings"
-              className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
-            >
-              Settings
-            </Link>
-          </li>
+          {currentUser?.is_super_admin && (
+  <li>
+    <Link
+      to="/organization-settings"
+      className="block px-4 py-3 rounded-lg hover:bg-white/10 transition"
+    >
+      Organization
+    </Link>
+  </li>
+)}
         </ul>
       </nav>
 
