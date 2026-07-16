@@ -22,6 +22,8 @@ import CheckEmail from "../pages/auth/CheckEmail";
 import VerifyOTP from "../pages/auth/VerifyOTP";
 import SetPassword from "../pages/auth/SetPassword";
 import Organization from "../pages/organization/Organization";
+import OrganizationSettings from "../pages/organization/OrganizationSettings";
+import WorkspacePending from "../pages/workspace/WorkspacePending";
 
 export default function AppRoutes() {
   return (
@@ -62,6 +64,19 @@ export default function AppRoutes() {
     </ProtectedRoute>
   }
 />
+<Route
+  path="/organization-settings"
+  element={
+    <ProtectedRoute>
+      <OrganizationSettings />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/workspace-pending"
+  element={<WorkspacePending />}
+/>
+
       </Routes>
     </BrowserRouter>
   );
