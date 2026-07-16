@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Plus, MoreVertical } from "lucide-react";
 import AppContext from "../context/AppContext";
+import CreateWorkspaceModal from "../components/CreateWorkspaceModal";
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -423,45 +424,17 @@ export default function Sidebar() {
       )}
 
       {/* Create Workspace Modal */}
-      {showCreateModal && createPortal(
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-[#141a2d] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-xl sm:text-2xl font-bold text-cyan-400 mb-3">
-              Create New Workspace
-            </h2>
-            <p className="text-slate-300 leading-relaxed mb-4">
-              Enter a name for your new workspace. You will be set as the Owner.
-            </p>
-            <input
-              type="text"
-              placeholder="Workspace Name"
-              value={newWorkspaceName}
-              onChange={(e) => setNewWorkspaceName(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 mb-4"
-            />
-            {createError && (
-              <div className="bg-red-500/20 text-red-300 border border-red-500/30 p-3 rounded-lg mb-4 text-sm">
-                {createError}
-              </div>
-            )}
-            <div className="flex justify-end gap-3 mt-2">
-              <button
-                onClick={() => { setShowCreateModal(false); setCreateError(""); setNewWorkspaceName(""); }}
-                className="px-5 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateWorkspace}
-                className="px-5 py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 transition"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <CreateWorkspaceModal
+  open={showCreateModal}
+  onClose={() => {
+    setShowCreateModal(false);
+    setCreateError("");
+    setNewWorkspaceName("");
+  }}
+  onSuccess={() => {
+    window.location.reload();
+  }}
+/>
 
       {showRenameModal && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

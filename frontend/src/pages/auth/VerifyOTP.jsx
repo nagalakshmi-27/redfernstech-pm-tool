@@ -102,7 +102,26 @@ const handleVerifyOTP = async () => {
         localStorage.removeItem("profileImage");
       }
 
-      navigate("/dashboard");
+      const workspaceRes = await fetch(
+  `${import.meta.env.VITE_API_URL}/workspaces/`,
+  {
+    headers: {
+      Authorization: `Bearer ${data.access_token}`,
+    },
+  }
+);
+
+if (workspaceRes.ok) {
+  const workspaces = await workspaceRes.json();
+
+  if (workspaces.length === 0) {
+    navigate("/organization");
+  } else {
+    navigate("/dashboard");
+  }
+} else {
+  navigate("/dashboard");
+}
     } catch (err) {
       setError(err.message);
     } finally {

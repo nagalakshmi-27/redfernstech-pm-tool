@@ -60,12 +60,22 @@ if (!isPasswordValid) {
 
       // 4. Get the response
       const data = await response.json();
-      
+      console.log("Login Success");
+console.log(data);
       // 5. Check if we got a temporary token (OTP needed)
       if (data.temp_token) {
-        navigate("/verify-otp", { state: { temp_token: data.temp_token, email: email, device_id: device_id } });
-        return;
-      }
+  console.log("OTP Required");
+  navigate("/verify-otp", {
+    state: {
+      temp_token: data.temp_token,
+      email: email,
+      device_id: device_id,
+    },
+  });
+  return;
+}
+
+console.log("Known Device Login");
 
       // 6. Save the real token securely! (Known device)
       localStorage.setItem("token", data.access_token);
@@ -81,14 +91,37 @@ if (!isPasswordValid) {
       }
 
       // 7. Check if there's a redirect pending
-      const searchParams = new URLSearchParams(window.location.search);
-      const redirect = searchParams.get("redirect");
-      if (redirect === "accept-invite") {
-        const inviteToken = searchParams.get("token");
-        navigate(`/accept-invite?token=${inviteToken}`);
-      } else {
-        navigate("/dashboard");
-      }
+const searchParams = new URLSearchParams(window.location.search);
+const redirect = searchParams.get("redirect");
+
+if (redirect === "accept-invite") {
+  const inviteToken = searchParams.get("token");
+  navigate(`/accept-invite?token=${inviteToken}`);
+} else {
+  const workspaceRes = await fetch(
+    `${import.meta.env.VITE_API_URL}/workspaces/`,
+    {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`,
+      },
+    }
+  );
+
+  if (workspaceRes.ok) {
+    const workspaces = await workspaceRes.json();
+
+    console.log("Workspaces:", workspaces);
+    console.log("Length:", workspaces.length);
+
+    if (workspaces.length === 0) {
+      navigate("/organization");
+    } else {
+      navigate("/dashboard");
+    }
+  } else {
+    navigate("/dashboard");
+  }
+}
     } catch (err) {
       alert(err.message); // This will show "Incorrect email or password" if they guess wrong
     }
