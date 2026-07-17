@@ -3,6 +3,8 @@ import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateUserModal from "./components/CreateUserModal";
 import ViewUsersModal from "./components/ViewUsersModal";
+import DeleteTransferModal from "./components/DeleteTransferModal";
+import TransferOwnershipModal from "./components/TransferOwnershipModal";
 import DeleteOrganizationModal from "./components/DeleteOrganizationModal";
 
 export default function OrganizationSettings() {
@@ -19,7 +21,10 @@ export default function OrganizationSettings() {
   const [message, setMessage] = useState("");
 const [showCreateUserModal, setShowCreateUserModal] = useState(false);
 const [showViewUsersModal, setShowViewUsersModal] = useState(false);
-const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [showDeleteTransferModal, setShowDeleteTransferModal] = useState(false);
+const [showTransferOwnershipModal, setShowTransferOwnershipModal] = useState(false);
+const [showDeleteOrganizationModal, setShowDeleteOrganizationModal] = useState(false);
+
   useEffect(() => {
     const fetchMyData = async () => {
       try {
@@ -184,10 +189,10 @@ const [showDeleteModal, setShowDeleteModal] = useState(false);
 </button>
 
   <button
-  onClick={() => setShowDeleteModal(true)}
+  onClick={() => setShowDeleteTransferModal(true)}
   className="px-6 py-3 rounded-lg border border-red-500 text-red-400 hover:bg-red-500/10 transition"
 >
-  Delete Organization
+  Delete / Transfer Organization
 </button>
 
 </div>
@@ -211,9 +216,27 @@ const [showDeleteModal, setShowDeleteModal] = useState(false);
   open={showViewUsersModal}
   onClose={() => setShowViewUsersModal(false)}
 />
+<DeleteTransferModal
+  open={showDeleteTransferModal}
+  onClose={() => setShowDeleteTransferModal(false)}
+  onTransfer={() => {
+    setShowDeleteTransferModal(false);
+    setShowTransferOwnershipModal(true);
+  }}
+  onDelete={() => {
+    setShowDeleteTransferModal(false);
+    setShowDeleteOrganizationModal(true);
+  }}
+/>
+
+<TransferOwnershipModal
+  open={showTransferOwnershipModal}
+  onClose={() => setShowTransferOwnershipModal(false)}
+/>
+
 <DeleteOrganizationModal
-  open={showDeleteModal}
-  onClose={() => setShowDeleteModal(false)}
+  open={showDeleteOrganizationModal}
+  onClose={() => setShowDeleteOrganizationModal(false)}
 />
     </MainLayout>
   );
