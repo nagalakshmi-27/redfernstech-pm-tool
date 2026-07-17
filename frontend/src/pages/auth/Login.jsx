@@ -62,11 +62,8 @@ if (!isPasswordValid) {
 
       // 4. Get the response
       const data = await response.json();
-      console.log("Login Success");
-console.log(data);
       // 5. Check if we got a temporary token (OTP needed)
       if (data.temp_token) {
-        console.log("OTP Required");
         navigate("/verify-otp", {
           state: {
             temp_token: data.temp_token,
@@ -75,8 +72,6 @@ console.log(data);
         });
         return;
       }
-      console.log("Known Device Login");
-
       // 6. Save the real token securely! (Known device)
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("isLoggedIn", "true");
@@ -109,9 +104,6 @@ if (redirect === "accept-invite") {
 
   if (workspaceRes.ok) {
     const workspaces = await workspaceRes.json();
-
-    console.log("Workspaces:", workspaces);
-    console.log("Length:", workspaces.length);
 
     await fetchCurrentUser();
     await fetchWorkspaces();

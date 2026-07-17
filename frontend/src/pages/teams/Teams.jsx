@@ -121,12 +121,10 @@ const memberRefs = useRef({});
           setShowModal(false);
         } else {
           const errData = await response.json();
-          console.log(errData);
           alert("Failed to send invite: " + JSON.stringify(errData));
         }
       }
     } catch (error) {
-      console.error(error);
       alert("Error: " + error.message);
     }
   };

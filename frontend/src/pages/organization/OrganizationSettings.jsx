@@ -181,7 +181,6 @@ const [showDeleteOrganizationModal, setShowDeleteOrganizationModal] = useState(f
 
   <button
   onClick={() => {
-    console.log("Create User clicked");
     setShowCreateUserModal(true);
   }}
   className="px-6 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium hover:opacity-90 transition"
