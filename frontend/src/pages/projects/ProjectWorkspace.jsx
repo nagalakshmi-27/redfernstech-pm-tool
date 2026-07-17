@@ -1,9 +1,9 @@
 import { useContext, useState, useEffect } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2, Users, Trash2 } from "lucide-react";
+import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2, Users, Pencil, LayoutPanelTop, Eye, Trash2, } from "lucide-react";
 import ProjectTeamModal from "./components/ProjectTeamModal";
 import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
@@ -16,10 +16,13 @@ import ScrumBoard from "./components/ScrumBoard";
 import TaskListBoard from "./components/TaskListBoard";
 import { useMemo } from "react";
 import { iconLibrary } from "../../utils/iconLibrary";
+import EditProjectModal from "./components/EditProjectModal";
+import DeleteProjectModal from "./components/DeleteProjectModal";
+import TaskVisibilityModal from "./components/TaskVisibilityModal";
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
-  const location = useLocation();
+  const navigate = useNavigate();
   const {
   projects,
   setProjects,
@@ -47,7 +50,7 @@ export default function ProjectWorkspace() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState(null);
-  
+  const [showProjectSettings, setShowProjectSettings] = useState(false);
   const closeEditModal = () => {
     setShowEditModal(false);
     if (editingTaskId) {
@@ -78,7 +81,11 @@ export default function ProjectWorkspace() {
   const [newWorkLogHours, setNewWorkLogHours] = useState("");
   const [newWorkLogDesc, setNewWorkLogDesc] = useState("");
   const [activeTaskTab, setActiveTaskTab] = useState("subtasks");
-  
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false);
+  const [showTaskVisibilityModal, setShowTaskVisibilityModal] = useState(false);
+
+const [taskVisibility, setTaskVisibility] = useState("everyone");
   const handleOpenTask = (task) => {
     setEditingTaskId(task.id);
     setTaskName(task.name);
@@ -96,6 +103,18 @@ export default function ProjectWorkspace() {
     setActiveTaskTab("subtasks");
     setShowEditModal(true);
   };
+  const [projectName, setProjectName] = useState(project.name);
+const [projectDescription, setProjectDescription] = useState(project.description);
+const [startDate, setStartDate] = useState(project.start_date || "");
+const [endDate, setEndDate] = useState(project.end_date || "");
+const [boardType, setBoardType] = useState(project.board_type || "kanban");
+
+const [selectedMembers, setSelectedMembers] = useState(
+  (project.members || []).map((m) => m.id)
+);
+
+const [memberSearch, setMemberSearch] = useState("");
+const [showAllMembers, setShowAllMembers] = useState(false);
 
   const handleAddSubtask = async () => {
     if (!newSubtaskTitle.trim() || !editingTaskId) return;
@@ -525,12 +544,194 @@ const getColumnColor = (column) => {
       return colors[Math.abs(hash) % colors.length];
   }
 };
+const handleUpdateProject = async () => {
+  if (!projectName.trim()) {
+    alert("Project Name is required");
+    return;
+  }
+
+  if (!projectDescription.trim()) {
+    alert("Project Description is required");
+    return;
+  }
+
+  if (!startDate) {
+    alert("Start Date is required");
+    return;
+  }
+
+  if (!endDate) {
+    alert("End Date is required");
+    return;
+  }
+
+  if (new Date(endDate) < new Date(startDate)) {
+    alert("End Date cannot be before Start Date");
+    return;
+  }
+
+  const token = localStorage.getItem("token");
+
+  const projectData = {
+    name: projectName,
+    description: projectDescription,
+    start_date: startDate,
+    end_date: endDate,
+    board_type: boardType,
+    member_ids: selectedMembers,
+    workspace_id: parseInt(activeWorkspaceId),
+  };
+
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/${project.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(projectData),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to update project");
+    }
+
+    const updatedProject = await response.json();
+
+    setProjects((prev) =>
+      prev.map((p) => (p.id === project.id ? updatedProject : p))
+    );
+
+    setShowEditProjectModal(false);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to update project.");
+  }
+};
+const handleDeleteProject = async () => {
+  const token = localStorage.getItem("token");
+
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/${project.id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete");
+    }
+
+    setProjects((prev) => prev.filter((p) => p.id !== project.id));
+
+    setShowDeleteProjectModal(false);
+
+    navigate("/projects");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete project.");
+  }
+};
   return (
     <MainLayout>
       <div className="mb-6">
-        <Link to="/projects" className="text-cyan-400 hover:text-cyan-300 flex items-center gap-2 mb-4 w-fit transition">
-          <ArrowLeft size={16} /> Back to Projects
-        </Link>
+
+  <div className="flex justify-between items-center mb-4">
+
+    <Link
+      to="/projects"
+      className="text-cyan-400 hover:text-cyan-300 flex items-center gap-2 transition"
+    >
+      <ArrowLeft size={16} />
+      Back to Projects
+    </Link>
+
+    {currentUserRole !== "Client" && (
+      <div className="relative">
+
+  <button
+    onClick={() => setShowProjectSettings(!showProjectSettings)}
+    className="p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition"
+  >
+    <Settings2 size={20} className="text-slate-300" />
+  </button>
+
+  {showProjectSettings && (
+  <div className="absolute right-0 mt-3 w-64 rounded-xl border border-white/10 bg-[#171d31] shadow-2xl z-50 overflow-hidden">
+
+    <button
+  onClick={() => {
+  setProjectName(project.name);
+  setProjectDescription(project.description);
+  setStartDate(project.start_date || "");
+  setEndDate(project.end_date || "");
+  setBoardType(project.board_type || "kanban");
+  setSelectedMembers((project.members || []).map((m) => m.id));
+  setMemberSearch("");
+  setShowAllMembers(false);
+
+  setShowProjectSettings(false);
+  setShowEditProjectModal(true);
+}}
+  className="w-full flex items-center gap-3 px-5 py-3 text-white hover:bg-white/5 transition"
+>
+      <Pencil size={18} />
+      <span>Edit Project</span>
+    </button>
+
+    <button
+  onClick={() => {
+    setShowProjectSettings(false);
+
+    setTempBoardColumns([...boardColumns]);
+    setNewColumnName("");
+
+    setShowCustomizeBoard(true);
+  }}
+  className="w-full flex items-center gap-3 px-5 py-3 text-white hover:bg-white/5 transition"
+>
+  <LayoutPanelTop size={18} />
+  <span>Customize Board</span>
+</button>
+
+    <button
+  onClick={() => {
+    setShowProjectSettings(false);
+    setShowTaskVisibilityModal(true);
+  }}
+  className="w-full flex items-center gap-3 px-5 py-3 text-white hover:bg-white/5 transition"
+>
+  <Eye size={18} />
+  <span>Task Visibility</span>
+</button>
+
+    <div className="border-t border-white/10" />
+
+    <button
+  onClick={() => {
+    setShowProjectSettings(false);
+    setShowDeleteProjectModal(true);
+  }}
+  className="w-full flex items-center gap-3 px-5 py-3 text-red-400 hover:bg-red-500/10 transition"
+>
+      <Trash2 size={18} />
+      <span>Delete Project</span>
+    </button>
+
+  </div>
+)}
+
+</div>
+    )}
+
+  </div>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-white/10 pb-6">
           <div
   className={`rounded-xl p-3 transition-all duration-700 ${
@@ -560,18 +761,6 @@ const getColumnColor = (column) => {
       <Users size={18} />
       Team
     </button>
-
-    <button
-      onClick={() => {
-  setTempBoardColumns([...boardColumns]);
-  setShowCustomizeBoard(true);
-}}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
-    >
-      <Settings2 size={18} />
-      Customize Board
-    </button>
-
     <CreateIssueModal defaultProjectId={project.id} />
   </div>
 )}
@@ -1027,7 +1216,7 @@ const getColumnColor = (column) => {
     // Force a reload so the global context pulls the updated tasks/columns from the backend 
     // since the backend might have moved tasks during a rename/delete!
     window.location.reload();
-  } catch (error) {
+  } catch {
     alert("Failed to save columns to database.");
   }
 }}
@@ -1037,6 +1226,46 @@ const getColumnColor = (column) => {
         onClose={() => setShowTeamModal(false)}
         members={members.filter(m => project.members?.some(mem => mem.id === m.id) || project.created_by_id === m.id)}
       />
+      <EditProjectModal
+  open={showEditProjectModal}
+  onClose={() => setShowEditProjectModal(false)}
+  projectName={projectName}
+  setProjectName={setProjectName}
+  projectDescription={projectDescription}
+  setProjectDescription={setProjectDescription}
+  boardType={boardType}
+  setBoardType={setBoardType}
+  startDate={startDate}
+  setStartDate={setStartDate}
+  endDate={endDate}
+  setEndDate={setEndDate}
+  members={members}
+  selectedMembers={selectedMembers}
+  setSelectedMembers={setSelectedMembers}
+  memberSearch={memberSearch}
+  setMemberSearch={setMemberSearch}
+  showAllMembers={showAllMembers}
+  setShowAllMembers={setShowAllMembers}
+  onUpdate={handleUpdateProject}
+/>
+<DeleteProjectModal
+  open={showDeleteProjectModal}
+  onClose={() => setShowDeleteProjectModal(false)}
+  onDelete={handleDeleteProject}
+  projectName={project.name}
+/>
+<TaskVisibilityModal
+  open={showTaskVisibilityModal}
+  onClose={() => setShowTaskVisibilityModal(false)}
+  visibility={taskVisibility}
+  setVisibility={setTaskVisibility}
+  onSave={() => {
+    console.log("Selected Visibility:", taskVisibility);
+
+    // Backend integration will come later
+    setShowTaskVisibilityModal(false);
+  }}
+/>
     </MainLayout>
   );
 }

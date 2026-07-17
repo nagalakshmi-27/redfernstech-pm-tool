@@ -299,36 +299,7 @@ setShowModal(true);
               <p className="text-sm text-slate-400 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-slate-400">End: {project.end_date}</p>
 
-              {(currentUserRole === "Admin" || project.created_by_id === currentUserId) && (
-  <div className="flex flex-col sm:flex-row gap-2 mt-4 relative z-10">
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        setEditingProjectId(project.id);
-        setProjectName(project.name);
-        setProjectDescription(project.description);
-        setStartDate(project.start_date || "");
-        setEndDate(project.end_date || "");
-        setBoardType(project.board_type || "kanban");
-        setSelectedMembers(memberArray.map((m) => m.id));
-        setShowModal(true);
-      }}
-      className="bg-white/10 text-white px-3 py-2 rounded-lg text-sm border border-white/20 hover:bg-white/20 transition"
-    >
-      Edit
-    </button>
-
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleDeleteProject(project.id);
-      }}
-      className="bg-red-500/20 text-red-200 px-3 py-2 rounded-lg text-sm border border-red-500/30 hover:bg-red-500/40 transition"
-    >
-      Delete
-    </button>
-  </div>
-)}
+              
             </div>
           );
         })}
