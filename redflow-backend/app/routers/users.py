@@ -297,8 +297,18 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 @router.post("/invite")
 def send_team_invite(invite: schemas.InviteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.is_owner:
-        raise HTTPException(status_code=403, detail="Only owners can invite users.")
+        if invite.is_owner:
+            raise HTTPException(status_code=403, detail="Only owners can invite other owners.")
+        if not invite.workspace_id:
+            raise HTTPException(status_code=403, detail="Only owners can invite users to the organization without a workspace.")
         
+        ws_membership = db.query(models.workspace_members).filter(
+            models.workspace_members.c.workspace_id == invite.workspace_id,
+            models.workspace_members.c.user_id == current_user.id
+        ).first()
+        
+        if not ws_membership or ws_membership.role != "Admin":
+            raise HTTPException(status_code=403, detail="Only Workspace Admins can invite users to this workspace.")
     if not invite.is_owner:
         if invite.workspace_access == "Client" and not invite.project_id:
             raise HTTPException(status_code=400, detail="Project is mandatory when workspace access is Client.")
@@ -467,20 +477,14 @@ def transfer_organization(
     if not current_user.is_owner:
         raise HTTPException(status_code=403, detail="Only owners can transfer the organization")
         
+    if not crud.verify_password(request.password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+        
     target_user = db.query(models.User).filter(models.User.id == request.new_owner_id, models.User.account_id == current_user.account_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="Target user not found")
         
-    # Verify they are an admin in some workspace
-    is_admin = db.query(models.workspace_members).join(models.Workspace, models.Workspace.id == models.workspace_members.c.workspace_id).filter(
-        models.Workspace.account_id == current_user.account_id,
-        models.workspace_members.c.user_id == target_user.id,
-        models.workspace_members.c.role == "Admin"
-    ).first()
     
-    if not is_admin:
-        raise HTTPException(status_code=400, detail="Target user must be an Admin in at least one workspace")
-        
     # Promote target user
     target_user.is_owner = True
     
@@ -491,7 +495,10 @@ def transfer_organization(
     return {"message": "Organization transferred successfully"}
 
 @router.delete("/me")
-def delete_user_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_user_account(request: schemas.PasswordRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not crud.verify_password(request.password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+        
     user_id = current_user.id
     
     if current_user.is_owner:
@@ -514,6 +521,7 @@ def delete_user_account(db: Session = Depends(get_db), current_user: models.User
                 db.query(models.WikiPageHistory).filter(models.WikiPageHistory.author_id.in_(user_ids)).update({"author_id": None}, synchronize_session=False)
                 db.query(models.Event).filter(models.Event.created_by_id.in_(user_ids)).update({"created_by_id": None}, synchronize_session=False)
                 db.query(models.Invitation).filter(models.Invitation.invited_by_id.in_(user_ids)).update({"invited_by_id": None}, synchronize_session=False)
+                db.query(models.Activity).filter(models.Activity.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
                 
                 # Delete notifications for these users
                 db.query(models.Notification).filter(models.Notification.user_id.in_(user_ids)).delete(synchronize_session=False)
@@ -545,6 +553,7 @@ def delete_user_account(db: Session = Depends(get_db), current_user: models.User
         db.query(models.WikiPageHistory).filter(models.WikiPageHistory.author_id == user_id).update({"author_id": None})
         db.query(models.Event).filter(models.Event.created_by_id == user_id).update({"created_by_id": None})
         db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id).update({"invited_by_id": None})
+        db.query(models.Activity).filter(models.Activity.user_id == user_id).update({"user_id": None})
         
         # Delete personal notifications
         db.query(models.Notification).filter(models.Notification.user_id == user_id).delete()
@@ -582,6 +591,31 @@ def delete_teammate(teammate_id: int, workspace_id: int, db: Session = Depends(g
     if not success:
         raise HTTPException(status_code=404, detail="Teammate not found or they are not on your team.")
     return {"message": "Teammate removed successfully!"}
+
+@router.delete("/organization/{user_id}")
+def remove_from_organization(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_owner:
+        raise HTTPException(status_code=403, detail="Only owners can remove users from the organization.")
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot remove yourself.")
+        
+    target_user = db.query(models.User).filter(models.User.id == user_id, models.User.account_id == current_user.account_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found in your organization.")
+        
+    if target_user.is_owner:
+        raise HTTPException(status_code=400, detail="Cannot remove an owner. Transfer ownership first.")
+        
+    # Nullify creator refs
+    db.query(models.Project).filter(models.Project.created_by_id == user_id).update({"created_by_id": None}, synchronize_session=False)
+    db.query(models.Event).filter(models.Event.created_by_id == user_id).update({"created_by_id": None}, synchronize_session=False)
+    db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id).update({"invited_by_id": None}, synchronize_session=False)
+    db.query(models.Notification).filter(models.Notification.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.Activity).filter(models.Activity.user_id == user_id).update({"user_id": None}, synchronize_session=False)
+    
+    db.delete(target_user)
+    db.commit()
+    return {"message": "User removed from organization successfully!"}
 
 @router.get("/fix_teammates_sync")
 def fix_teammates_sync(db: Session = Depends(get_db)):

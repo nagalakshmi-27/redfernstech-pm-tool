@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "../../../context/AppContext";
+import { useNavigate } from "react-router-dom";
 
 export default function DeleteOrganizationModal({
   open,
@@ -6,13 +8,78 @@ export default function DeleteOrganizationModal({
 }) {
   const [transferFirst, setTransferFirst] = useState(false);
   const [selectedMember, setSelectedMember] = useState("");
-  const [confirmText, setConfirmText] = useState("");
+  const [password, setPassword] = useState("");
   const [agree, setAgree] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { currentUser } = useContext(AppContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (open) {
+      setPassword("");
+      setAgree(false);
+      fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
+        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        setUsers(data.filter(u => u.id !== currentUser?.id));
+      })
+      .catch(err => console.error(err));
+    }
+  }, [open, currentUser]);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      if (transferFirst && selectedMember) {
+        // Transfer ownership first
+        const transferRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-organization`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          },
+          body: JSON.stringify({ new_owner_id: parseInt(selectedMember), password })
+        });
+        if (!transferRes.ok) {
+          const err = await transferRes.json();
+          alert(err.detail || "Failed to transfer ownership");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Delete account
+      const deleteRes = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ password })
+      });
+      if (deleteRes.ok) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("activeWorkspaceId");
+        window.location.href = "/";
+      } else {
+        const err = await deleteRes.json();
+        alert(err.detail || "Failed to delete organization");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting organization");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!open) return null;
 
   const canDelete =
-    confirmText === "DELETE" &&
+    password &&
     agree &&
     (!transferFirst || selectedMember);
 
@@ -67,18 +134,11 @@ Transfer Ownership To
     <option value="" className="bg-[#161b2e] text-white">
       Select Member
     </option>
-
-    <option value="Rahul Sharma" className="bg-[#161b2e] text-white">
-      Rahul Sharma
-    </option>
-
-    <option value="Priya Reddy" className="bg-[#161b2e] text-white">
-      Priya Reddy
-    </option>
-
-    <option value="Akansha" className="bg-[#161b2e] text-white">
-      Akansha
-    </option>
+    {users.map(user => (
+      <option key={user.id} value={user.id} className="bg-[#161b2e] text-white">
+        {user.full_name || user.email}
+      </option>
+    ))}
   </select>
 
   <svg
@@ -103,14 +163,15 @@ Transfer Ownership To
 <div className="mt-6">
 
 <label className="block text-slate-300 mb-2">
-Type <span className="text-red-400 font-semibold">DELETE</span> to continue
+Enter your password to continue
 </label>
 
 <input
-value={confirmText}
-onChange={(e)=>setConfirmText(e.target.value)}
-placeholder="Type DELETE"
-className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
+type="password"
+value={password}
+onChange={(e)=>setPassword(e.target.value)}
+placeholder="Your password"
+className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none"
 />
 
 </div>
@@ -137,14 +198,15 @@ Back
 </button>
 
 <button
-disabled={!canDelete}
+disabled={!canDelete || loading}
+onClick={handleDelete}
 className={`px-6 py-3 rounded-lg text-white ${
 canDelete
 ? "bg-red-500 hover:bg-red-600"
 : "bg-slate-600 cursor-not-allowed"
 }`}
 >
-Delete Organization
+{loading ? "Deleting..." : "Delete Organization"}
 </button>
 
 </div>

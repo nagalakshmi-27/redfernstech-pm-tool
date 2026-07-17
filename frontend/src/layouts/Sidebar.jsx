@@ -274,12 +274,14 @@ export default function Sidebar() {
                         >
                           Rename
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setShowDeleteWorkspaceModal(true); setDeleteWorkspaceConfirm(""); setShowDropdown(false); setWorkspaceDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/20"
-                        >
-                          Delete
-                        </button>
+                        {currentUser?.is_owner && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setShowDeleteWorkspaceModal(true); setDeleteWorkspaceConfirm(""); setShowDropdown(false); setWorkspaceDropdownOpen(false); }}
+                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/20"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>,
                       document.body
                     )}

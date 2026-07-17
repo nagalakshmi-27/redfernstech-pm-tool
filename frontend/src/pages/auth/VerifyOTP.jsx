@@ -5,7 +5,7 @@ import AppContext from "../../context/AppContext";
 export default function VerifyOTP() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { fetchWorkspaces } = useContext(AppContext);
+  const { fetchWorkspaces, fetchCurrentUser } = useContext(AppContext);
   const { temp_token, email, device_id } = location.state || {};
   
   const [error, setError] = useState("");
@@ -116,6 +116,7 @@ const handleVerifyOTP = async () => {
 if (workspaceRes.ok) {
   const workspaces = await workspaceRes.json();
   
+  await fetchCurrentUser();
   await fetchWorkspaces();
 
   if (workspaces.length === 0) {

@@ -297,9 +297,7 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
     if not db_project: return None
     
     role = get_user_workspace_role(db, user_id, db_project.workspace_id)
-    if role == "Client":
-        return None
-    if role == "Member" and not any(m.id == user_id for m in db_project.members):
+    if role != "Admin":
         return None
     
     update_data = project_update.model_dump(exclude_unset=True) # or .dict() for older pydantic
@@ -437,8 +435,8 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
         setattr(db_task, key, value)
         
     # If someone is just changing status (drag drop), they need to be the assignee, creator, or workspace admin
-    if "status" in update_data and not is_workspace_admin_user:
-        if not is_assignee and not is_creator:
+    if "status" in update_data and role != "Admin":
+        if db_task.assignee_id != user_id and db_task.created_by_id != user_id:
             db_notification = models.Notification(
                 user_id=project.created_by_id,
                 message=f"Task '{db_task.name}' status updated to '{update_data['status']}'",

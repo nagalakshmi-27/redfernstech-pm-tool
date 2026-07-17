@@ -5,7 +5,7 @@ import AppContext from "../../context/AppContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { fetchWorkspaces } = useContext(AppContext);
+  const { fetchWorkspaces, fetchCurrentUser } = useContext(AppContext);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -113,6 +113,7 @@ if (redirect === "accept-invite") {
     console.log("Workspaces:", workspaces);
     console.log("Length:", workspaces.length);
 
+    await fetchCurrentUser();
     await fetchWorkspaces();
 
     if (workspaces.length === 0) {

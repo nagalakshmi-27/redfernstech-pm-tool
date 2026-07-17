@@ -225,7 +225,7 @@ if (currentUserRole === "Client") {
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white">Teams</h1>
 
-        {currentUserRole !== "Client" && (
+        {currentUserRole === "Admin" && (
           <button
             onClick={() => setShowModal(true)}
             className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-medium shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] w-full sm:w-auto transition-all"

@@ -1,18 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "../../../context/AppContext";
 
 export default function TransferOwnershipModal({
   open,
   onClose,
 }) {
   const [selectedMember, setSelectedMember] = useState("");
-  const [confirmText, setConfirmText] = useState("");
+  const [password, setPassword] = useState("");
   const [agree, setAgree] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { currentUser, fetchCurrentUser, fetchWorkspaces } = useContext(AppContext);
+
+  useEffect(() => {
+    if (open) {
+      setPassword("");
+      setAgree(false);
+      fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
+        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        setUsers(data.filter(u => u.id !== currentUser?.id));
+      })
+      .catch(err => console.error(err));
+    }
+  }, [open, currentUser]);
+
+  const handleTransfer = async () => {
+    if (!selectedMember || !password) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me/transfer-organization`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({ new_owner_id: parseInt(selectedMember), password })
+      });
+      if (response.ok) {
+        await fetchCurrentUser();
+        await fetchWorkspaces();
+        window.location.reload();
+      } else {
+        const err = await response.json();
+        alert(err.detail || "Failed to transfer ownership");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error transferring ownership");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!open) return null;
 
   const canTransfer =
     selectedMember &&
-    confirmText === "TRANSFER" &&
+    password &&
     agree;
 
   return (
@@ -54,18 +101,11 @@ export default function TransferOwnershipModal({
     <option value="" className="bg-[#161b2e] text-white">
       Select Member
     </option>
-
-    <option value="Rahul Sharma" className="bg-[#161b2e] text-white">
-      Rahul Sharma
-    </option>
-
-    <option value="Priya Reddy" className="bg-[#161b2e] text-white">
-      Priya Reddy
-    </option>
-
-    <option value="Akansha" className="bg-[#161b2e] text-white">
-      Akansha
-    </option>
+    {users.map(user => (
+      <option key={user.id} value={user.id} className="bg-[#161b2e] text-white">
+        {user.full_name || user.email}
+      </option>
+    ))}
   </select>
 
   <svg
@@ -91,14 +131,15 @@ export default function TransferOwnershipModal({
         <div className="mt-6">
 
           <label className="block text-slate-300 mb-2">
-            Type <span className="text-cyan-400 font-semibold">TRANSFER</span> to continue
+            Enter your password to confirm
           </label>
 
           <input
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            placeholder="Type TRANSFER"
-            className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your password"
+            className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none"
           />
 
         </div>
@@ -131,14 +172,15 @@ export default function TransferOwnershipModal({
           </button>
 
           <button
-            disabled={!canTransfer}
+            disabled={!canTransfer || loading}
+            onClick={handleTransfer}
             className={`px-6 py-3 rounded-lg text-white ${
               canTransfer
                 ? "bg-gradient-to-r from-cyan-500 to-blue-500"
                 : "bg-slate-600 cursor-not-allowed"
             }`}
           >
-            Confirm Transfer
+            {loading ? "Transferring..." : "Transfer Ownership"}
           </button>
 
         </div>

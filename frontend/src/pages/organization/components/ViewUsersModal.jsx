@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Trash2 } from "lucide-react";
 
 export default function ViewUsersModal({ open, onClose }) {
   const [search, setSearch] = useState("");
@@ -7,10 +7,12 @@ export default function ViewUsersModal({ open, onClose }) {
   const [networkUsers, setNetworkUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const currentUserId = Number(localStorage.getItem("userId"));
+
   useEffect(() => {
     if (open) {
       setLoading(true);
-      fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
+      fetch(`${import.meta.env.VITE_API_URL}/users/network`, {
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       })
       .then(res => res.json())
@@ -24,6 +26,25 @@ export default function ViewUsersModal({ open, onClose }) {
       });
     }
   }, [open]);
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this user from the organization?")) return;
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/organization/${userId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      });
+      if (response.ok) {
+        setNetworkUsers(networkUsers.filter(u => u.id !== userId));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.detail || "Failed to delete user.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while deleting the user.");
+    }
+  };
 
   if (!open) return null;
 
@@ -109,6 +130,19 @@ export default function ViewUsersModal({ open, onClose }) {
                   >
                     Active
                   </span>
+                  
+                  {user.id !== currentUserId && !user.is_owner && user.role !== "Owner" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteUser(user.id);
+                      }}
+                      className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition ml-2"
+                      title="Remove from Organization"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))

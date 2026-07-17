@@ -7,8 +7,15 @@ import DeleteTransferModal from "./components/DeleteTransferModal";
 import TransferOwnershipModal from "./components/TransferOwnershipModal";
 import DeleteOrganizationModal from "./components/DeleteOrganizationModal";
 
+import { Navigate } from "react-router-dom";
+
 export default function OrganizationSettings() {
-  const { activeWorkspaceRole, currentUser } = useContext(AppContext);
+  const { activeWorkspaceRole, currentUser, fetchCurrentUser } = useContext(AppContext);
+
+  // If currentUser is loaded and they are not an owner, redirect them
+  if (currentUser && !currentUser.is_owner) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const currentUserRole = currentUser?.is_owner
     ? "Owner"
@@ -74,6 +81,7 @@ const [showDeleteOrganizationModal, setShowDeleteOrganizationModal] = useState(f
       );
 
       if (response.ok) {
+        await fetchCurrentUser();
         setMessage("Settings saved successfully!");
       } else {
         setMessage("Failed to save settings.");

@@ -33,6 +33,10 @@ class VerifyOTPRequest(BaseModel):
 # --- USERS ---
 class ChangeOwnerRequest(BaseModel):
     new_owner_id: int
+    password: str
+
+class PasswordRequest(BaseModel):
+    password: str
 
 class UserBase(BaseModel):
     username: Optional[str] = None
@@ -149,7 +153,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: int
-    created_by_id: int
+    created_by_id: Optional[int] = None
     workspace_id: Optional[int] = None
     members: List[UserResponse] = []
     progress: int = 0
@@ -301,7 +305,7 @@ class EventUpdate(BaseModel):
 
 class EventResponse(EventBase):
     id: int
-    created_by_id: int
+    created_by_id: Optional[int] = None
     class Config:
         from_attributes = True
 
@@ -452,7 +456,7 @@ class IntegrationResponse(IntegrationBase):
 class ActivityResponse(BaseModel):
     id: int
     project_id: int
-    user_id: int
+    user_id: Optional[int] = None
     action: str
     target_name: Optional[str] = None
     target_type: Optional[str] = None

@@ -186,7 +186,7 @@ const displayedMembers = showAllMembers
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white">Projects</h1>
-        {currentUserRole !== "Client" && (
+        {currentUserRole === "Admin" && (
   <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 
     <button
@@ -299,7 +299,7 @@ setShowModal(true);
               <p className="text-sm text-slate-400 mt-2">Start: {project.start_date}</p>
               <p className="text-sm text-slate-400">End: {project.end_date}</p>
 
-              {(currentUserRole === "Admin" || project.created_by_id === currentUserId) && (
+              {currentUserRole === "Admin" && (
   <div className="flex flex-col sm:flex-row gap-2 mt-4 relative z-10">
     <button
       onClick={(e) => {

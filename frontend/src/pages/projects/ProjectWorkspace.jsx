@@ -552,25 +552,29 @@ const getColumnColor = (column) => {
             <p className="text-slate-300 mt-2 max-w-2xl">{project.description}</p>
           </div>
           {currentUserRole !== "Client" && (
-  <div className="flex items-center gap-3">
-    <button
-      onClick={() => setShowTeamModal(true)}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
-    >
-      <Users size={18} />
-      Team
-    </button>
+          <div className="flex items-center gap-3">
+    {currentUserRole === "Admin" && (
+      <>
+        <button
+          onClick={() => setShowTeamModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
+        >
+          <Users size={18} />
+          Team
+        </button>
 
-    <button
-      onClick={() => {
-  setTempBoardColumns([...boardColumns]);
-  setShowCustomizeBoard(true);
-}}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
-    >
-      <Settings2 size={18} />
-      Customize Board
-    </button>
+        <button
+          onClick={() => {
+            setTempBoardColumns([...boardColumns]);
+            setShowCustomizeBoard(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
+        >
+          <Settings2 size={18} />
+          Customize Board
+        </button>
+      </>
+    )}
 
     <CreateIssueModal defaultProjectId={project.id} />
   </div>
