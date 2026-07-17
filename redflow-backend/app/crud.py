@@ -374,7 +374,40 @@ def get_user_tasks(db: Session, user_id: int, workspace_id: int = None):
             )
         )
 
-    return query.all()
+    raw_tasks = query.all()
+    
+    filtered_tasks = []
+    role_cache = {}
+    
+    for task in raw_tasks:
+        proj = task.project
+        if not proj: continue
+        
+        ws_id = proj.workspace_id
+        if ws_id not in role_cache:
+            role_cache[ws_id] = get_user_workspace_role(db, user_id, ws_id)
+            
+        role = role_cache[ws_id]
+        
+        # Admin and Client see all tasks
+        if role in ["Admin", "Client"]:
+            filtered_tasks.append(task)
+            continue
+            
+        # Member rules
+        visibility = getattr(proj, "task_visibility", "everyone")
+        viewers = getattr(proj, "task_viewers", []) or []
+        
+        if visibility == "everyone":
+            filtered_tasks.append(task)
+        elif visibility == "assigned":
+            if task.assignee_id == user_id:
+                filtered_tasks.append(task)
+        elif visibility == "custom":
+            if user_id in viewers or task.assignee_id == user_id:
+                filtered_tasks.append(task)
+                
+    return filtered_tasks
 
 def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
     # Fetch the project to get its name for the ticket ID prefix

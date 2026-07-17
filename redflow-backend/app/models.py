@@ -97,6 +97,9 @@ class Project(Base):
     ])
     project_key = Column(String, index=True, nullable=True)
     task_counter = Column(Integer, default=0)
+    
+    task_visibility = Column(String, default="everyone")
+    task_viewers = Column(JSON, default=[])
 
     creator = relationship("User", back_populates="projects")
     workspace = relationship("Workspace", back_populates="projects")

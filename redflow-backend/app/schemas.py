@@ -140,6 +140,8 @@ class ProjectBase(BaseModel):
 class ProjectCreate(ProjectBase):
     workspace_id: int
     member_ids: List[int] = []
+    task_visibility: Optional[str] = "everyone"
+    task_viewers: Optional[List[int]] = []
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -150,6 +152,8 @@ class ProjectUpdate(BaseModel):
     member_ids: Optional[List[int]] = None
     board_type: Optional[str] = None
     board_columns: Optional[List[BoardColumn]] = None
+    task_visibility: Optional[str] = None
+    task_viewers: Optional[List[int]] = None
 
 class ProjectResponse(ProjectBase):
     id: int
@@ -158,6 +162,8 @@ class ProjectResponse(ProjectBase):
     members: List[UserResponse] = []
     progress: int = 0
     calculated_status: str = "Planning"
+    task_visibility: Optional[str] = "everyone"
+    task_viewers: Optional[List[int]] = []
     class Config:
         from_attributes = True
 

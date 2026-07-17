@@ -84,8 +84,15 @@ export default function ProjectWorkspace() {
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false);
   const [showTaskVisibilityModal, setShowTaskVisibilityModal] = useState(false);
-
-const [taskVisibility, setTaskVisibility] = useState("everyone");
+  const [taskVisibility, setTaskVisibility] = useState("everyone");
+  const [taskViewers, setTaskViewers] = useState([]);
+  
+  useEffect(() => {
+    if (project) {
+      setTaskVisibility(project.task_visibility || "everyone");
+      setTaskViewers(project.task_viewers || []);
+    }
+  }, [project]);
   const handleOpenTask = (task) => {
     setEditingTaskId(task.id);
     setTaskName(task.name);
@@ -653,7 +660,7 @@ const handleDeleteProject = async () => {
       Back to Projects
     </Link>
 
-    {currentUserRole !== "Client" && (
+    {currentUserRole === "Admin" && (
       <div className="relative">
 
   <button
@@ -762,17 +769,6 @@ const handleDeleteProject = async () => {
         >
           <Users size={18} />
           Team
-        </button>
-
-        <button
-          onClick={() => {
-            setTempBoardColumns([...boardColumns]);
-            setShowCustomizeBoard(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
-        >
-          <Settings2 size={18} />
-          Customize Board
         </button>
       </>
     )}
@@ -1274,11 +1270,34 @@ const handleDeleteProject = async () => {
   onClose={() => setShowTaskVisibilityModal(false)}
   visibility={taskVisibility}
   setVisibility={setTaskVisibility}
-  onSave={() => {
-    console.log("Selected Visibility:", taskVisibility);
-
-    // Backend integration will come later
-    setShowTaskVisibilityModal(false);
+  taskViewers={taskViewers}
+  setTaskViewers={setTaskViewers}
+  projectMembers={project?.members || []}
+  onSave={async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/projects/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          task_visibility: taskVisibility,
+          task_viewers: taskViewers
+        })
+      });
+      if (res.ok) {
+        const updatedProject = await res.json();
+        setProjects(projects.map(p => p.id === parseInt(id) ? updatedProject : p));
+        setShowTaskVisibilityModal(false);
+      } else {
+        alert("Failed to update task visibility");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving settings");
+    }
   }}
 />
     </MainLayout>
