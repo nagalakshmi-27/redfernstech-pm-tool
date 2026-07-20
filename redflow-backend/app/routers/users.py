@@ -74,7 +74,7 @@ def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_
     
     email_prefix = user_data["email"].split("@")[0]
     org_name = "".join(e for e in account.name if e.isalnum())
-    base_username = f"{email_prefix}.{org_name}"
+    base_username = f"{email_prefix}@{org_name}"
     username = base_username
     counter = 1
     while crud.get_user_by_username(db, username):
@@ -393,7 +393,7 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
 
         email_prefix = invitation.email.split("@")[0]
         org_name = "".join(e for e in account.name if e.isalnum())
-        base_username = f"{email_prefix}.{org_name}"
+        base_username = f"{email_prefix}@{org_name}"
         username = base_username
         counter = 1
         while crud.get_user_by_username(db, username):

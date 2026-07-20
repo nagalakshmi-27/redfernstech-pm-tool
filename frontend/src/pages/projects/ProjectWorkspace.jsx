@@ -110,15 +110,26 @@ export default function ProjectWorkspace() {
     setActiveTaskTab("subtasks");
     setShowEditModal(true);
   };
-  const [projectName, setProjectName] = useState(project.name);
-const [projectDescription, setProjectDescription] = useState(project.description);
-const [startDate, setStartDate] = useState(project.start_date || "");
-const [endDate, setEndDate] = useState(project.end_date || "");
-const [boardType, setBoardType] = useState(project.board_type || "kanban");
+  const [projectName, setProjectName] = useState(project?.name || "");
+const [projectDescription, setProjectDescription] = useState(project?.description || "");
+const [startDate, setStartDate] = useState(project?.start_date || "");
+const [endDate, setEndDate] = useState(project?.end_date || "");
+const [boardType, setBoardType] = useState(project?.board_type || "kanban");
 
 const [selectedMembers, setSelectedMembers] = useState(
-  (project.members || []).map((m) => m.id)
+  (project?.members || []).map((m) => m.id)
 );
+
+useEffect(() => {
+  if (project) {
+    setProjectName(project.name);
+    setProjectDescription(project.description || "");
+    setStartDate(project.start_date || "");
+    setEndDate(project.end_date || "");
+    setBoardType(project.board_type || "kanban");
+    setSelectedMembers((project.members || []).map((m) => m.id));
+  }
+}, [project]);
 
 const [memberSearch, setMemberSearch] = useState("");
 const [showAllMembers, setShowAllMembers] = useState(false);

@@ -12,7 +12,7 @@ export default function ViewUsersModal({ open, onClose }) {
   useEffect(() => {
     if (open) {
       setLoading(true);
-      fetch(`${import.meta.env.VITE_API_URL}/users/network`, {
+      fetch(`${import.meta.env.VITE_API_URL}/users/teammates`, {
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
       })
       .then(res => res.json())

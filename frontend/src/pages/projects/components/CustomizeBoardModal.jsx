@@ -49,6 +49,11 @@ const colors = ["#facc15", "#22d3ee", "#4ade80", "#f87171", "#a78bfa", "#f472b6"
 const getRandomColor = () => colors[Math.floor(Math.random() * colors.length)];
 const getRandomIcon = () => popularIcons[Math.floor(Math.random() * popularIcons.length)];
 
+const getColId = (col) => {
+  const name = typeof col === 'string' ? col : col?.name;
+  return name?.trim() ? name : 'Unknown';
+};
+
 function SortableColumn({
   id,
   column,
@@ -56,7 +61,7 @@ function SortableColumn({
   tempBoardColumns,
   setTempBoardColumns,
 }) {
-  const isCompleted = (typeof column === 'string' ? column : (column?.name || "")) === "Completed";
+  const isCompleted = getColId(column) === "Completed";
   
   const {
     attributes,
@@ -170,13 +175,13 @@ const handleDragEnd = (event) => {
   if (!over || active.id === over.id) return;
 
   setTempBoardColumns((items) => {
-    const oldIndex = items.findIndex(item => (typeof item === 'string' ? item : item.name) === active.id);
-    const newIndex = items.findIndex(item => (typeof item === 'string' ? item : item.name) === over.id);
+    const oldIndex = items.findIndex(item => getColId(item) === active.id);
+    const newIndex = items.findIndex(item => getColId(item) === over.id);
     
     let result = arrayMove(items, oldIndex, newIndex);
     
     // Enforce Completed stays at the very end
-    const completedIdx = result.findIndex(item => (typeof item === 'string' ? item : item.name) === "Completed");
+    const completedIdx = result.findIndex(item => getColId(item) === "Completed");
     if (completedIdx !== -1 && completedIdx !== result.length - 1) {
         const completedCol = result.splice(completedIdx, 1)[0];
         result.push(completedCol);
@@ -211,12 +216,12 @@ const handleDragEnd = (event) => {
   onDragEnd={handleDragEnd}
 >
   <SortableContext
-    items={tempBoardColumns.map(col => typeof col === 'string' ? col : col.name)}
+    items={tempBoardColumns.map(getColId)}
     strategy={verticalListSortingStrategy}
   >
     <div className="space-y-3">
       {tempBoardColumns.map((column, index) => {
-        const colName = typeof column === 'string' ? column : (column?.name || 'Unknown');
+        const colName = getColId(column);
         return (
         <SortableColumn
           key={colName}
@@ -507,7 +512,7 @@ const handleDragEnd = (event) => {
         color: selectedColor || getRandomColor()
       };
 
-      const completedIndex = tempBoardColumns.findIndex(c => (typeof c === 'string' ? c : c.name) === "Completed");
+      const completedIndex = tempBoardColumns.findIndex(c => getColId(c) === "Completed");
       
       if (completedIndex !== -1) {
         const newCols = [...tempBoardColumns];
