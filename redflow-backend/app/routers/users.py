@@ -90,9 +90,30 @@ def set_password(request: schemas.SetPasswordRequest, db: Session = Depends(get_
 
 @router.post("/login")
 def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    authenticated_user = crud.authenticate_user(db, user.username, user.password)
+    authenticated_user = crud.authenticate_user(db, user.identifier, user.password)
+    
     if not authenticated_user:
-        raise HTTPException(status_code=400, detail="Incorrect User-Name or password")
+        users = db.query(models.User).filter(models.User.email == user.identifier).all()
+        if not users:
+            raise HTTPException(status_code=400, detail="Incorrect username, email, or password")
+        if not crud.verify_password(user.password, users[0].hashed_password):
+            raise HTTPException(status_code=400, detail="Incorrect username, email, or password")
+            
+        organizations = []
+        for u in users:
+            org_role = "Owner" if u.is_owner else "Member"
+            organizations.append({
+                "id": u.account.id if u.account else 0,
+                "name": u.account.name if u.account else "Unknown",
+                "username": u.username,
+                "role": org_role,
+                "user_id": u.id
+            })
+            
+        return {
+            "needs_org_selection": True,
+            "organizations": organizations
+        }
         
     if user.device_id and crud.check_user_device(db, authenticated_user.id, user.device_id):
         access_token = auth.create_access_token(data={"sub": authenticated_user.username})
@@ -351,8 +372,7 @@ def get_invite(token: str, db: Session = Depends(get_db)):
     workspace = db.query(models.Workspace).filter(models.Workspace.id == invitation.workspace_id).first()
     inviter = db.query(models.User).filter(models.User.id == invitation.invited_by_id).first()
     user_exists = db.query(models.User).filter(
-        models.User.email == invitation.email, 
-        models.User.account_id == inviter.account_id
+        models.User.email == invitation.email
     ).first() is not None
     return {
         "email": invitation.email,
@@ -384,7 +404,8 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
     if existing_org_user:
         new_user = existing_org_user
     else:
-        if not request.password:
+        global_user = db.query(models.User).filter(models.User.email == invitation.email).first()
+        if not global_user and not request.password:
             raise HTTPException(status_code=400, detail="Password is required for new users")
             
         parts = invitation.full_name.split(" ", 1) if invitation.full_name else ["", ""]
@@ -403,11 +424,16 @@ def accept_invite(token: str, request: schemas.InviteAccept, db: Session = Depen
         new_user_data = schemas.UserCreate(
             username=username,
             email=invitation.email,
-            password=request.password,
+            password=request.password or "DUMMY_PASSWORD",
             first_name=first_name,
             last_name=last_name
         )
         new_user = crud.create_user(db=db, user=new_user_data, account_id=account_id, is_owner=invitation.is_owner)
+        
+        if global_user:
+            new_user.hashed_password = global_user.hashed_password
+            db.commit()
+            db.refresh(new_user)
     
     if not invitation.is_owner and invitation.workspace_id:
         # Check if they are already in the workspace to prevent duplicate key error
@@ -522,6 +548,8 @@ def delete_user_account(request: schemas.PasswordRequest, db: Session = Depends(
                 db.query(models.Event).filter(models.Event.created_by_id.in_(user_ids)).update({"created_by_id": None}, synchronize_session=False)
                 db.query(models.Invitation).filter(models.Invitation.invited_by_id.in_(user_ids)).update({"invited_by_id": None}, synchronize_session=False)
                 db.query(models.Activity).filter(models.Activity.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
+                db.query(models.WorkLog).filter(models.WorkLog.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
+                db.query(models.NotebookItem).filter(models.NotebookItem.user_id.in_(user_ids)).update({"user_id": None}, synchronize_session=False)
                 
                 # Delete notifications for these users
                 db.query(models.Notification).filter(models.Notification.user_id.in_(user_ids)).delete(synchronize_session=False)
@@ -554,12 +582,15 @@ def delete_user_account(request: schemas.PasswordRequest, db: Session = Depends(
         db.query(models.Event).filter(models.Event.created_by_id == user_id).update({"created_by_id": None})
         db.query(models.Invitation).filter(models.Invitation.invited_by_id == user_id).update({"invited_by_id": None})
         db.query(models.Activity).filter(models.Activity.user_id == user_id).update({"user_id": None})
+        db.query(models.WorkLog).filter(models.WorkLog.user_id == user_id).update({"user_id": None})
+        db.query(models.NotebookItem).filter(models.NotebookItem.user_id == user_id).update({"user_id": None})
         
         # Delete personal notifications
         db.query(models.Notification).filter(models.Notification.user_id == user_id).delete()
         
         # Clear many-to-many relationship
         current_user.assigned_projects = []
+        current_user.workspaces = []
         
         # Finally, delete the user record
         db.delete(current_user)

@@ -168,7 +168,7 @@ class ProjectResponse(ProjectBase):
         from_attributes = True
 
 class UserLogin(BaseModel):
-    username: str
+    identifier: str
     password: str
     device_id: Optional[str] = None
 

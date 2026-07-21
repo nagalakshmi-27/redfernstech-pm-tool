@@ -1,6 +1,0 @@
-Task Name,Description,Status,Priority,Assignee Email
-Setup Database,Initialize the PostgreSQL database and create schemas,Completed,High,akansha@redfernstech.com
-Design Dashboard,Create Figma mockups for the main dashboard UI,In Progress,Medium,akansha@redfernstech.com
-Implement API Auth,Write JWT authentication middleware,To Do,High,
-Write Unit Tests,Cover all CRUD operations for tasks,To Do,Low,
-Fix Navigation Bug,Fix the mobile sidebar closing issue,In Progress,Medium,akansha@redfernstech.com

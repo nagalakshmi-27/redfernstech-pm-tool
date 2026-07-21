@@ -181,7 +181,10 @@ def update_user(db: Session, user: models.User, user_update: schemas.UserUpdate)
     return user
 
 def update_password(db: Session, user: models.User, new_password: str):
-    user.hashed_password = get_password_hash(new_password)
+    hashed_password = get_password_hash(new_password)
+    users = db.query(models.User).filter(models.User.email == user.email).all()
+    for u in users:
+        u.hashed_password = hashed_password
     db.commit()
     db.refresh(user)
     return user

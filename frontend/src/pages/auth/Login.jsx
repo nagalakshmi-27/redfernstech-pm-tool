@@ -66,6 +66,22 @@ if (!isPasswordValid) {
 
       // 4. Get the response
       const data = await response.json();
+      
+      if (data.needs_org_selection) {
+        const searchParams = new URLSearchParams(window.location.search);
+        navigate("/select-organization", {
+          state: {
+            organizations: data.organizations,
+            identifier: identifier,
+            password: password,
+            device_id: device_id,
+            redirect: searchParams.get("redirect"),
+            inviteToken: searchParams.get("token")
+          }
+        });
+        return;
+      }
+
       // 5. Check if we got a temporary token (OTP needed)
       if (data.temp_token) {
         navigate("/verify-otp", {

@@ -1,49 +1,96 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
+import AppContext from "../../context/AppContext";
 import { Search } from "lucide-react";
 export default function OrganizationSelection() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { fetchWorkspaces, fetchCurrentUser } = useContext(AppContext);
 
-  // Later this will come from the Login page
-  const organizations =
-  location.state?.organizations || [
-    {
-      id: 1,
-      name: "RedFerns Tech",
-      username: "nagalakshmi_redferns",
-      role: "Super Admin",
-    },
-    {
-      id: 2,
-      name: "ABC Solutions",
-      username: "nagalakshmi_abc",
-      role: "Member",
-    },
-    {
-      id: 3,
-      name: "InnovateX Pvt Ltd",
-      username: "nagalakshmi_innovatex",
-      role: "Admin",
-    },
-    {
-      id: 4,
-      name: "TechWave Systems",
-      username: "nagalakshmi_techwave",
-      role: "Client",
-    },
-  ];
+  useEffect(() => {
+    if (!location.state?.organizations || !location.state?.password) {
+      navigate("/login");
+    }
+  }, [location, navigate]);
+
+  const organizations = location.state?.organizations || [];
   const [search, setSearch] = useState("");
 
   const filteredOrganizations = organizations.filter((org) =>
   org.name.toLowerCase().includes(search.toLowerCase()) ||
   org.username.toLowerCase().includes(search.toLowerCase())
 );
-  const handleContinue = (organization) => {
-    console.log("Selected Organization:", organization);
+  const handleContinue = async (organization) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: organization.username,
+          password: location.state?.password,
+          device_id: location.state?.device_id
+        })
+      });
 
-    // Later this will call the backend API
-    navigate("/dashboard");
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.temp_token) {
+          navigate("/verify-otp", { state: { temp_token: data.temp_token, device_id: location.state?.device_id } });
+          return;
+        }
+
+        // Save the real token securely! (Known device)
+        localStorage.setItem("token", data.access_token);
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userEmail", data.user.email);
+        localStorage.setItem("userId", data.user.id);
+
+        if (data.user.profile_image) {
+          const backendHost = import.meta.env.VITE_API_URL.replace("/api", "").replace(/\/$/, "");
+          localStorage.setItem("profileImage", `${backendHost}${data.user.profile_image}`);
+        } else {
+          localStorage.removeItem("profileImage");
+        }
+
+        if (location.state?.redirect === "accept-invite") {
+          navigate(`/accept-invite?token=${location.state.inviteToken}`);
+        } else {
+          const workspaceRes = await fetch(
+            `${import.meta.env.VITE_API_URL}/workspaces/`,
+            {
+              headers: {
+                Authorization: `Bearer ${data.access_token}`,
+              },
+            }
+          );
+
+          if (workspaceRes.ok) {
+            const workspaces = await workspaceRes.json();
+            await fetchCurrentUser();
+            await fetchWorkspaces();
+
+            if (workspaces.length === 0) {
+              if (data.user?.is_owner) {
+                navigate("/organization");
+              } else {
+                navigate("/workspace-pending");
+              }
+            } else {
+              navigate("/dashboard");
+            }
+          } else {
+            navigate("/dashboard");
+          }
+        }
+      } else {
+        const errorData = await response.json();
+        alert(errorData.detail || "Failed to login to this organization.");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Network error. Please try again.");
+    }
   };
 
   // If no organizations are received
