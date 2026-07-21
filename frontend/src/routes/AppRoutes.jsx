@@ -16,6 +16,7 @@ import Notifications from "../pages/notifications/Notifications";
 import Settings from "../pages/settings/Settings";
 import Reports from "../pages/reports/Reports";
 import Notebook from "../pages/notebook/Notebook";
+import NoteCleanup from "../pages/notebook/NoteCleanup";
 import Integrations from "../pages/integrations/Integrations";
 import ProtectedRoute from "./ProtectedRoute";
 import CheckEmail from "../pages/auth/CheckEmail";
@@ -57,6 +58,7 @@ export default function AppRoutes() {
         <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/notebook" element={<Notebook />} />
+        <Route path="/notebook/cleanup" element={<ProtectedRoute><NoteCleanup /></ProtectedRoute>} />
 <Route
   path="/organization"
   element={

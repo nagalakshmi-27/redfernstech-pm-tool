@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 import app.models
-from app.routers import users, projects, tasks, events, notifications, collaboration, workspaces, notebooks, integrations, webhooks, subtasks, worklogs
+from app.routers import users, projects, tasks, events, notifications, collaboration, workspaces, notebooks, integrations, webhooks, subtasks, worklogs, ai
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -60,6 +60,7 @@ app.include_router(integrations.public_router)
 app.include_router(subtasks.router)
 app.include_router(worklogs.router)
 app.include_router(webhooks.router)
+app.include_router(ai.router)
 
 @app.get("/")
 def read_root():

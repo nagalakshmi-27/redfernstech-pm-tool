@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Save, Download } from "lucide-react";
+import { ArrowLeft, Save, Download, Sparkles } from "lucide-react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 
@@ -7,6 +7,7 @@ export default function NoteEditor({ item, onClose, token }) {
   const [title, setTitle] = useState(item.title);
   const [content, setContent] = useState(item.content || "");
   const [saving, setSaving] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false); // <--- AI Loading state
   const saveTimeoutRef = useRef(null);
 
   const modules = {
@@ -20,11 +21,8 @@ export default function NoteEditor({ item, onClose, token }) {
   };
 
   const formats = [
-    'size',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'list', 'bullet', 'check'
-  ];
+    'size', 'bold', 'italic', 'underline', 'strike',
+    'color', 'background', 'list'];
 
   const saveToBackend = async (newTitle, newContent, isClosing = false) => {
     setSaving(true);
@@ -45,8 +43,39 @@ export default function NoteEditor({ item, onClose, token }) {
     }
   };
 
+  // --- NEW AI CLEANUP FUNCTION ---
+  const handleAiCleanup = async () => {
+    // Prevent cleaning an empty note
+    if (!content.trim() || content === '<p><br></p>') return; 
+    
+    setIsCleaning(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      // Notice we are calling our new AI route
+      const response = await fetch(`${apiUrl.replace('/api/v1', '')}/api/ai/notes/cleanup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ raw_note: content }),
+      });
+
+      if (!response.ok) throw new Error('Failed to clean up note.');
+      
+      const data = await response.json();
+      
+      // Update the editor with the shiny new AI text!
+      handleContentChange(data.cleaned_note);
+    } catch (err) {
+      console.error(err);
+      alert('AI Cleanup failed: ' + err.message);
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   const handleExport = () => {
-    const plainText = content.replace(/<[^>]*>?/gm, ''); // Strip HTML for a clean txt file
+    const plainText = content.replace(/<[^>]*>?/gm, ''); 
     const blob = new Blob([plainText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -114,15 +143,9 @@ export default function NoteEditor({ item, onClose, token }) {
           color: #475569;
           font-style: normal;
         }
-        .note-editor-container .ql-snow .ql-stroke {
-          stroke: #94a3b8;
-        }
-        .note-editor-container .ql-snow .ql-fill {
-          fill: #94a3b8;
-        }
-        .note-editor-container .ql-snow .ql-picker {
-          color: #94a3b8;
-        }
+        .note-editor-container .ql-snow .ql-stroke { stroke: #94a3b8; }
+        .note-editor-container .ql-snow .ql-fill { fill: #94a3b8; }
+        .note-editor-container .ql-snow .ql-picker { color: #94a3b8; }
         .note-editor-container .ql-snow .ql-picker-options {
           background-color: #1e1e2d;
           border-color: #334155;
@@ -199,6 +222,18 @@ export default function NoteEditor({ item, onClose, token }) {
               <span className="flex items-center"><Save className="w-4 h-4 mr-1" /> Auto-saved</span>
             )}
           </div>
+          
+          {/* NEW AI BUTTON */}
+          <button 
+            onClick={handleAiCleanup}
+            disabled={isCleaning}
+            className="flex items-center p-2 sm:px-4 sm:py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-purple-500/20 disabled:opacity-50"
+            title="AI Cleanup"
+          >
+            <Sparkles className={`w-4 h-4 sm:mr-2 ${isCleaning ? 'animate-pulse' : ''}`} /> 
+            <span className="hidden sm:inline">{isCleaning ? 'Cleaning...' : 'AI Cleanup ✨'}</span>
+          </button>
+
           <button 
             onClick={handleExport}
             className="flex items-center p-2 sm:px-4 sm:py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors border border-slate-600"
