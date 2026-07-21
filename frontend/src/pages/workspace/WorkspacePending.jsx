@@ -1,6 +1,24 @@
 import { Building2, Clock3 } from "lucide-react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function WorkspacePending() {
+  const navigate = useNavigate();
+  useEffect(() => {
+  const interval = setInterval(() => {
+    // TODO: Replace this with backend API call
+
+    // TODO: Replace this with backend API response
+const isAssigned = false;
+
+if (isAssigned) {
+  clearInterval(interval);
+  navigate("/dashboard");
+}
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [navigate]);
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 px-6">
       <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-10 text-center shadow-xl">
