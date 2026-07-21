@@ -24,6 +24,7 @@ import SetPassword from "../pages/auth/SetPassword";
 import Organization from "../pages/organization/Organization";
 import OrganizationSettings from "../pages/organization/OrganizationSettings";
 import WorkspacePending from "../pages/workspace/WorkspacePending";
+import OrganizationSelection from "../pages/auth/OrganizationSelection";
 
 export default function AppRoutes() {
   return (
@@ -75,6 +76,10 @@ export default function AppRoutes() {
 <Route
   path="/workspace-pending"
   element={<WorkspacePending />}
+/>
+<Route
+  path="/select-organization"
+  element={<OrganizationSelection />}
 />
 
       </Routes>

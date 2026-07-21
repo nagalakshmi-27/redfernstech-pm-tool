@@ -7,7 +7,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { fetchWorkspaces, fetchCurrentUser } = useContext(AppContext);
 
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordRules, setShowPasswordRules] =
@@ -15,7 +15,7 @@ export default function Login() {
 
   const handleLogin = async (e) => { // <-- We added "async" here!
     e.preventDefault();
-    if (!username || !password) {
+    if (!identifier || !password) {
   alert("Please fill all fields");
   return;
 }
@@ -51,7 +51,11 @@ if (!isPasswordValid) {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username, password: password, device_id: device_id })
+        body: JSON.stringify({
+  identifier: identifier,
+  password: password,
+  device_id: device_id
+})
       });
 
       // 3. Check if the backend rejected the login
@@ -148,14 +152,14 @@ if (redirect === "accept-invite") {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block mb-2 font-medium text-slate-300">
-              User-Name
+              Email or Username
             </label>
 
             <input
               type="text"
-              placeholder="Enter your User-Name"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={identifier}
+onChange={(e) => setIdentifier(e.target.value)}
+placeholder="Enter your email or username"
               className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />
           </div>
