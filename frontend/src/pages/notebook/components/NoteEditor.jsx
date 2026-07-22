@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Save, Download, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, Download, Sparkles, RotateCcw } from "lucide-react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 
@@ -8,6 +8,7 @@ export default function NoteEditor({ item, onClose, token }) {
   const [content, setContent] = useState(item.content || "");
   const [saving, setSaving] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false); // <--- AI Loading state
+  const [originalContent, setOriginalContent] = useState(item.original_content || null);
   const saveTimeoutRef = useRef(null);
 
   const modules = {
@@ -24,7 +25,7 @@ export default function NoteEditor({ item, onClose, token }) {
     'size', 'bold', 'italic', 'underline', 'strike',
     'color', 'background', 'list'];
 
-  const saveToBackend = async (newTitle, newContent, isClosing = false) => {
+  const saveToBackend = async (newTitle, newContent, newOriginalContent = originalContent, isClosing = false) => {
     setSaving(true);
     try {
       await fetch(`${import.meta.env.VITE_API_URL}/notebooks/${item.id}`, {
@@ -33,7 +34,11 @@ export default function NoteEditor({ item, onClose, token }) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ title: newTitle, content: newContent })
+        body: JSON.stringify({ 
+          title: newTitle, 
+          content: newContent,
+          original_content: newOriginalContent // <--- Sends the backup to the DB
+        })
       });
       if (isClosing) onClose();
     } catch (err) {
@@ -45,32 +50,45 @@ export default function NoteEditor({ item, onClose, token }) {
 
   // --- NEW AI CLEANUP FUNCTION ---
   const handleAiCleanup = async () => {
-    // Prevent cleaning an empty note
     if (!content.trim() || content === '<p><br></p>') return; 
     
     setIsCleaning(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      // Notice we are calling our new AI route
       const response = await fetch(`${apiUrl.replace('/api/v1', '')}/api/ai/notes/cleanup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ raw_note: content }),
       });
-
       if (!response.ok) throw new Error('Failed to clean up note.');
       
       const data = await response.json();
       
-      // Update the editor with the shiny new AI text!
-      handleContentChange(data.cleaned_note);
+      // Update state
+      setOriginalContent(content);
+      setContent(data.cleaned_note);
+      
+      // Instantly save BOTH the new AI text and the original backup to the DB
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => saveToBackend(title, data.cleaned_note, content), 500);
     } catch (err) {
       console.error(err);
       alert('AI Cleanup failed: ' + err.message);
     } finally {
       setIsCleaning(false);
+    }
+  };
+  const handleRevert = () => {
+    if (originalContent !== null) {
+      setContent(originalContent);
+      setOriginalContent(null);
+      
+      // Instantly save the reverted text and delete the backup from the DB
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => saveToBackend(title, originalContent, null), 500);
     }
   };
 
@@ -201,7 +219,7 @@ export default function NoteEditor({ item, onClose, token }) {
       <div className="min-h-[4rem] py-2 sm:py-0 bg-[#13131a] border-b border-slate-800 flex flex-wrap sm:flex-nowrap items-center justify-between px-2 sm:px-6 z-10 gap-2">
         <div className="flex items-center flex-1 min-w-[150px]">
           <button 
-            onClick={() => saveToBackend(title, content, true)}
+            onClick={() => saveToBackend(title, content, originalContent, true)}
             className="text-slate-400 hover:text-white mr-2 sm:mr-4 p-2 rounded-full hover:bg-slate-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -222,7 +240,16 @@ export default function NoteEditor({ item, onClose, token }) {
               <span className="flex items-center"><Save className="w-4 h-4 mr-1" /> Auto-saved</span>
             )}
           </div>
-          
+           {/* REVERT BUTTON (Only shows if there is a backup) */}
+          {originalContent && (
+            <button 
+              onClick={handleRevert}
+              className="flex items-center p-2 sm:px-3 sm:py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors shadow-lg shadow-orange-500/20"
+              title="Revert AI Cleanup"
+            >
+              <RotateCcw className="w-5 h-5" /> 
+            </button>
+          )}
           {/* NEW AI BUTTON */}
           <button 
             onClick={handleAiCleanup}
@@ -243,7 +270,7 @@ export default function NoteEditor({ item, onClose, token }) {
           </button>
           
           <button 
-            onClick={() => saveToBackend(title, content, true)}
+            onClick={() => saveToBackend(title, content, originalContent, true)}
             className="flex items-center p-2 sm:px-4 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
             title="Save & Close"
           >

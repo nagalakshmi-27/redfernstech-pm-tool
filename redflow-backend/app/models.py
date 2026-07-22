@@ -305,6 +305,7 @@ class NotebookItem(Base):
     title = Column(String, default="Untitled")
     item_type = Column(String, default="note") # "note" or "scribble"
     content = Column(String, nullable=True) # Text or base64 image data
+    original_content = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

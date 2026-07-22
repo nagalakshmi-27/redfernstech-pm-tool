@@ -421,6 +421,7 @@ class NotebookItemBase(BaseModel):
     title: str
     item_type: str # "note" or "scribble"
     content: Optional[str] = None
+    original_content: Optional[str] = None
     workspace_id: int
 
 class NotebookItemCreate(NotebookItemBase):
@@ -429,6 +430,7 @@ class NotebookItemCreate(NotebookItemBase):
 class NotebookItemUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    original_content: Optional[str] = None
 
 class NotebookItemResponse(NotebookItemBase):
     id: int
