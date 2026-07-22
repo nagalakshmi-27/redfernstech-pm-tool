@@ -20,9 +20,9 @@ export default function TopNavbar({
   setSidebarOpen,
 }) {
   const navigate = useNavigate();
-  const { projects, tasks, members } = useContext(AppContext);
+  const { projects, tasks, members, currentUser } = useContext(AppContext);
   const userEmail = localStorage.getItem("userEmail") || "";
-
+  const organizationName = currentUser?.organization_name || "Your Organization";
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -220,7 +220,7 @@ const handleSearchClick = (item) => {
 
   return (
     <>
-    <div className="h-[72px] bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-6 relative z-50">
+    <div className="h-[72px] bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 md:px-6 relative z-40">
       <div className="relative flex items-center gap-3">
   <button
     onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -228,6 +228,18 @@ const handleSearchClick = (item) => {
   >
     ☰
   </button>
+  <div className="hidden lg:flex flex-col mr-4 min-w-[220px] max-w-[280px]">
+  <span className="text-xs uppercase tracking-wider text-slate-400">
+    Organization
+  </span>
+
+  <span
+    className="text-white font-semibold truncate"
+    title={organizationName}
+  >
+    {organizationName}
+  </span>
+</div>
 
   <input
   type="text"

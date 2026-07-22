@@ -15,8 +15,8 @@ export default function MainLayout({ children }) {
 
   {/* Mobile Sidebar */}
   {sidebarOpen && (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="w-56 bg-slate-900/90 backdrop-blur-xl shadow-lg border-r border-white/10">
+    <div className="fixed inset-0 z-[9999] flex">
+      <div className="w-56 h-screen bg-slate-900/95 backdrop-blur-xl shadow-2xl border-r border-white/10">
         <Sidebar />
       </div>
 
