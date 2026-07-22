@@ -657,6 +657,43 @@ const handleDeleteProject = async () => {
     alert("Failed to delete project.");
   }
 };
+
+const handleBoardViewChange = async (type) => {
+  // Change UI immediately
+  setBoardType(type);
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/${project.id}/board-view`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          board_type: type,
+        }),
+      }
+    );
+
+    if (response.ok) {
+      const updatedProject = await response.json();
+
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === project.id ? updatedProject : p
+        )
+      );
+    }
+  } catch (err) {
+    // Backend is not ready yet.
+    console.log("Board view API not available yet.");
+  }
+};
+
   return (
     <MainLayout>
       <div className="mb-6">
@@ -806,57 +843,79 @@ const handleDeleteProject = async () => {
 
       {/* TAB CONTENT */}
       {activeTab === "Board" && (
-        <div className="w-full">
+  <div className="w-full">
 
-  {(!project.board_type || project.board_type === "kanban") && (
-  <KanbanBoard
-    columns={columns}
-    projectTasks={projectTasks}
-    members={members}
-    currentUserRole={currentUserRole}
-    handleDragStart={handleDragStart}
-    handleDragOver={handleDragOver}
-    handleDropOnColumn={handleDropOnColumn}
-    handleDropOnCard={handleDropOnCard}
-    getColumnIcon={getColumnIcon}
-    getColumnColor={getColumnColor}
-    handleDeleteTask={handleDeleteTask}
-    openTask={handleOpenTask}
-    highlightedTaskId={highlightedTaskId}
-  />
+    {/* Board View Switcher */}
+    <div className="flex justify-end mb-5">
+      <div className="flex rounded-xl border border-white/10 bg-[#171d31] p-1">
+        {["kanban", "scrum", "list"].map((type) => (
+          <button
+            key={type}
+            onClick={() => handleBoardViewChange(type)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
+              boardType === type
+                ? "bg-cyan-500 text-white shadow-md"
+                : "text-slate-300 hover:bg-white/10"
+            }`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Kanban Board */}
+    {(!boardType || boardType === "kanban") && (
+      <KanbanBoard
+        columns={columns}
+        projectTasks={projectTasks}
+        members={members}
+        currentUserRole={currentUserRole}
+        handleDragStart={handleDragStart}
+        handleDragOver={handleDragOver}
+        handleDropOnColumn={handleDropOnColumn}
+        handleDropOnCard={handleDropOnCard}
+        getColumnIcon={getColumnIcon}
+        getColumnColor={getColumnColor}
+        handleDeleteTask={handleDeleteTask}
+        openTask={handleOpenTask}
+        highlightedTaskId={highlightedTaskId}
+      />
+    )}
+
+    {/* Scrum Board */}
+    {boardType === "scrum" && (
+      <ScrumBoard
+        columns={columns}
+        projectTasks={projectTasks}
+        members={members}
+        currentUserRole={currentUserRole}
+        handleDragStart={handleDragStart}
+        handleDragOver={handleDragOver}
+        handleDropOnColumn={handleDropOnColumn}
+        handleDropOnCard={handleDropOnCard}
+        getColumnIcon={getColumnIcon}
+        getColumnColor={getColumnColor}
+        handleDeleteTask={handleDeleteTask}
+        openTask={handleOpenTask}
+        highlightedTaskId={highlightedTaskId}
+      />
+    )}
+
+    {/* List Board */}
+    {boardType === "list" && (
+      <TaskListBoard
+        projectTasks={projectTasks}
+        members={members}
+        currentUserRole={currentUserRole}
+        handleDeleteTask={handleDeleteTask}
+        openTask={handleOpenTask}
+        highlightedTaskId={highlightedTaskId}
+      />
+    )}
+
+  </div>
 )}
-
-  {project.board_type === "scrum" && (
-    <ScrumBoard
-  columns={columns}
-  projectTasks={projectTasks}
-  members={members}
-  currentUserRole={currentUserRole}
-  handleDragStart={handleDragStart}
-  handleDragOver={handleDragOver}
-  handleDropOnColumn={handleDropOnColumn}
-  handleDropOnCard={handleDropOnCard}
-  getColumnIcon={getColumnIcon}
-  getColumnColor={getColumnColor}
-  handleDeleteTask={handleDeleteTask}
-  openTask={handleOpenTask}
-  highlightedTaskId={highlightedTaskId}
-/>
-  )}
-
-  {project.board_type === "list" && (
-    <TaskListBoard
-  projectTasks={projectTasks}
-  members={members}
-  currentUserRole={currentUserRole}
-  handleDeleteTask={handleDeleteTask}
-  openTask={handleOpenTask}
-  highlightedTaskId={highlightedTaskId}
-/>
-  )}
-
-        </div>
-      )}
 
       {activeTab === "Activity" && (
         <ProjectComments projectId={project.id} />

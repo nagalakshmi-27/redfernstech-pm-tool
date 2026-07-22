@@ -24,7 +24,6 @@ export default function Projects() {
   const [projectDescription, setProjectDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [boardType, setBoardType] = useState("kanban");
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState("");
@@ -54,9 +53,8 @@ const [uploading, setUploading] = useState(false);
   start_date: startDate,
   end_date: endDate,
   status: "Planning",
-  board_type: boardType,
   member_ids: selectedMembers,
-  workspace_id: parseInt(activeWorkspaceId)
+  workspace_id: parseInt(activeWorkspaceId),
 };
 
     try {
@@ -90,7 +88,6 @@ const [uploading, setUploading] = useState(false);
     setStartDate("");
     setEndDate("");
     setSelectedMembers([]);
-setBoardType("kanban");
 setEditingProjectId(null);
 setMemberSearch("");
 setShowAllMembers(false);
@@ -204,7 +201,6 @@ const displayedMembers = showAllMembers
         setStartDate("");
         setEndDate("");
         setSelectedMembers([]);
-setBoardType("kanban");
 setMemberSearch("");
 setShowAllMembers(false);
 setShowModal(true);
@@ -321,29 +317,6 @@ setShowModal(true);
                 <textarea value={projectDescription} onChange={(e) => setProjectDescription(e.target.value)} className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500" />
               </div>
 
-              <div>
-  <label className="block mb-2 font-medium text-slate-300">
-    Board Type
-  </label>
-
-  <select
-    value={boardType}
-    onChange={(e) => setBoardType(e.target.value)}
-    className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-  >
-    <option value="kanban" className="bg-slate-900">
-      Kanban
-    </option>
-
-    <option value="scrum" className="bg-slate-900">
-      Scrum
-    </option>
-
-    <option value="list" className="bg-slate-900">
-      List
-    </option>
-  </select>
-</div>
 
               <div>
   <label className="flex items-center gap-2 mb-2 font-medium text-slate-300">
