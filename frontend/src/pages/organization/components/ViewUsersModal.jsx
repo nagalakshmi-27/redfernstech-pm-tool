@@ -62,9 +62,9 @@ export default function ViewUsersModal({ open, onClose }) {
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#171d31] p-6"
-      >
+  onClick={(e) => e.stopPropagation()}
+  className="w-full max-w-2xl max-h-[90vh] rounded-xl border border-white/10 bg-[#171d31] p-6 flex flex-col"
+>
         <h2 className="text-2xl font-bold text-white mb-6">
           View Users
         </h2>
@@ -83,7 +83,7 @@ export default function ViewUsersModal({ open, onClose }) {
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto flex-1 pr-2">
           {loading ? (
             <div className="text-center text-slate-400 py-4">Loading users...</div>
           ) : usersToShow.length === 0 ? (
