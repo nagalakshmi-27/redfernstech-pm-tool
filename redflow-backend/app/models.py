@@ -59,6 +59,7 @@ class User(Base):
     is_owner = Column(Boolean, default=False)
     account_id = Column(Integer, ForeignKey("accounts.id"), index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    preferences = Column(JSON, default={})
 
     account = relationship("Account", back_populates="users")
     workspaces = relationship("Workspace", secondary=workspace_members, back_populates="members")

@@ -273,7 +273,13 @@ def get_user_projects(db: Session, user_id: int, workspace_id: int = None):
 
     projects = query.all()
 
+    prefs = user.preferences or {}
+    project_boards = prefs.get("project_boards", {})
+
     for project in projects:
+        if str(project.id) in project_boards:
+            project.board_type = project_boards[str(project.id)]
+            
         total_tasks = len(project.tasks)
         completed_tasks = len(
             [t for t in project.tasks if t.status == "Completed"]

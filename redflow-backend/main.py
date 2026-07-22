@@ -31,6 +31,13 @@ try:
         conn.execute(text("ALTER TABLE notebook_items ADD COLUMN original_content VARCHAR"))
 except Exception:
     pass
+
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN preferences JSON DEFAULT '{}'::jsonb"))
+except Exception:
+    pass
+
 app = FastAPI(title="RedFlow API")
 
 from fastapi.staticfiles import StaticFiles

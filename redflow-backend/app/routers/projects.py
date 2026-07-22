@@ -132,3 +132,18 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
     if not success:
         raise HTTPException(status_code=403, detail="Forbidden")
     return {"message": "Project deleted successfully"}
+
+@router.put("/{project_id}/board-view")
+def update_project_board_view(project_id: int, view_update: schemas.ProjectBoardViewUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    prefs = current_user.preferences or {}
+    if "project_boards" not in prefs:
+        prefs["project_boards"] = {}
+    
+    prefs["project_boards"][str(project_id)] = view_update.board_type
+    
+    from sqlalchemy.orm.attributes import flag_modified
+    current_user.preferences = prefs
+    flag_modified(current_user, "preferences")
+    
+    db.commit()
+    return {"message": "Board view preference updated", "board_type": view_update.board_type}

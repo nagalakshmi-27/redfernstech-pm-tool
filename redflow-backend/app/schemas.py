@@ -143,6 +143,9 @@ class ProjectCreate(ProjectBase):
     task_visibility: Optional[str] = "everyone"
     task_viewers: Optional[List[int]] = []
 
+class ProjectBoardViewUpdate(BaseModel):
+    board_type: str
+
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
