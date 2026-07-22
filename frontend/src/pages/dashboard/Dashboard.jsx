@@ -12,9 +12,11 @@ import {
   X,
   Clock3,
   Circle,
+  Sparkles,
 } from "lucide-react";
 import AppContext from "../../context/AppContext";
 import WelcomeOverview from "./components/WelcomeOverview";
+import SmartSummaryModal from "../../components/SmartSummaryModal";
 
 export default function Dashboard() {
   const { projects, tasks, activeWorkspaceId } = useContext(AppContext);
@@ -22,6 +24,7 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalData, setModalData] = useState([]);
+  const [showSmartSummary, setShowSmartSummary] = useState(false);
 
   // Sticky Notes State
   const [stickyNotes, setStickyNotes] = useState([]);
@@ -138,9 +141,22 @@ const openCompletedTasksModal = () => {
 
   return (
     <MainLayout>
-      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">
-  Dashboard
-</h1>
+      <div className="mb-6 flex items-center justify-between">
+  <h1 className="text-2xl md:text-3xl font-bold text-white">
+    Dashboard
+  </h1>
+
+  <button
+    onClick={() => setShowSmartSummary(true)}
+    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-white backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:bg-white/20"
+  >
+    <Sparkles
+      size={18}
+      className="text-yellow-400 animate-pulse"
+    />
+    Catch Up
+  </button>
+</div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -390,6 +406,10 @@ const openCompletedTasksModal = () => {
     </div>
   </div>
 )}
+<SmartSummaryModal
+  isOpen={showSmartSummary}
+  onClose={() => setShowSmartSummary(false)}
+/>
     </MainLayout>
   );
 }
