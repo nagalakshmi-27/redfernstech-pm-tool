@@ -166,16 +166,24 @@ export default function Sidebar() {
   const currentUserRole = activeWorkspaceRole;
   const organizationName = currentUser?.organization_name || "Your Organization";
   return (
-    <div className="w-56 min-h-screen bg-white/5 backdrop-blur-lg border-r border-white/10 text-white flex flex-col">
+    <div className="w-56 h-screen bg-white/5 backdrop-blur-lg border-r border-white/10 text-white flex flex-col overflow-y-auto">
       {/* Logo / App Name */}
 <div className="h-[72px] px-5 border-b border-white/10 flex flex-col justify-center">
   <h1 className="text-2xl font-bold leading-none bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
   RedFerns PM
 </h1>
 
-  <p className="text-sm text-slate-400 font-medium mt-1 truncate">
-  {organizationName}
-</p>
+  <div className="relative group">
+  <p className="text-sm text-slate-400 font-medium mt-1 truncate cursor-default">
+    {organizationName}
+  </p>
+
+  <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-[9999]">
+    <div className="bg-slate-900 border border-white/10 rounded-lg shadow-2xl px-3 py-2 text-sm text-white whitespace-nowrap">
+      {organizationName}
+    </div>
+  </div>
+</div>
 </div>
 
       {/* Workspace Switcher */}
@@ -223,7 +231,17 @@ export default function Sidebar() {
               onClick={() => setWorkspaceDropdownOpen(!workspaceDropdownOpen)}
               className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-left text-white focus:outline-none focus:ring-1 focus:ring-purple-500 flex justify-between items-center transition hover:bg-white/10"
             >
-              <span className="truncate">{activeWorkspace?.name || "Select Workspace"}</span>
+              <div className="relative group flex-1">
+  <span className="block truncate">
+    {activeWorkspace?.name || "Select Workspace"}
+  </span>
+
+  <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-[9999]">
+    <div className="bg-slate-900 border border-white/10 rounded-lg shadow-2xl px-3 py-2 text-sm text-white whitespace-nowrap">
+      {activeWorkspace?.name || "Select Workspace"}
+    </div>
+  </div>
+</div>
               <span className="ml-2 text-slate-400 text-xs">▼</span>
             </button>
 
@@ -293,7 +311,7 @@ export default function Sidebar() {
         )}
       </div>
       {/* Navigation Menu */}
-      <nav className="p-4">
+      <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-4">
           <li>
             <Link
