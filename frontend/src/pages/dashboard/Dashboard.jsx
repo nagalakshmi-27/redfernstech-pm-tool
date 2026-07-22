@@ -409,6 +409,7 @@ const openCompletedTasksModal = () => {
 <SmartSummaryModal
   isOpen={showSmartSummary}
   onClose={() => setShowSmartSummary(false)}
+  workspaceId={activeWorkspaceId}
 />
     </MainLayout>
   );

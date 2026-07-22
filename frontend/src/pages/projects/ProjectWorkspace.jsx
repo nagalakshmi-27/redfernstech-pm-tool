@@ -563,12 +563,12 @@ const getColumnColor = (column) => {
   }
 };
 const handleUpdateProject = async () => {
-  if (!projectName.trim()) {
+  if (!projectName?.trim()) {
     alert("Project Name is required");
     return;
   }
 
-  if (!projectDescription.trim()) {
+  if (!projectDescription?.trim()) {
     alert("Project Description is required");
     return;
   }
@@ -595,7 +595,6 @@ const handleUpdateProject = async () => {
     description: projectDescription,
     start_date: startDate,
     end_date: endDate,
-    board_type: boardType,
     member_ids: selectedMembers,
     workspace_id: parseInt(activeWorkspaceId),
   };
@@ -680,11 +679,9 @@ const handleBoardViewChange = async (type) => {
     );
 
     if (response.ok) {
-      const updatedProject = await response.json();
-
       setProjects((prev) =>
         prev.map((p) =>
-          p.id === project.id ? updatedProject : p
+          p.id === project.id ? { ...p, board_type: type } : p
         )
       );
     }
@@ -723,8 +720,8 @@ const handleBoardViewChange = async (type) => {
 
     <button
   onClick={() => {
-  setProjectName(project.name);
-  setProjectDescription(project.description);
+  setProjectName(project.name || "");
+  setProjectDescription(project.description || "");
   setStartDate(project.start_date || "");
   setEndDate(project.end_date || "");
   setBoardType(project.board_type || "kanban");
@@ -811,6 +808,22 @@ const handleBoardViewChange = async (type) => {
           <div className="flex items-center gap-3">
     {currentUserRole === "Admin" && (
       <>
+        {/* Board View Switcher */}
+        <div className="flex rounded-xl border border-white/10 bg-[#171d31] p-1 h-[42px]">
+          {["kanban", "scrum", "list"].map((type) => (
+            <button
+              key={type}
+              onClick={() => handleBoardViewChange(type)}
+              className={`px-3 py-1 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
+                boardType === type
+                  ? "bg-cyan-500 text-white shadow-md"
+                  : "text-slate-300 hover:bg-white/10"
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => setShowTeamModal(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:border-cyan-500 transition-all"
@@ -844,25 +857,6 @@ const handleBoardViewChange = async (type) => {
       {/* TAB CONTENT */}
       {activeTab === "Board" && (
   <div className="w-full">
-
-    {/* Board View Switcher */}
-    <div className="flex justify-end mb-5">
-      <div className="flex rounded-xl border border-white/10 bg-[#171d31] p-1">
-        {["kanban", "scrum", "list"].map((type) => (
-          <button
-            key={type}
-            onClick={() => handleBoardViewChange(type)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all duration-200 ${
-              boardType === type
-                ? "bg-cyan-500 text-white shadow-md"
-                : "text-slate-300 hover:bg-white/10"
-            }`}
-          >
-            {type}
-          </button>
-        ))}
-      </div>
-    </div>
 
     {/* Kanban Board */}
     {(!boardType || boardType === "kanban") && (
@@ -1314,8 +1308,6 @@ const handleBoardViewChange = async (type) => {
   setProjectName={setProjectName}
   projectDescription={projectDescription}
   setProjectDescription={setProjectDescription}
-  boardType={boardType}
-  setBoardType={setBoardType}
   startDate={startDate}
   setStartDate={setStartDate}
   endDate={endDate}

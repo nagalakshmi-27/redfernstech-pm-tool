@@ -73,30 +73,7 @@ const displayedMembers = showAllMembers
     />
   </div>
 
-  {/* Board Type */}
-  <div>
-    <label className="block mb-2 font-medium text-slate-300">
-      Board Type
-    </label>
 
-    <select
-      value={boardType}
-      onChange={(e) => setBoardType(e.target.value)}
-      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-    >
-      <option value="kanban" className="bg-slate-900">
-        Kanban
-      </option>
-
-      <option value="scrum" className="bg-slate-900">
-        Scrum
-      </option>
-
-      <option value="list" className="bg-slate-900">
-        List
-      </option>
-    </select>
-  </div>
 
   {/* Team Members */}
   <div>

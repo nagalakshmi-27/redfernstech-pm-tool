@@ -62,15 +62,22 @@ async def cleanup_note(request: NoteCleanupRequest):
         print(f"\n--- AI ERROR --- \n{str(e)}\n-----------------\n")
         raise HTTPException(status_code=500, detail=f"AI Error: {str(e)}")
 
+from typing import List, Optional
+
 class SmartSummaryRequest(BaseModel):
     start_date: str
     end_date: str
+    workspace_id: int
+    project_ids: List[int] = []
+    local_start_date: str = None
+    local_end_date: str = None
 
 class SmartSummaryResponse(BaseModel):
     summary: str
 
 from .users import get_current_user, get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from fastapi import Depends
 from .. import models, crud
 from datetime import datetime
@@ -85,64 +92,169 @@ async def get_smart_summary(
         # Parse ISO date strings to naive datetimes
         start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00')).replace(tzinfo=None)
         end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00')).replace(tzinfo=None)
+        
+        # Prevent future dates
+        now = datetime.utcnow()
+        if start_date.date() > now.date() or end_date.date() > now.date():
+            raise HTTPException(status_code=400, detail="Summary dates cannot be in the future.")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format.")
 
-    projects = crud.get_user_projects(db=db, user_id=current_user.id)
-    project_ids = [p.id for p in projects]
+    projects = crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=request.workspace_id)
+    allowed_project_ids = [p.id for p in projects]
 
-    if not project_ids:
-        return SmartSummaryResponse(summary="<p>You are not part of any projects, so there is no activity to summarize.</p>")
+    if request.project_ids:
+        # Verify user has access to all requested projects
+        for pid in request.project_ids:
+            if pid not in allowed_project_ids:
+                raise HTTPException(status_code=403, detail="You do not have access to one or more selected projects.")
+        target_project_ids = request.project_ids
+    else:
+        target_project_ids = allowed_project_ids
 
-    tasks = db.query(models.Task).filter(
-        models.Task.project_id.in_(project_ids),
-        models.Task.created_at >= start_date,
-        models.Task.created_at <= end_date
+    if not target_project_ids:
+        return SmartSummaryResponse(summary="<p>No projects found or you do not have access to them.</p>")
+
+    activities = db.query(models.Activity).filter(
+        models.Activity.project_id.in_(target_project_ids),
+        models.Activity.created_at >= start_date,
+        models.Activity.created_at <= end_date
     ).all()
 
-    # Get all tasks for these projects to find comments
-    all_project_task_ids = [t.id for t in db.query(models.Task.id).filter(models.Task.project_id.in_(project_ids)).all()]
+    # Get all tasks for these projects to find comments, attachments, and worklogs
+    all_project_tasks = db.query(models.Task).filter(models.Task.project_id.in_(target_project_ids)).all()
+    task_ids = [t.id for t in all_project_tasks]
     
     comments = []
-    if all_project_task_ids:
+    attachments = []
+    worklogs = []
+    
+    if task_ids:
         comments = db.query(models.Comment).filter(
-            models.Comment.task_id.in_(all_project_task_ids),
+            models.Comment.task_id.in_(task_ids),
             models.Comment.created_at >= start_date,
             models.Comment.created_at <= end_date
         ).all()
+        
+        attachments = db.query(models.TaskAttachment).filter(
+            models.TaskAttachment.task_id.in_(task_ids),
+            models.TaskAttachment.created_at >= start_date,
+            models.TaskAttachment.created_at <= end_date
+        ).all()
+        
+        worklogs = db.query(models.WorkLog).filter(
+            models.WorkLog.task_id.in_(task_ids),
+            models.WorkLog.created_at >= start_date,
+            models.WorkLog.created_at <= end_date
+        ).all()
 
     messages = db.query(models.Message).filter(
-        models.Message.project_id.in_(project_ids),
+        models.Message.project_id.in_(target_project_ids),
         models.Message.created_at >= start_date,
         models.Message.created_at <= end_date
     ).all()
+    
+    wikis = db.query(models.WikiPage).filter(
+        models.WikiPage.project_id.in_(target_project_ids),
+        models.WikiPage.created_at >= start_date,
+        models.WikiPage.created_at <= end_date
+    ).all()
+    
+    wiki_histories = db.query(models.WikiPageHistory).join(models.WikiPage).filter(
+        models.WikiPage.project_id.in_(target_project_ids),
+        models.WikiPageHistory.created_at >= start_date,
+        models.WikiPageHistory.created_at <= end_date
+    ).all()
 
-    if not tasks and not comments and not messages:
+    if not activities and not comments and not messages and not attachments and not worklogs and not wikis and not wiki_histories:
         return SmartSummaryResponse(summary="<p>There was no activity in your projects during this time frame.</p>")
+    display_start = request.local_start_date or start_date.strftime('%b %d, %Y')
+    display_end = request.local_end_date or end_date.strftime('%b %d, %Y')
+    
+    prompt = f"Summarize the following project activity between {display_start} and {display_end}:\n\n"
+    
+    for project in projects:
+        p_activities = [a for a in activities if a.project_id == project.id]
+        p_task_ids = [t.id for t in all_project_tasks if t.project_id == project.id]
+        p_comments = [c for c in comments if c.task_id in p_task_ids]
+        p_messages = [m for m in messages if m.project_id == project.id]
+        p_attachments = [a for a in attachments if a.task_id in p_task_ids]
+        p_worklogs = [w for w in worklogs if w.task_id in p_task_ids]
+        p_wikis = [w for w in wikis if w.project_id == project.id]
+        p_wiki_histories = [wh for wh in wiki_histories if wh.page.project_id == project.id]
+        
+        if not any([p_activities, p_comments, p_messages, p_attachments, p_worklogs, p_wikis, p_wiki_histories]):
+            continue
+            
+        prompt += f"\n\n--- ACTIVITY FOR PROJECT: '{project.name}' ---\n"
+        
+        if p_activities:
+            prompt += "Activity Logs:\n"
+            for a in p_activities:
+                author = a.user.full_name or a.user.username if a.user else "Someone"
+                prompt += f"- {author} {a.action} ({a.target_type}: {a.target_name})\n"
+                
+        if p_comments:
+            prompt += "Task Comments:\n"
+            for c in p_comments:
+                author = c.user.full_name or c.user.username if c.user else "Someone"
+                prompt += f"- {author} said: '{c.content}'\n"
+                
+        if p_messages:
+            prompt += "Project Chat Messages:\n"
+            for m in p_messages:
+                author = m.user.full_name or m.user.username if m.user else "Someone"
+                prompt += f"- {author} said: '{m.content}'\n"
+                
+        if p_attachments:
+            prompt += "Attachments:\n"
+            for a in p_attachments:
+                author = a.user.full_name or a.user.username if a.user else "Someone"
+                prompt += f"- {author} uploaded a file: '{a.file_name}' to a task.\n"
+                
+        if p_worklogs:
+            prompt += "Work Logs (Time Logged):\n"
+            task_hours = {}
+            for wl in p_worklogs:
+                task_hours[wl.task_id] = task_hours.get(wl.task_id, 0) + wl.hours_spent
+            for task_id, hours in task_hours.items():
+                task_name = next((t.name for t in all_project_tasks if t.id == task_id), f"Task ID {task_id}")
+                prompt += f"- Total {hours} hours spent on task '{task_name}'.\n"
+                
+        if p_wikis or p_wiki_histories:
+            prompt += "Wiki Document Updates:\n"
+            for w in p_wikis:
+                prompt += f"- New wiki page created: '{w.title}'\n"
+            for wh in p_wiki_histories:
+                author = wh.user.full_name or wh.user.username if wh.user else "Someone"
+                prompt += f"- {author} updated wiki page: '{wh.page.title}'\n"
+            
+    if display_start == display_end:
+        date_string = display_start
+    else:
+        date_string = f"{display_start} - {display_end}"
 
-    prompt = f"Summarize the following project activity between {start_date.strftime('%b %d, %Y')} and {end_date.strftime('%b %d, %Y')}:\n\n"
-    
-    if tasks:
-        prompt += "Tasks created:\n"
-        for t in tasks:
-            prompt += f"- {t.name} (Status: {t.status})\n"
-    
-    if comments:
-        prompt += "\nComments made on tasks:\n"
-        for c in comments:
-            author = c.user.full_name or c.user.username if c.user else "Someone"
-            prompt += f"- {author} said: '{c.content}'\n"
-            
-    if messages:
-        prompt += "\nMessages sent in project chats:\n"
-        for m in messages:
-            author = m.user.full_name or m.user.username if m.user else "Someone"
-            prompt += f"- {author} said: '{m.content}'\n"
-            
-    prompt += """
+    prompt += f"""
     \nYou are an expert PM assistant. 
-    Format your response beautifully using HTML. Use headings like <h3>, bullet points, and <strong> text for emphasis.
-    Group the summary logically by what happened (e.g. 'New Tasks', 'Team Discussions', etc).
+    Format your response beautifully using HTML. 
+    You must include a main heading at the very top: <h2>Project Activity Summary ({date_string})</h2>
+    
+    CRITICAL INSTRUCTION: You MUST maintain the Project-by-Project grouping provided in the input data. 
+    Do NOT merge activities from different projects together. 
+    For each project, output EXACTLY like this structure:
+    
+    <strong>Project:</strong> [Project Name]
+    <br/><br/>
+    <strong>Task Progress & Updates</strong>
+    <ul>
+      <li><strong>[Brief Topic]:</strong> [Concise summary of the person's actions, e.g. 'Akansha Thakur successfully moved the task Implement API Auth to Completed.'].</li>
+    </ul>
+    <strong>Team Discussions & Milestones</strong>
+    <ul>
+      <li><strong>[Brief Topic]:</strong> [Concise summary of the chat/discussion, e.g. 'Akansha shared updates...'].</li>
+    </ul>
+    <br/><br/>
+    
     CRITICAL: You must return the output as pure HTML. DO NOT wrap the output in markdown code blocks like ```html ... ```. 
     Do not add any conversational text.
     """

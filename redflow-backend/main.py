@@ -38,6 +38,12 @@ try:
 except Exception:
     pass
 
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE tasks ADD COLUMN updated_at TIMESTAMP"))
+except Exception as e:
+    print(f"Migration error: {e}")
+
 app = FastAPI(title="RedFlow API")
 
 from fastapi.staticfiles import StaticFiles

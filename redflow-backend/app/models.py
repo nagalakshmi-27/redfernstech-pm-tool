@@ -147,6 +147,7 @@ class Task(Base):
     priority = Column(String, default="Medium") 
     due_date = Column(String, nullable=True) # Changed to String
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     issue_type = Column(String, default="Task") # "Task" or "Bug"
     severity = Column(String, nullable=True)    # "Critical", "High", "Medium", "Low"
     ticket_id = Column(String, unique=True, index=True, nullable=True) # e.g. RED-1

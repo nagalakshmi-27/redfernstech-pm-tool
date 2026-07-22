@@ -145,7 +145,7 @@ export default function ProjectChat({ projectId, projectName, currentUserRole })
                   <span className="text-xs text-slate-500 mb-1">
                     {msg.user?.full_name || "Unknown User"} • {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </span>
-                  <div className={`px-4 py-2 rounded-2xl text-sm ${
+                  <div className={`px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words ${
                     isMe ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] rounded-tr-sm" : "bg-white/10 text-slate-200 rounded-tl-sm border border-white/5"
                   }`}>
                     {msg.content.split(/(@\w+)/g).map((part, i) => 
@@ -207,12 +207,20 @@ export default function ProjectChat({ projectId, projectName, currentUserRole })
           >
             <Paperclip size={16} />
           </button>
-          <input
-            type="text"
+          <textarea
             value={newMessage}
             onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (newMessage.trim()) {
+                  sendMessage(e);
+                }
+              }
+            }}
             placeholder="Type a message... (use @ to mention)"
-            className="flex-1 bg-black/20 border border-white/10 text-white placeholder-slate-500 px-4 py-2 rounded-full focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+            className="flex-1 bg-black/20 border border-white/10 text-white placeholder-slate-500 px-4 py-2.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-cyan-500 transition resize-none min-h-[44px] max-h-[150px] overflow-y-auto"
+            rows="1"
           />
           <button 
             type="submit" 

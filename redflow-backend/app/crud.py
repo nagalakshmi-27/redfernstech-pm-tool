@@ -311,11 +311,16 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
     
     update_data = project_update.model_dump(exclude_unset=True) # or .dict() for older pydantic
     
+    changed_fields = []
+    
     if "member_ids" in update_data:
         member_ids = update_data.pop("member_ids")
         users = db.query(models.User).filter(models.User.id.in_(member_ids)).all()
         
         old_user_ids = [u.id for u in db_project.members]
+        if set(old_user_ids) != set([u.id for u in users]):
+            changed_fields.append("Team Members")
+            
         for u in users:
             if u.id not in old_user_ids and u.id != user_id:
                 notif = models.Notification(user_id=u.id, message=f"You have been added to the project '{db_project.name}'.")
@@ -350,10 +355,19 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
                 task.status = new_names[0]
 
     for key, value in update_data.items():
+        if key not in ["board_columns", "workspace_id"]:
+            old_val = getattr(db_project, key, None)
+            if old_val != value:
+                if not (not old_val and not value):
+                    changed_fields.append(key.replace("_", " ").title())
         setattr(db_project, key, value)
         
     db.commit()
     db.refresh(db_project)
+    
+    if changed_fields:
+        log_activity(db, project_id=db_project.id, user_id=user_id, action=f"updated project (changed {', '.join(changed_fields)})", target_name=db_project.name, target_type="Project")
+        
     return db_project
 
 def delete_project(db: Session, project_id: int, user_id: int):
@@ -470,10 +484,20 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     status_changed = "status" in update_data and update_data["status"] != db_task.status
     new_status = update_data.get("status")
     
+    changed_fields = []
+    
     for key, value in update_data.items():
-        if key == "assignee_id" and value != db_task.assignee_id and value is not None and value != user_id:
-            notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.", workspace_id=project.workspace_id)
-            db.add(notif)
+        if key == "assignee_id":
+            if value != db_task.assignee_id:
+                changed_fields.append("Assignee")
+            if value != db_task.assignee_id and value is not None and value != user_id:
+                notif = models.Notification(user_id=value, message=f"You have been assigned the task: '{update_data.get('name', db_task.name)}'.", workspace_id=project.workspace_id)
+                db.add(notif)
+        elif key != "status":
+            old_val = getattr(db_task, key, None)
+            if old_val != value:
+                if not (not old_val and not value):
+                    changed_fields.append(key.replace("_", " ").title())
         setattr(db_task, key, value)
         
     # If someone is just changing status (drag drop), they need to be the assignee, creator, or workspace admin
@@ -491,6 +515,9 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user
     
     if status_changed:
         log_activity(db, project_id=db_task.project_id, user_id=user_id, action=f"moved task to {new_status}", target_name=db_task.name, target_type="Task", ticket_id=db_task.ticket_id)
+        
+    if changed_fields:
+        log_activity(db, project_id=db_task.project_id, user_id=user_id, action=f"updated task (changed {', '.join(changed_fields)})", target_name=db_task.name, target_type="Task", ticket_id=db_task.ticket_id)
         
     return db_task
 
