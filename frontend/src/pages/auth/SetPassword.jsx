@@ -90,11 +90,19 @@ export default function SetPassword() {
             <p className="text-lg text-slate-300 mb-6">
               Your account has been successfully created.
             </p>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 text-left inline-block w-full">
-              <p className="text-sm text-slate-400 mb-1">Your unique User-Name is:</p>
-              <p className="text-2xl font-bold text-cyan-400 select-all font-mono tracking-wide">{successUsername}</p>
-              <p className="text-xs text-slate-500 mt-3">You will use this to log in instead of your email. Make sure to remember it!</p>
-            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 w-full">
+  <p className="text-sm text-slate-400 mb-2">
+    Your unique User-Name is:
+  </p>
+
+  <p className="w-full break-all text-center text-lg sm:text-xl md:text-2xl font-bold text-cyan-400 font-mono bg-black/20 rounded-lg px-3 py-3 select-all">
+  {successUsername}
+</p>
+
+  <p className="text-xs text-slate-500 mt-3">
+    You will use this to log in instead of your email. Make sure to remember it!
+  </p>
+</div>
             <button
               onClick={() => navigate("/")}
               className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-3 rounded-lg transition-colors"
