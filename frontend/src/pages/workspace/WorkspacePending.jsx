@@ -5,20 +5,36 @@ import { useNavigate } from "react-router-dom";
 export default function WorkspacePending() {
   const navigate = useNavigate();
   useEffect(() => {
-  const interval = setInterval(() => {
-    // TODO: Replace this with backend API call
+    const checkAssignment = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-    // TODO: Replace this with backend API response
-const isAssigned = false;
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.workspaces && data.workspaces.length > 0) {
+            navigate("/dashboard");
+          }
+        }
+      } catch (error) {
+        console.error("Error checking workspace assignment:", error);
+      }
+    };
 
-if (isAssigned) {
-  clearInterval(interval);
-  navigate("/dashboard");
-}
-  }, 5000);
+    // Check immediately
+    checkAssignment();
 
-  return () => clearInterval(interval);
-}, [navigate]);
+    // Poll every 5 seconds
+    const interval = setInterval(checkAssignment, 5000);
+
+    return () => clearInterval(interval);
+  }, [navigate]);
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 px-6">
       <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-10 text-center shadow-xl">

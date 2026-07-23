@@ -567,7 +567,7 @@ def get_teammates(db: Session, workspace_id: Optional[int], account_id: int):
             "full_name": admin.full_name or "Pending...",
             "role": "Super Admin",
             "company_role": admin.company_role,
-            "department": admin.department or "Admin",
+            "department": admin.department or "",
             "profile_image": admin.profile_image,
             "shared_projects": []
         }
@@ -591,7 +591,7 @@ def get_teammates(db: Session, workspace_id: Optional[int], account_id: int):
                     "full_name": member.full_name or "Pending...",
                     "role": role,
                     "company_role": member.company_role,
-                    "department": member.department or "Member",
+                    "department": member.department or "",
                     "profile_image": member.profile_image,
                     "shared_projects": []
                 }
@@ -607,7 +607,7 @@ def get_teammates(db: Session, workspace_id: Optional[int], account_id: int):
                 "full_name": user.full_name or "Pending...",
                 "role": "Organization Member",
                 "company_role": user.company_role,
-                "department": user.department or "Member",
+                "department": user.department or "",
                 "profile_image": user.profile_image,
                 "shared_projects": []
             }

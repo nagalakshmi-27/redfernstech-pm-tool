@@ -43,7 +43,8 @@ export default function Sidebar() {
         setWorkspaceDropdownOpen(false);
       }
     };
-    const handleScroll = () => {
+    const handleScroll = (event) => {
+      if (dropdownRef.current && dropdownRef.current.contains(event.target)) return;
       setShowDropdown(false);
       setWorkspaceDropdownOpen(false);
     };
