@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
@@ -51,6 +51,7 @@ export default function ProjectWorkspace() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
+  const settingsMenuRef = useRef(null);
   const closeEditModal = () => {
     setShowEditModal(false);
     if (editingTaskId) {
@@ -691,6 +692,25 @@ const handleBoardViewChange = async (type) => {
   }
 };
 
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      settingsMenuRef.current &&
+      !settingsMenuRef.current.contains(event.target)
+    ) {
+      setShowProjectSettings(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener("touchstart", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+    document.removeEventListener("touchstart", handleClickOutside);
+  };
+}, []);
+
   return (
     <MainLayout>
       <div className="mb-6">
@@ -706,7 +726,7 @@ const handleBoardViewChange = async (type) => {
     </Link>
 
     {currentUserRole === "Admin" && (
-      <div className="relative">
+      <div className="relative" ref={settingsMenuRef}>
 
   <button
     onClick={() => setShowProjectSettings(!showProjectSettings)}
