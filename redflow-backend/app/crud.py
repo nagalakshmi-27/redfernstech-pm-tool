@@ -378,9 +378,19 @@ def delete_project(db: Session, project_id: int, user_id: int):
     if role != "Admin":
         return False
         
-    db.delete(db_project)
-    db.commit()
-    return True
+    try:
+        # Delete items without cascading relationships first
+        db.query(models.Activity).filter(models.Activity.project_id == project_id).delete(synchronize_session=False)
+        db.query(models.Invitation).filter(models.Invitation.project_id == project_id).delete(synchronize_session=False)
+        db.query(models.Comment).filter(models.Comment.project_id == project_id).delete(synchronize_session=False)
+        
+        db.delete(db_project)
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting project: {e}")
+        return False
 
 def get_user_tasks(db: Session, user_id: int, workspace_id: int = None):
     query = db.query(models.Task).filter(
