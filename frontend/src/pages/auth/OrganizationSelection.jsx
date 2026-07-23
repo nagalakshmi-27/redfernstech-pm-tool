@@ -130,9 +130,15 @@ export default function OrganizationSelection() {
               <div>
                 <h2 className="text-white font-semibold">{org.name}</h2>
 
-                <p className="text-slate-400 text-sm">
-                  Username: {org.username}
-                </p>
+                <div className="mt-1">
+  <p className="text-slate-400 text-sm font-medium">
+    Username:
+  </p>
+
+  <p className="text-slate-300 text-sm break-all">
+    {org.username}
+  </p>
+</div>
 
                 <div className="mt-2">
   <span

@@ -181,10 +181,11 @@ const SmartSummaryModal = ({ isOpen, onClose, workspaceId }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm p-4">
+  <div className="flex min-h-full items-center justify-center py-4">
 
       {/* Modal */}
-      <div className="w-full max-w-4xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-4xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-2xl">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
@@ -208,7 +209,7 @@ const SmartSummaryModal = ({ isOpen, onClose, workspaceId }) => {
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="max-h-[75vh] overflow-y-auto p-4 md:max-h-[80vh] md:p-6">
 
           {/* Date and Project Inputs */}
           <div className="grid gap-5 md:grid-cols-3">
@@ -302,28 +303,28 @@ const SmartSummaryModal = ({ isOpen, onClose, workspaceId }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 flex items-center justify-between">
+          <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <button
               onClick={handleGenerateSummary}
               disabled={loading}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-semibold text-white shadow-lg transition hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
             >
               <Sparkles className={loading ? "animate-spin" : "animate-pulse"} size={18} />
               {loading ? "Generating..." : "Generate Catch-Up Summary"}
             </button>
 
             {summary && (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3 w-full md:w-auto md:flex-row">
                 <button
                   onClick={handleCopyToClipboard}
-                  className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-3 font-semibold text-white shadow-lg transition hover:bg-white/10 hover:scale-105"
+                  className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-3 font-semibold text-white shadow-lg transition hover:bg-white/10"
                 >
                   <Copy size={18} />
                   Copy
                 </button>
                 <button
                   onClick={handleDownloadPdf}
-                  className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-3 font-semibold text-white shadow-lg transition hover:bg-white/10 hover:scale-105"
+                  className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-3 font-semibold text-white shadow-lg transition hover:bg-white/10"
                 >
                   <Download size={18} />
                   Download PDF
@@ -333,7 +334,7 @@ const SmartSummaryModal = ({ isOpen, onClose, workspaceId }) => {
           </div>
 
           {/* Summary Area */}
-          <div className="mt-6 h-[350px] overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-5">
+          <div className="mt-6 h-[300px] md:h-[350px] overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-5">
 
             {!loading && !summary && (
               <div className="flex h-full items-center justify-center text-gray-400">
@@ -362,6 +363,7 @@ const SmartSummaryModal = ({ isOpen, onClose, workspaceId }) => {
 
         </div>
 
+      </div>
       </div>
 
     </div>
