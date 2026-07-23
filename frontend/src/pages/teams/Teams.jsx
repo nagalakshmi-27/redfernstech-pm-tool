@@ -279,19 +279,28 @@ if (currentUserRole === "Client") {
                     </div>
                   )}
                   <h2 className="text-lg md:text-xl font-semibold mb-2 break-words text-white">
-                    {member.full_name || member.name || "Unknown"}
-                  </h2>
-                  <p className="text-cyan-400 mb-2">
-                    {member.role === "Client" ? "Client" : (member.company_role || member.role)}
-                  </p>
+  {member.full_name || member.name || "Unknown"}{" "}
+  <span className="text-cyan-400 text-base font-medium">
+  (
+    {member.is_owner || member.role === "Super Admin"
+      ? "Owner"
+      : member.role}
+  )
+</span>
+</h2>
+                  {member.company_role && (
+  <p className="text-cyan-400 mb-2">
+    {member.company_role}
+  </p>
+)}
                   <p className="text-slate-300 break-all">
                     {member.email}
                   </p>
-                  {member.role !== "Client" && (
-                    <p className="text-sm text-slate-400 mt-2">
-                      Department: {member.department}
-                    </p>
-                  )}
+                  {member.role !== "Client" && member.department && (
+  <p className="text-sm text-slate-400 mt-2">
+    Department: {member.department}
+  </p>
+)}
                   {currentUserRole === "Admin" && member.email !== localStorage.getItem("userEmail") && (
                     <div className="mt-4 flex gap-2">
                       <button
