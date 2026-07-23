@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Users,
 } from "lucide-react";
+import DeleteProjectModal from "./components/DeleteProjectModal";
 
 export default function Projects() {
   const { projects, setProjects, members, activeWorkspaceId, workspaces, activeWorkspaceRole } = useContext(AppContext);
@@ -32,6 +33,8 @@ const [showAllMembers, setShowAllMembers] = useState(false);
 const [selectedFile, setSelectedFile] = useState(null);
 const [importProjectName, setImportProjectName] = useState("");
 const [uploading, setUploading] = useState(false);
+const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [projectToDelete, setProjectToDelete] = useState(null);
   const totalProjects = projects.length;
   const planningProjects = projects.filter((p) => p.calculated_status === "Planning").length;
   const inProgressProjects = projects.filter((p) => p.calculated_status === "In Progress").length;
@@ -94,22 +97,29 @@ setShowAllMembers(false);
 setShowModal(false);
   };
 
-  const handleDeleteProject = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this project?");
-    if (!confirmDelete) return;
+  const handleDeleteProject = async () => {
+  if (!projectToDelete) return;
 
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${id}`, {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/projects/${projectToDelete.id}`,
+      {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-      });
-      if (response.ok) {
-        setProjects(projects.filter((project) => project.id !== id));
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       }
-    } catch {
-      alert("Failed to connect to backend.");
+    );
+
+    if (response.ok) {
+      setProjects(projects.filter((p) => p.id !== projectToDelete.id));
+      setShowDeleteModal(false);
+      setProjectToDelete(null);
     }
-  };
+  } catch {
+    alert("Failed to connect to backend.");
+  }
+};
 
   const handleImportProject = async () => {
   if (!selectedFile) {
@@ -290,10 +300,17 @@ setShowModal(true);
                 </div>
               </div>
 
-              <p className="text-slate-300">Members: {memberArray.length}</p>
-              <p className="text-sm text-slate-400 mt-1 break-words">{memberArray.map(m => m.full_name).join(", ") || "No members assigned"}</p>
-              <p className="text-sm text-slate-400 mt-2">Start: {project.start_date}</p>
-              <p className="text-sm text-slate-400">End: {project.end_date}</p>
+              <div className="flex items-center gap-2 mt-2 text-slate-300">
+  <Users size={16} className="text-cyan-400" />
+  <span>{memberArray.length} Members</span>
+</div>
+
+<p className="text-sm text-slate-400 mt-2">
+  Start: {project.start_date}
+</p>
+<p className="text-sm text-slate-400">
+  End: {project.end_date}
+</p>
 
 
             </div>
@@ -521,6 +538,16 @@ setShowModal(true);
     </div>
   </div>
 )}
+
+<DeleteProjectModal
+  open={showDeleteModal}
+  onClose={() => {
+    setShowDeleteModal(false);
+    setProjectToDelete(null);
+  }}
+  onDelete={handleDeleteProject}
+  projectName={projectToDelete?.name}
+/>
     </MainLayout>
   );
 }
