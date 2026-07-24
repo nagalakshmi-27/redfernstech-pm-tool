@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
-import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
@@ -40,6 +40,24 @@ export default function ProjectWorkspace() {
   ],
   []
 );
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      settingsMenuRef.current &&
+      !settingsMenuRef.current.contains(event.target)
+    ) {
+      setShowProjectSettings(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener("touchstart", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+    document.removeEventListener("touchstart", handleClickOutside);
+  };
+}, []);
   const currentUserRole = activeWorkspaceRole;
   const [highlightProject, setHighlightProject] = useState(false);
 
@@ -590,6 +608,7 @@ const handleUpdateProject = async () => {
   }
 
   const token = localStorage.getItem("token");
+  
 
   const projectData = {
     name: projectName,
@@ -692,24 +711,6 @@ const handleBoardViewChange = async (type) => {
   }
 };
 
-useEffect(() => {
-  function handleClickOutside(event) {
-    if (
-      settingsMenuRef.current &&
-      !settingsMenuRef.current.contains(event.target)
-    ) {
-      setShowProjectSettings(false);
-    }
-  }
-
-  document.addEventListener("mousedown", handleClickOutside);
-  document.addEventListener("touchstart", handleClickOutside);
-
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-    document.removeEventListener("touchstart", handleClickOutside);
-  };
-}, []);
 
   return (
     <MainLayout>
