@@ -269,3 +269,130 @@ async def get_smart_summary(
     except Exception as e:
         print(f"\n--- AI ERROR --- \n{str(e)}\n-----------------\n")
         raise HTTPException(status_code=500, detail=f"AI Error generating summary: {str(e)}")
+
+class AIChatHistoryItem(BaseModel):
+    role: str
+    content: str
+
+class AIChatRequest(BaseModel):
+    workspace_id: int
+    message: str
+    history: List[AIChatHistoryItem] = []
+
+class TaskDataSchema(BaseModel):
+    name: str
+    description: str
+
+class ProjectDataSchema(BaseModel):
+    name: str
+    description: str
+    tasks: List[TaskDataSchema]
+
+class AIChatResponseSchema(BaseModel):
+    action: str
+    response_message: str
+    project_data: Optional[ProjectDataSchema] = None
+
+class AIChatResponse(BaseModel):
+    response_message: str
+    new_project_id: Optional[int] = None
+
+@router.post("/chat", response_model=AIChatResponse)
+async def chat_with_ai(
+    request: AIChatRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 1. Fetch workspace context
+        projects = crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=request.workspace_id)
+        
+        # Build context string
+        context_str = "CURRENT WORKSPACE CONTEXT:\n"
+        if not projects:
+            context_str += "No projects found.\n"
+        else:
+            for p in projects:
+                context_str += f"Project: {p.name} (Status: {p.status})\n"
+                for t in p.tasks:
+                    context_str += f" - Task: {t.name} (Status: {t.status})\n"
+                    
+        # Build prompt
+        system_instruction = f"""
+        You are an expert AI Project Management Assistant.
+        Your job is to answer questions about the workspace or automate tasks like creating a project.
+        
+        {context_str}
+        
+        If the user asks a question, use the context to answer it. 
+        If the user wants to create a project (e.g. "We need to develop a PM tool"), figure out the project name, description, and a logical list of tasks to break it down. Set action to 'create_project'.
+        """
+        
+        contents = [system_instruction]
+        
+        for msg in request.history:
+            prefix = "User: " if msg.role == "user" else "Assistant: "
+            contents.append(prefix + msg.content)
+            
+        contents.append("User: " + request.message)
+
+        from google.genai import types
+        import json
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=AIChatResponseSchema,
+            ),
+        )
+        
+        res_dict = json.loads(response.text)
+        action = res_dict.get("action", "answer")
+        response_message = res_dict.get("response_message", "")
+        project_data = res_dict.get("project_data")
+        
+        new_project_id = None
+        
+        if action == "create_project" and project_data:
+            new_project = models.Project(
+                name=project_data.get("name", "New Project"),
+                description=project_data.get("description", ""),
+                workspace_id=request.workspace_id,
+                created_by_id=current_user.id,
+                status="Planning",
+                board_type="kanban",
+            )
+            db.add(new_project)
+            db.commit()
+            db.refresh(new_project)
+            new_project_id = new_project.id
+            
+            tasks_data = project_data.get("tasks", [])
+            for t in tasks_data:
+                new_task = models.Task(
+                    name=t.get("name", "Task"),
+                    description=t.get("description", ""),
+                    project_id=new_project_id,
+                    status="To Do",
+                    priority="Medium"
+                )
+                db.add(new_task)
+            
+            db.execute(
+                models.project_members.insert().values(
+                    user_id=current_user.id,
+                    project_id=new_project_id
+                )
+            )
+            db.commit()
+            
+        return AIChatResponse(
+            response_message=response_message,
+            new_project_id=new_project_id
+        )
+        
+    except Exception as e:
+        print(f"\\n--- AI CHAT ERROR --- \\n{str(e)}\\n-----------------\\n")
+        raise HTTPException(status_code=500, detail=f"AI Chat Error: {str(e)}")
