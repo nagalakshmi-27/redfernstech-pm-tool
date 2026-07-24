@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-
+import WorkspaceAI from "../components/ai/WorkspaceAI";
 export default function MainLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -37,6 +37,7 @@ export default function MainLayout({ children }) {
       {children}
     </main>
   </div>
+  <WorkspaceAI />
 </div>
   );
 }
