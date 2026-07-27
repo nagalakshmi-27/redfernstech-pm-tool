@@ -1,11 +1,14 @@
 import {
   Menu,
   Plus,
+  Search,
   MessageSquare,
   MoreHorizontal,
   Pencil,
   Pin,
   Trash2,
+  Archive,
+ArrowLeft,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -26,10 +29,13 @@ export default function ChatSidebar({
   onCancelRename,
 
   onTogglePinChat,
-  onDeleteChat,
+onToggleArchive,
+onDeleteChat,
 }) {
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+const [searchTerm, setSearchTerm] = useState("");
+const [showSearch, setShowSearch] = useState(false);
+const [showArchiveView, setShowArchiveView] = useState(false);
   const inputRef = useRef(null);
   useEffect(() => {
   if (editingChatId) {
@@ -37,9 +43,31 @@ export default function ChatSidebar({
     inputRef.current?.select();
   }
 }, [editingChatId]);
+const menuRef = useRef(null);
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      menuRef.current &&
+      !menuRef.current.contains(event.target)
+    ) {
+      setOpenMenuId(null);
+    }
+  }
 
-const filteredChats = chats.filter((chat) =>
-  chat.title.toLowerCase().includes(searchTerm.toLowerCase())
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+  };
+}, []);
+
+const filteredChats = chats.filter(
+  (chat) =>
+    !chat.archived &&
+    chat.title.toLowerCase().includes(searchTerm.toLowerCase())
 );
 const getGroup = (date) => {
   const today = new Date();
@@ -76,6 +104,11 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
 
   return acc;
 }, {});
+const archivedChats = chats.filter(
+  (chat) =>
+    chat.archived &&
+    chat.title.toLowerCase().includes(searchTerm.toLowerCase())
+);
   return (
     <div
   className={`
@@ -110,25 +143,56 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
 >
       {/* Header */}
       <div className="flex h-[88px] items-center justify-between border-b border-white/10 px-3 sm:px-4 whitespace-nowrap">
-        <span
-  className={`truncate text-sm sm:text-base font-semibold text-white transition-opacity duration-300 ${
-            isSidebarOpen ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Workspace AI
-        </span>
+        <div className="flex items-center gap-2">
+  <span
+    className={`truncate text-sm sm:text-base font-semibold text-white transition-opacity duration-300 ${
+      isSidebarOpen ? "opacity-100" : "opacity-0"
+    }`}
+  >
+    Workspace AI
+  </span>
+</div>
 
-        <button
-          onClick={() => setIsSidebarOpen(false)}
-          className={`rounded-md p-2 text-slate-400 transition-all duration-300 hover:bg-white/5 hover:text-white ${
-            isSidebarOpen
-              ? "opacity-100"
-              : "opacity-0 pointer-events-none"
-          }`}
-        >
-          <Menu size={18} />
-        </button>
+<div className="flex items-center gap-2">
+
+  <button
+    onClick={() => setShowSearch(!showSearch)}
+    className="rounded-md p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+  >
+    <Search size={18} />
+  </button>
+  <button
+  onClick={() => setShowArchiveView(true)}
+  className="rounded-md p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+>
+  <Archive size={18} />
+</button>
+
+  <button
+    onClick={() => setIsSidebarOpen(false)}
+    className={`rounded-md p-2 text-slate-400 transition-all duration-300 hover:bg-white/5 hover:text-white ${
+      isSidebarOpen
+        ? "opacity-100"
+        : "opacity-0 pointer-events-none"
+    }`}
+  >
+    <Menu size={18} />
+  </button>
+
+</div>
       </div>
+
+      {showSearch && (
+  <div className="px-4 py-3 border-b border-white/10">
+    <input
+      type="text"
+      placeholder="Search chats..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500/40"
+    />
+  </div>
+)}
 
       {/* Sidebar Content */}
       <div
@@ -139,57 +203,39 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
         }`}
       >
         {/* New Chat */}
-        <div className="p-4">
-          <button
-            onClick={onNewChat}
-            className="
-  flex
-  w-full
-  items-center
-  gap-2 sm:gap-3
-  rounded-xl
-  border
-  border-white/10
-  bg-white/[0.03]
-  px-3 sm:px-4
-  py-2.5 sm:py-3
-  text-sm
-              text-white
-              transition-all
-              hover:border-cyan-500/40
-              hover:bg-cyan-500/10
-            "
-          >
-            <Plus size={18} />
-            New Chat
-          </button>
-        </div>
-
-        <div className="px-4 pb-2">
-  <input
-    type="text"
-    placeholder="Search chats..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    className="
-      w-full
-      rounded-xl
-      border
-      border-white/10
-      bg-white/[0.03]
-      px-3
-      py-2
-      text-sm
-      text-white
-      placeholder:text-slate-500
-      outline-none
-      focus:border-cyan-500/40
-    "
-  />
-</div>
+        {/* New Chat */}
+{!showArchiveView && (
+  <div className="p-4">
+    <button
+      onClick={onNewChat}
+      className="
+        flex
+        w-full
+        items-center
+        gap-2 sm:gap-3
+        rounded-xl
+        border
+        border-white/10
+        bg-white/[0.03]
+        px-3 sm:px-4
+        py-2.5 sm:py-3
+        text-sm
+        text-white
+        transition-all
+        hover:border-cyan-500/40
+        hover:bg-cyan-500/10
+      "
+    >
+      <Plus size={18} />
+      New Chat
+    </button>
+  </div>
+)}
 
         {/* Today */}
         <div className="flex-1 overflow-y-auto px-2 pb-4">
+          {!showArchiveView && (
+  <>
 
   {pinnedChats.length > 0 && (
     <>
@@ -342,6 +388,16 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
 
   {chat.pinned ? "Unpin Chat" : "Pin Chat"}
 </button>
+<button
+  onClick={() => {
+    onToggleArchive(chat.id);
+    setOpenMenuId(null);
+  }}
+  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 transition-colors hover:bg-white/5"
+>
+  <Archive size={16} />
+  Archive
+</button>
 
         <button
   onClick={() => {
@@ -450,7 +506,7 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
 
         {/* Popup */}
         {openMenuId === chat.id && (
-          <div className="absolute right-2 top-12 z-50 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#141B2D] shadow-2xl">
+          <div ref={menuRef} className="absolute right-2 top-12 z-50 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#141B2D] shadow-2xl">
             <button
               onClick={() => {
                 onRenameChat(chat);
@@ -472,6 +528,16 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
               <Pin size={16} />
               {chat.pinned ? "Unpin Chat" : "Pin Chat"}
             </button>
+            <button
+  onClick={() => {
+    onToggleArchive(chat.id);
+    setOpenMenuId(null);
+  }}
+  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 transition-colors hover:bg-white/5"
+>
+  <Archive size={16} />
+  Archive
+</button>
 
             <button
               onClick={() => {
@@ -489,7 +555,102 @@ const groupedChats = unPinnedChats.reduce((acc, chat) => {
     ))}
   </div>
 ))}
-  
+</>
+  )}
+   {showArchiveView && (
+  <>
+    <button
+      onClick={() => setShowArchiveView(false)}
+      className="mb-4 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5"
+    >
+      <ArrowLeft size={18} />
+      Archived
+    </button>
+
+    {archivedChats.length === 0 ? (
+      <div className="mt-10 text-center text-sm text-slate-500">
+        No archived chats
+      </div>
+    ) : (
+      archivedChats.map((chat) => (
+        <div
+  key={chat.id}
+  className="group relative mb-1"
+>
+  <button
+    onClick={() => {
+      setOpenMenuId(null);
+      onSelectChat(chat.id);
+    }}
+    className="flex w-full items-center rounded-xl px-3 py-3 text-left text-slate-300 transition hover:bg-white/5"
+  >
+    <div className="flex min-w-0 items-center gap-3">
+      <MessageSquare size={16} />
+      <span className="truncate text-sm sm:text-base">
+        {chat.title}
+      </span>
+    </div>
+  </button>
+
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      setOpenMenuId(
+        openMenuId === chat.id ? null : chat.id
+      );
+    }}
+    className={`
+      absolute
+      right-3
+      top-1/2
+      -translate-y-1/2
+      rounded-md
+      p-1.5
+      ${
+        openMenuId === chat.id
+          ? "opacity-100"
+          : "opacity-0 group-hover:opacity-100"
+      }
+      text-slate-400
+      transition-all
+      hover:bg-white/10
+      hover:text-white
+    `}
+  >
+    <MoreHorizontal size={16} />
+  </button>
+  {openMenuId === chat.id && (
+  <div ref={menuRef} className="absolute right-2 top-12 z-50 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#141B2D] shadow-2xl">
+
+    <button
+      onClick={() => {
+        onToggleArchive(chat.id);
+        setOpenMenuId(null);
+      }}
+      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-200 transition-colors hover:bg-white/5"
+    >
+      <Archive size={16} />
+      Restore Chat
+    </button>
+
+    <button
+      onClick={() => {
+        onDeleteChat(chat.id);
+        setOpenMenuId(null);
+      }}
+      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+    >
+      <Trash2 size={16} />
+      Delete Forever
+    </button>
+
+  </div>
+)}
+</div>
+      ))
+    )}
+  </>
+)}
 
         </div>
       </div>

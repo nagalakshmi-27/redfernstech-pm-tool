@@ -31,6 +31,7 @@ const [chats, setChats] = useState(() => {
       return parsed.map(c => ({
         ...c,
         pinned: c.pinned || false,
+        archived: c.archived || false,
         createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
       }));
     } catch (e) { /* ignore */ }
@@ -40,6 +41,7 @@ const [chats, setChats] = useState(() => {
       id: 1,
       title: "New Chat",
       pinned: false,
+      archived: false,
       createdAt: new Date(),
       messages: [],
     },
@@ -117,6 +119,7 @@ const handleNewChat = () => {
   id: Date.now(),
   title: "New Chat",
   pinned: false,
+  archived: false,
   createdAt: new Date(),
   messages: [],
 };
@@ -195,16 +198,30 @@ const handleTogglePinChat = (chatId) => {
     )
   );
 };
+
+const handleToggleArchive = (chatId) => {
+  setChats((prev) =>
+    prev.map((chat) =>
+      chat.id === chatId
+        ? {
+            ...chat,
+            archived: !chat.archived,
+          }
+        : chat
+    )
+  );
+};
 const handleDeleteChat = (chatId) => {
   const remainingChats = chats.filter((chat) => chat.id !== chatId);
 
   if (remainingChats.length === 0) {
     const newChat = {
-      id: Date.now(),
-      title: "New Chat",
-      pinned: false,
-      messages: [],
-    };
+  id: Date.now(),
+  title: "New Chat",
+  pinned: false,
+  archived: false,
+  messages: [],
+};
 
     setChats([newChat]);
     setActiveChat(newChat.id);
@@ -474,7 +491,8 @@ sm:w-14
   onCancelRename={handleCancelRename}
 
   onTogglePinChat={handleTogglePinChat}
-  onDeleteChat={handleDeleteChat}
+onToggleArchive={handleToggleArchive}
+onDeleteChat={handleDeleteChat}
 />
 
   <div
