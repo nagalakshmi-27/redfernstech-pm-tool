@@ -3,7 +3,21 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
-import { CheckSquare, Clock3, PlayCircle, CheckCircle, ArrowLeft, ExternalLink, Settings2, Users, Pencil, LayoutPanelTop, Eye, Trash2, } from "lucide-react";
+import {
+  CheckSquare,
+  Clock3,
+  PlayCircle,
+  CheckCircle,
+  ArrowLeft,
+  ExternalLink,
+  Settings2,
+  Users,
+  Pencil,
+  LayoutPanelTop,
+  Eye,
+  Archive,
+  Trash2,
+} from "lucide-react";
 import ProjectTeamModal from "./components/ProjectTeamModal";
 import ProjectChat from "./ProjectChat";
 import ProjectWiki from "./ProjectWiki";
@@ -83,6 +97,21 @@ useEffect(() => {
       setTimeout(() => setHighlightedTaskId(null), 4000);
     }
   };
+  const handleArchiveProject = () => {
+  setProjects((prevProjects) =>
+    prevProjects.map((p) =>
+      p.id === project.id
+        ? {
+            ...p,
+            archived: true,
+          }
+        : p
+    )
+  );
+
+  setShowArchiveProjectModal(false);
+  navigate("/projects");
+};
 
   const [taskName, setTaskName] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -103,6 +132,7 @@ useEffect(() => {
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false);
   const [showTaskVisibilityModal, setShowTaskVisibilityModal] = useState(false);
+  const [showArchiveProjectModal, setShowArchiveProjectModal] = useState(false);
   const [taskVisibility, setTaskVisibility] = useState("everyone");
   const [taskViewers, setTaskViewers] = useState([]);
   
@@ -785,6 +815,17 @@ const handleBoardViewChange = async (type) => {
   <span>Task Visibility</span>
 </button>
 
+<button
+  onClick={() => {
+    setShowProjectSettings(false);
+    setShowArchiveProjectModal(true);
+  }}
+  className="w-full flex items-center gap-3 px-5 py-3 text-white hover:bg-white/5 transition"
+>
+  <Archive size={18} />
+  <span>Archive Project</span>
+</button>
+
     <div className="border-t border-white/10" />
 
     <button
@@ -1383,6 +1424,44 @@ const handleBoardViewChange = async (type) => {
     }
   }}
 />
+{showArchiveProjectModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#171d31] p-6 shadow-2xl">
+
+      <div className="flex items-center gap-3">
+        <Archive size={24} className="text-cyan-400" />
+        <h2 className="text-xl font-semibold text-white">
+          Archive Project
+        </h2>
+      </div>
+
+      <p className="mt-4 text-slate-300">
+        Are you sure you want to archive this project?
+      </p>
+
+      <p className="mt-2 text-sm text-slate-500">
+        Archived projects can be restored later.
+      </p>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          onClick={() => setShowArchiveProjectModal(false)}
+          className="rounded-lg border border-white/10 px-4 py-2 text-slate-300 hover:bg-white/5"
+        >
+          Cancel
+        </button>
+
+        <button
+  onClick={handleArchiveProject}
+  className="rounded-lg bg-cyan-500 px-4 py-2 text-white hover:bg-cyan-600"
+>
+  Archive
+</button>
+      </div>
+
+    </div>
+  </div>
+)}
     </MainLayout>
   );
 }
