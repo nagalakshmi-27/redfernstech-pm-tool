@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { Sparkles } from "lucide-react";
+import AppContext from "../../context/AppContext";
 import AIHeader from "./AIHeader";
 import PromptInput from "./PromptInput";
 import ConversationPanel from "./ConversationPanel";
@@ -8,6 +9,7 @@ import ChatMessage from "./ChatMessage";
 import ChatSidebar from "./ChatSidebar";
 
 export default function WorkspaceAI() {
+  const { activeWorkspaceId, workspaces, projects, setProjects, tasks, setTasks, events, setEvents, members, currentUser } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
 const [view, setView] = useState("home");
@@ -15,45 +17,50 @@ const [copied, setCopied] = useState(false);
 const [editingId, setEditingId] = useState(null);
 const [editedText, setEditedText] = useState("");
 const [isTyping, setIsTyping] = useState(false);
-const [activeChat, setActiveChat] = useState(1);
+const [activeChat, setActiveChat] = useState(() => {
+  const saved = localStorage.getItem(`workspace_ai_active_${activeWorkspaceId}`);
+  return saved ? Number(saved) : 1;
+});
 const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-const [chats, setChats] = useState([
-  {
-    id: 1,
-    title: "CRM Project",
-    pinned: false,
-    archived: false,
-    createdAt: new Date(),
-    messages: [],
-  },
-  {
-    id: 2,
-    title: "Login Module",
-    pinned: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    messages: [],
-  },
-  {
-    id: 3,
-    title: "Dashboard UI",
-    pinned: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    messages: [],
-  },
-  {
-    id: 4,
-    title: "Meeting Notes",
-    pinned: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-    messages: [],
-  },
-]);
+const [chats, setChats] = useState(() => {
+  const saved = localStorage.getItem(`workspace_ai_chats_${activeWorkspaceId}`);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map(c => ({
+        ...c,
+        pinned: c.pinned || false,
+        archived: c.archived || false,
+        createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+      }));
+    } catch (e) { /* ignore */ }
+  }
+  return [
+    {
+      id: 1,
+      title: "New Chat",
+      pinned: false,
+      archived: false,
+      createdAt: new Date(),
+      messages: [],
+    },
+  ];
+});
 const [editingChatId, setEditingChatId] = useState(null);
 const [editingChatTitle, setEditingChatTitle] = useState("");
+
+useEffect(() => {
+  if (activeWorkspaceId && chats) {
+    localStorage.setItem(`workspace_ai_chats_${activeWorkspaceId}`, JSON.stringify(chats));
+  }
+}, [chats, activeWorkspaceId]);
+
+useEffect(() => {
+  if (activeWorkspaceId && activeChat) {
+    localStorage.setItem(`workspace_ai_active_${activeWorkspaceId}`, activeChat.toString());
+  }
+}, [activeChat, activeWorkspaceId]);
 const currentChat = chats.find(
   (chat) => chat.id === activeChat
 );
@@ -239,82 +246,164 @@ const handleCancelRename = () => {
   setEditingChatId(null);
   setEditingChatTitle("");
 };
-  const handleGenerate = () => {
-  if (!prompt.trim()) return;
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
 
-  if (editingId !== null) {
-  setChats((prev) =>
-    prev.map((chat) =>
-      chat.id === activeChat
-        ? {
+    if (editingId !== null) {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChat
+            ? {
+                ...chat,
+                messages: chat.messages.map((msg) =>
+                  msg.id === editingId
+                    ? {
+                        ...msg,
+                        content: prompt.trim(),
+                      }
+                    : msg
+                ),
+              }
+            : chat
+        )
+      );
+
+      setEditingId(null);
+      setEditedText("");
+      setPrompt("");
+      setView("chat");
+    } else {
+      const promptToSend = prompt.trim();
+      setPrompt("");
+      setView("chat");
+
+      const userMessage = {
+        id: Date.now(),
+        role: "user",
+        content: promptToSend,
+      };
+
+      const currentHistory = (currentChat?.messages || []).map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.id !== activeChat) return chat;
+
+          return {
             ...chat,
-            messages: chat.messages.map((msg) =>
-              msg.id === editingId
-                ? {
-                    ...msg,
-                    content: prompt.trim(),
-                  }
-                : msg
-            ),
+            title:
+              chat.title === "New Chat"
+                ? promptToSend.length > 30
+                  ? promptToSend.slice(0, 30) + "..."
+                  : promptToSend
+                : chat.title,
+            messages: [...chat.messages, userMessage],
+          };
+        })
+      );
+      setIsTyping(true);
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            workspace_id: Number(activeWorkspaceId),
+            message: promptToSend,
+            history: currentHistory,
+            frontend_context: {
+              workspaces: workspaces || [],
+              projects: projects || [],
+              tasks: tasks || [],
+              events: events || [],
+              members: members || [],
+              currentUser: currentUser || {},
+            }
+          }),
+        });
+
+        let assistantContent = "Sorry, I encountered an error while processing your request.";
+        if (response.ok) {
+          const data = await response.json();
+          assistantContent = data.response_message || "Done!";
+
+          if (data.new_project_id || data.new_task_id || data.new_event_id) {
+            try {
+              const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (projRes.ok && setProjects) {
+                const projData = await projRes.json();
+                setProjects(projData);
+              }
+              const taskRes = await fetch(`${import.meta.env.VITE_API_URL}/tasks/?workspace_id=${activeWorkspaceId}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (taskRes.ok && setTasks) {
+                const taskData = await taskRes.json();
+                setTasks(taskData);
+              }
+              const eventRes = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+              if (eventRes.ok && setEvents) {
+                const eventData = await eventRes.json();
+                setEvents(eventData);
+              }
+            } catch (err) {
+              console.error("Error refreshing workspace data:", err);
+            }
           }
-        : chat
-    )
-  );
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          assistantContent = errData.detail || "Error connecting to AI service.";
+        }
 
-  setEditingId(null);
-  setEditedText("");
-} else {
-  const userMessage = {
-  id: Date.now(),
-  role: "user",
-  content: prompt.trim(),
-};
+        const assistantMessage = {
+          id: Date.now() + 1,
+          role: "assistant",
+          content: assistantContent,
+        };
 
-setChats((prev) =>
-  prev.map((chat) => {
-    if (chat.id !== activeChat) return chat;
-
-    return {
-      ...chat,
-
-      title:
-        chat.title === "New Chat"
-          ? prompt.trim().length > 30
-            ? prompt.trim().slice(0, 30) + "..."
-            : prompt.trim()
-          : chat.title,
-
-      messages: [...chat.messages, userMessage],
-    };
-  })
-);
-setIsTyping(true);
-
-setTimeout(() => {
-  const assistantMessage = {
-    id: Date.now() + 1,
-    role: "assistant",
-    content: "This is a dummy AI response. Later this will come from the backend.",
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === activeChat
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, assistantMessage],
+                }
+              : chat
+          )
+        );
+      } catch (error) {
+        console.error("AI chat error:", error);
+        const errorMessage = {
+          id: Date.now() + 1,
+          role: "assistant",
+          content: "Network error. Please check your connection and try again.",
+        };
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === activeChat
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, errorMessage],
+                }
+              : chat
+          )
+        );
+      } finally {
+        setIsTyping(false);
+      }
+    }
   };
-
-  setChats((prev) =>
-    prev.map((chat) =>
-      chat.id === activeChat
-        ? {
-            ...chat,
-            messages: [...chat.messages, assistantMessage],
-          }
-        : chat
-    )
-  );
-
-  setIsTyping(false);
-}, 1500);
-}
-
-setPrompt("");
-setView("chat");
-};
 
   return (
     <>
@@ -458,13 +547,6 @@ onDeleteChat={handleDeleteChat}
       </div>
     )}
 
-    <PromptInput
-  prompt={prompt}
-  setPrompt={setPrompt}
-  onGenerate={handleGenerate}
-  isTyping={isTyping}
-/>
-
     <div className="flex-1 overflow-y-auto">
 
       {view === "home" ? (
@@ -492,6 +574,13 @@ onDeleteChat={handleDeleteChat}
       )}
 
     </div>
+
+    <PromptInput
+  prompt={prompt}
+  setPrompt={setPrompt}
+  onGenerate={handleGenerate}
+  isTyping={isTyping}
+/>
 
   </div>
 

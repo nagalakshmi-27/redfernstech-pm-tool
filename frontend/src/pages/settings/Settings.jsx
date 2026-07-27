@@ -595,19 +595,7 @@ const canProceed = passwordForDelete && allAssigned;
         This action cannot be undone.
       </p>
       <div className="mt-6 flex-1 overflow-y-auto pr-2">
-        <div className="mt-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
-  <p className="text-yellow-300 font-semibold">
-    Before deleting your account
-  </p>
-
-  <ul className="list-disc list-inside text-sm text-slate-300 mt-2 space-y-1">
-    <li>All projects you own will be transferred.</li>
-    <li>You will immediately lose access to your projects.</li>
-    <li>Your account will be permanently deleted.</li>
-    <li>This action cannot be undone.</li>
-  </ul>
-</div>
-  <div className="mt-6">
+        <div className="mt-6">
     {currentUser?.is_owner ? (
       <>
         <h3 className="text-lg font-semibold text-white mb-4 mt-6">
@@ -617,7 +605,8 @@ const canProceed = passwordForDelete && allAssigned;
           <div className="text-slate-400">Checking for eligible admins...</div>
         ) : eligibleAdmins.length === 0 ? (
           <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
-            You are the only Owner. If you proceed, the entire organization and all its data will be permanently deleted.
+            <p>You are the only Owner. If you proceed, the entire organization and all its data will be permanently deleted.</p>
+            <p className="mt-2 font-medium">We suggest you transfer your organization from the organization settings before deleting your account.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -678,7 +667,7 @@ const canProceed = passwordForDelete && allAssigned;
     ) : (
       <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-xl">
         <p className="text-cyan-200 text-sm">
-          <span className="font-semibold text-cyan-400">Note:</span> Your account will be removed, but the organization and your projects will remain intact.
+          <span className="font-semibold text-cyan-400">Note:</span> Your account with this organization will be permanently deleted however your other accounts with other organizations will remain intact.
         </p>
       </div>
     )}

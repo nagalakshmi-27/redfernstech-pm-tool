@@ -4,23 +4,8 @@ import AppContext from "../../context/AppContext";
 import { CalendarDays, Clock, CheckCircle, XCircle } from "lucide-react";
 
 export default function Calendar() {
-  const { tasks, members } = useContext(AppContext);
+  const { tasks, members, events: manualEvents, setEvents: setManualEvents } = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
-  const [manualEvents, setManualEvents] = useState([]); // This stores events from your DB
-
-  // 1. Fetch your events from the database when the page loads!
-  useEffect(() => {
-    const fetchEvents = async () => {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (response.ok) {
-        setManualEvents(await response.json());
-      }
-    };
-    fetchEvents();
-  }, []);
 
   // 2. MAGICAL MERGE! Combine manual events and your real tasks into one giant calendar array!
   const events = [

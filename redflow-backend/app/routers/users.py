@@ -44,8 +44,7 @@ def send_email(to_email: str, subject: str, body: str):
 
 @router.post("/register")
 def register_account(request: schemas.RegisterRequest, db: Session = Depends(get_db)):
-    if crud.get_user_by_email(db, request.email) or crud.get_account_by_email(db, request.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # We allow the same email to be used for multiple organizations
         
     account = crud.create_account(db, request.organization_name, request.email)
     user_data = request.model_dump()

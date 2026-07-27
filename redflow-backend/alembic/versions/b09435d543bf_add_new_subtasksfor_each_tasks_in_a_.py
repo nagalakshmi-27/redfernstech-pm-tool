@@ -1,8 +1,8 @@
-"""adding usernames
+"""Add new subtasksfor each tasks in a  project
 
-Revision ID: 7de5941ca8aa
-Revises: 476e41171265
-Create Date: 2026-07-16 18:54:47.914549
+Revision ID: b09435d543bf
+Revises: 944388e219a6
+Create Date: 2026-07-13 19:51:47.100968
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7de5941ca8aa'
-down_revision: Union[str, Sequence[str], None] = '476e41171265'
+revision: str = 'b09435d543bf'
+down_revision: Union[str, Sequence[str], None] = '944388e219a6'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -39,9 +39,9 @@ def connect_integration(workspace_id: int, provider: str, integration_data: sche
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
         
-    is_owner = current_user.id == workspace.owner_id
-    if not is_owner:
-        raise HTTPException(status_code=403, detail="Only workspace owners can configure integrations")
+    is_member = current_user.id == workspace.owner_id or any(w.id == workspace_id for w in current_user.workspaces)
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not authorized to configure integrations")
         
     # Check if integration already exists
     existing = db.query(models.AppIntegration).filter(
@@ -78,9 +78,9 @@ def disconnect_integration(workspace_id: int, provider: str, db: Session = Depen
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
         
-    is_owner = current_user.id == workspace.owner_id
-    if not is_owner:
-        raise HTTPException(status_code=403, detail="Only workspace owners can configure integrations")
+    is_member = current_user.id == workspace.owner_id or any(w.id == workspace_id for w in current_user.workspaces)
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not authorized to configure integrations")
         
     integration = db.query(models.AppIntegration).filter(
         models.AppIntegration.workspace_id == workspace_id,

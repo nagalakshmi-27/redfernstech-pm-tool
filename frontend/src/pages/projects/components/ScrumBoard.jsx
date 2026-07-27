@@ -111,14 +111,14 @@ export default function ScrumBoard({
         </div>
 
         <span className="rounded-full bg-cyan-500/20 px-2 py-1 text-xs text-cyan-300">
-          {projectTasks.filter(task => task.status === colName).length}
+          {projectTasks.filter(task => (task.status || '').toLowerCase() === (colName || '').toLowerCase()).length}
         </span>
 
       </div>
 
       <div className="space-y-3">
   {projectTasks
-    .filter(task => task.status === colName)
+    .filter(task => (task.status || '').toLowerCase() === (colName || '').toLowerCase())
     .map(task => {
       const assignee = members.find(
         m => m.id === task.assignee_id

@@ -16,7 +16,7 @@ export default function Integrations() {
   
   const currentUserId = Number(localStorage.getItem("userId"));
   const activeWorkspace = workspaces?.find(w => w.id === Number(activeWorkspaceId));
-  const isOwner = activeWorkspace?.owner_id === currentUserId;
+  const canConfigure = true;
 
   useEffect(() => {
     if (activeWorkspaceId) {
@@ -41,7 +41,6 @@ export default function Integrations() {
   };
 
   const handleConnect = async (provider) => {
-    if (!isOwner) return;
     setConnecting(provider);
     
     if (provider === "google_calendar") {
@@ -89,7 +88,6 @@ export default function Integrations() {
   };
 
   const handleDisconnect = async (provider) => {
-    if (!isOwner) return;
     if (!window.confirm(`Are you sure you want to disconnect ${provider}?`)) return;
     
     try {
@@ -214,12 +212,6 @@ export default function Integrations() {
             Connect your favorite tools to automate your project management workflow.
           </p>
         </div>
-        
-        {!isOwner && (
-          <div className="mb-6 bg-amber-500/10 border border-amber-500/20 text-amber-200 p-4 rounded-xl">
-            Only workspace owners can configure app integrations.
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {apps.map((app) => {
@@ -241,7 +233,7 @@ export default function Integrations() {
                       <span className="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                         <Check size={14} /> Connected
                       </span>
-                      {isOwner && (
+                      {canConfigure && (
                         <button 
                           onClick={() => handleDisconnect(app.provider)}
                           className="bg-black/30 hover:bg-red-500/20 text-slate-300 hover:text-red-400 p-2 rounded-lg transition"
@@ -258,7 +250,7 @@ export default function Integrations() {
                           Coming Soon
                         </span>
                       )}
-                      {isOwner && (
+                      {canConfigure && (
                         <button
                           onClick={() => handleConnect(app.provider)}
                           disabled={isConnecting}

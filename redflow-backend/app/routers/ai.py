@@ -51,11 +51,17 @@ async def cleanup_note(request: NoteCleanupRequest):
     """
 
     try:
-        # We are trying the newest Gemini 3.5 Flash model here!
-        response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
-            contents=prompt,
-        )
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available model succeeded.")
         clean_html = response.text.replace('```html', '').replace('```', '').strip()
         return NoteCleanupResponse(cleaned_note=clean_html)
     except Exception as e:
@@ -79,7 +85,7 @@ from .users import get_current_user, get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from fastapi import Depends
-from .. import models, crud
+from .. import models, crud, schemas
 from datetime import datetime
 
 @router.post("/smart-summary", response_model=SmartSummaryResponse)
@@ -260,12 +266,392 @@ async def get_smart_summary(
     """
 
     try:
-        response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
-            contents=prompt,
-        )
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available model succeeded.")
         clean_html = response.text.replace('```html', '').replace('```', '').strip()
         return SmartSummaryResponse(summary=clean_html)
     except Exception as e:
         print(f"\n--- AI ERROR --- \n{str(e)}\n-----------------\n")
         raise HTTPException(status_code=500, detail=f"AI Error generating summary: {str(e)}")
+
+class AIChatHistoryItem(BaseModel):
+    role: str
+    content: str
+
+class AIChatRequest(BaseModel):
+    workspace_id: int
+    message: str
+    history: List[AIChatHistoryItem] = []
+    frontend_context: Optional[dict] = None
+
+class TaskDataSchema(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    status: Optional[str] = "To Do"
+    priority: Optional[str] = "Medium"
+    due_date: Optional[str] = None
+    assignee_id: Optional[int] = None
+    assignee_name: Optional[str] = None
+
+class ProjectDataSchema(BaseModel):
+    name: str
+    description: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    board_columns: Optional[List[str]] = []
+    members: Optional[List[str]] = []
+    tasks: Optional[List[TaskDataSchema]] = []
+
+class SingleTaskCreateSchema(BaseModel):
+    project_id: Optional[int] = None
+    project_name: Optional[str] = None
+    name: str
+    description: Optional[str] = ""
+    priority: Optional[str] = "Normal"
+    due_date: Optional[str] = None
+    assignee_id: Optional[int] = None
+    assignee_name: Optional[str] = None
+
+class SingleEventCreateSchema(BaseModel):
+    title: str
+    date: str
+    category: Optional[str] = "Meeting"
+    description: Optional[str] = ""
+
+class AIChatResponseSchema(BaseModel):
+    action: str
+    response_message: str
+    project_data: Optional[ProjectDataSchema] = None
+    task_data: Optional[SingleTaskCreateSchema] = None
+    event_data: Optional[SingleEventCreateSchema] = None
+
+class AIChatResponse(BaseModel):
+    response_message: str
+    new_project_id: Optional[int] = None
+    new_task_id: Optional[int] = None
+    new_event_id: Optional[int] = None
+
+@router.post("/chat", response_model=AIChatResponse)
+async def chat_with_ai(
+    request: AIChatRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 1. Build workspace context directly from frontend state if available
+        context_str = "CURRENT WORKSPACE CONTEXT (FROM FRONTEND STATE):\n"
+        if request.frontend_context:
+            fc = request.frontend_context
+            workspaces_data = fc.get("workspaces", [])
+            projects_data = fc.get("projects", [])
+            tasks_data = fc.get("tasks", [])
+            events_data = fc.get("events", [])
+            members_data = fc.get("members", [])
+            current_user_data = fc.get("currentUser", {})
+            
+            context_str += f"Logged in User: {current_user_data.get('full_name') or current_user_data.get('email')} (ID: {current_user_data.get('id')})\n\n"
+            
+            context_str += "--- WORKSPACES ---\n"
+            for ws in workspaces_data:
+                context_str += f"Workspace ID: {ws.get('id')}, Name: '{ws.get('name')}', Role: {ws.get('user_role')}\n"
+                
+            context_str += "\n--- TEAM MEMBERS ---\n"
+            for m in members_data:
+                context_str += f"Member ID: {m.get('id')}, Name: '{m.get('name') or m.get('full_name')}', Email: {m.get('email')}, Role: {m.get('role')}\n"
+                
+            context_str += "\n--- PROJECTS ---\n"
+            if not projects_data:
+                context_str += "(No projects found)\n"
+            else:
+                for p in projects_data:
+                    context_str += f"Project ID: {p.get('id')}, Name: '{p.get('name')}', Status: {p.get('status')}, Description: {p.get('description') or 'None'}\n"
+                    
+            context_str += "\n--- TASKS ---\n"
+            if not tasks_data:
+                context_str += "(No tasks found)\n"
+            else:
+                for t in tasks_data:
+                    assignee_name = t.get('assignee_name') or (t.get('assignee') and (t.get('assignee').get('full_name') or t.get('assignee').get('email'))) or "Unassigned"
+                    context_str += f"Task ID: {t.get('id')}, Project ID: {t.get('project_id')}, Name: '{t.get('name')}', Status: '{t.get('status')}', Priority: '{t.get('priority') or 'Normal'}', Due Date: '{t.get('due_date') or 'No Deadline'}', Assignee: '{assignee_name}', Description: '{t.get('description') or 'None'}'\n"
+                    
+            context_str += "\n--- CALENDAR EVENTS & MEETINGS ---\n"
+            if not events_data:
+                context_str += "(No calendar events found)\n"
+            else:
+                for e in events_data:
+                    context_str += f"Event ID: {e.get('id')}, Title: '{e.get('title')}', Date/Time: '{e.get('date') or e.get('start_time')}', Category: '{e.get('category') or e.get('type') or 'Meeting'}', Status: '{e.get('status')}', Description: '{e.get('description') or 'None'}'\n"
+        else:
+            projects = crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=request.workspace_id)
+            if not projects:
+                context_str += "No projects found.\n"
+            else:
+                for p in projects:
+                    context_str += f"Project: {p.name} (Status: {p.status}, Description: {p.description or 'None'})\n"
+                    for t in p.tasks:
+                        assignee_name = t.assignee.full_name or t.assignee.email if getattr(t, 'assignee', None) else "Unassigned"
+                        context_str += f" - Task ID {t.id}: '{t.name}' | Status: {t.status} | Priority: {t.priority or 'Normal'} | Due Date: {t.due_date or 'No Deadline'} | Assignee: {assignee_name}\n"
+                    
+        # Build prompt
+        system_instruction = f"""
+        You are an expert AI Project Management Assistant.
+        Your job is to answer questions about the workspace or automate tasks like creating a project, creating a task, or adding a meeting/event.
+        
+        {context_str}
+        
+        If the user asks a question about tasks, projects, meetings, team members, or deadlines, use the CURRENT WORKSPACE CONTEXT to answer it.
+        If the user wants to create a project (e.g. "We need to develop a PM tool", "Create a project with members X and Y", or filling out details like Name, Members, Duration, Columns), set action to 'create_project'.
+        When creating a project, you MUST intelligently generate and autofill any details based on whatever instructions or context the user provided:
+        1. Name: Use the provided name or generate a fitting, professional name if omitted/blank.
+        2. Description: Always generate a rich, comprehensive, professional description of the project.
+        3. Duration / Dates: If a duration is provided (e.g., "3 weeks", "2 months", "10 days"), calculate 'start_date' as today (in YYYY-MM-DD format) and 'end_date' accordingly. If duration is not specified or left blank, autofill 'start_date' as today and 'end_date' as 30 days from today.
+        4. Columns: If custom column names are provided (e.g. "Backlog, Development, Review, Done"), output them as a list of strings in 'board_columns'. If omitted or left blank, autofill 'board_columns' with ["To Do", "In Progress", "Completed"].
+        5. Members: If specific team members (by email or name) are mentioned, include them in the 'members' array so they get assigned! If omitted or left blank, autofill appropriately.
+        6. Tasks: Generate 2-4 realistic initial tasks for the project and assign them to the members if appropriate.
+
+        If the user wants to create a single task (e.g. "Generate a task in the Dummy project to create a design..."), set action to 'create_task' and provide task_data with the correct project_id or project_name from context.
+        If the user wants to schedule a meeting or calendar event (e.g. "Add a team meeting tomorrow at 3pm"), set action to 'create_event' and provide event_data with title, date, category='Meeting'.
+
+        CRITICAL: You MUST respond in pure JSON matching this structure:
+        {{
+          "action": "answer" or "create_project" or "create_task" or "create_event",
+          "response_message": "your helpful reply confirming what you did or answering the question",
+          "project_data": null or {{ "name": "Generated Project Name", "description": "Comprehensive project description generated from user instructions.", "start_date": "2026-07-27", "end_date": "2026-08-26", "board_columns": [ "To Do", "In Progress", "Completed" ], "members": [ "email@example.com", "Member Name" ], "tasks": [ {{ "name": "Initial Task", "description": "Task Desc", "assignee_name": "Member Name" }} ] }},
+          "task_data": null or {{ "project_id": 123, "project_name": "Name", "name": "Task Name", "description": "Desc", "priority": "High", "due_date": "2026-07-30", "assignee_name": "Member Name" }},
+          "event_data": null or {{ "title": "Meeting Title", "date": "2026-07-28", "category": "Meeting", "description": "Desc" }}
+        }}
+        Do NOT wrap your response in markdown code blocks like ```json ... ```. Return ONLY valid JSON.
+        """
+        
+        prompt_text = f"{system_instruction}\n\n--- PREVIOUS CONVERSATION HISTORY ---\n"
+        if not request.history:
+            prompt_text += "(No previous messages)\n"
+        else:
+            for msg in request.history:
+                role_label = "USER" if msg.role == "user" else "AI ASSISTANT"
+                prompt_text += f"[{role_label}]: {msg.content}\n\n"
+                
+        prompt_text += f"--- NEW USER MESSAGE ---\n[USER]: {request.message}\n\n[AI ASSISTANT]:"
+        
+        contents = [prompt_text]
+
+        from google.genai import types
+        import json
+
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=m_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
+                )
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available AI model succeeded for chat.")
+        
+        res_text = response.text.replace('```json', '').replace('```', '').strip()
+        res_dict = json.loads(res_text)
+        action = res_dict.get("action", "answer")
+        response_message = res_dict.get("response_message", "")
+        project_data = res_dict.get("project_data")
+        
+        new_project_id = None
+        new_task_id = None
+        new_event_id = None
+        
+        if action == "create_project" and project_data:
+            import datetime
+            today_str = datetime.date.today().isoformat()
+            default_end_str = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+            p_start = project_data.get("start_date") or today_str
+            p_end = project_data.get("end_date") or default_end_str
+            
+            raw_cols = project_data.get("board_columns", [])
+            formatted_cols = []
+            colors = ["#facc15", "#22d3ee", "#a855f7", "#f97316", "#ec4899", "#4ade80"]
+            icons = ["Clock3", "PlayCircle", "CheckCircle", "FolderKanban", "ListTodo"]
+            if raw_cols and isinstance(raw_cols, list):
+                for idx, c_name in enumerate(raw_cols):
+                    if isinstance(c_name, str) and c_name.strip():
+                        formatted_cols.append({
+                            "name": c_name.strip(),
+                            "icon": icons[idx % len(icons)],
+                            "color": colors[idx % len(colors)]
+                        })
+                    elif isinstance(c_name, dict) and "name" in c_name:
+                        formatted_cols.append(c_name)
+            
+            if not formatted_cols:
+                formatted_cols = [
+                    {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
+                    {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"},
+                    {"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"}
+                ]
+
+            new_project = models.Project(
+                name=project_data.get("name") or "New Project",
+                description=project_data.get("description") or "",
+                workspace_id=request.workspace_id,
+                created_by_id=current_user.id,
+                start_date=p_start,
+                end_date=p_end,
+                status="Planning",
+                board_type="kanban",
+                board_columns=formatted_cols,
+            )
+            db.add(new_project)
+            db.commit()
+            db.refresh(new_project)
+            new_project_id = new_project.id
+            
+            added_member_ids = {current_user.id}
+            db.execute(
+                models.project_members.insert().values(
+                    user_id=current_user.id,
+                    project_id=new_project_id
+                )
+            )
+            
+            members_data = project_data.get("members", [])
+            for m_str in members_data:
+                if not m_str or not isinstance(m_str, str):
+                    continue
+                found_id = None
+                if request.frontend_context and request.frontend_context.get("members"):
+                    for fc_m in request.frontend_context.get("members", []):
+                        fc_email = fc_m.get("email") or ""
+                        fc_name = fc_m.get("name") or fc_m.get("full_name") or ""
+                        if m_str.lower() == fc_email.lower() or m_str.lower() in fc_name.lower() or fc_name.lower() in m_str.lower():
+                            found_id = fc_m.get("id")
+                            break
+                if not found_id:
+                    u_match = db.query(models.User).filter(
+                        (models.User.email.ilike(f"{m_str}")) | (models.User.full_name.ilike(f"%{m_str}%"))
+                    ).first()
+                    if u_match:
+                        found_id = u_match.id
+                        
+                if found_id and found_id not in added_member_ids:
+                    added_member_ids.add(found_id)
+                    db.execute(
+                        models.project_members.insert().values(
+                            user_id=found_id,
+                            project_id=new_project_id
+                        )
+                    )
+            
+            tasks_data = project_data.get("tasks", [])
+            for t in tasks_data:
+                t_assignee_id = t.get("assignee_id")
+                t_assignee_name = t.get("assignee_name") or t.get("assignee")
+                if not t_assignee_id and t_assignee_name and isinstance(t_assignee_name, str):
+                    if request.frontend_context and request.frontend_context.get("members"):
+                        for fc_m in request.frontend_context.get("members", []):
+                            fc_name = fc_m.get("name") or fc_m.get("full_name") or fc_m.get("email") or ""
+                            if t_assignee_name.lower() in fc_name.lower() or fc_name.lower() in t_assignee_name.lower():
+                                t_assignee_id = fc_m.get("id")
+                                break
+                    if not t_assignee_id:
+                        u_match = db.query(models.User).filter(
+                            (models.User.email.ilike(t_assignee_name)) | (models.User.full_name.ilike(f"%{t_assignee_name}%"))
+                        ).first()
+                        if u_match:
+                            t_assignee_id = u_match.id
+                
+                first_col_name = formatted_cols[0]["name"] if formatted_cols else "To Do"
+                t_status = t.get("status") or first_col_name
+                matched_col = False
+                for c in formatted_cols:
+                    if c["name"].lower() == t_status.lower():
+                        t_status = c["name"]
+                        matched_col = True
+                        break
+                if not matched_col:
+                    t_status = first_col_name
+
+                new_task = models.Task(
+                    name=t.get("name", "Task"),
+                    description=t.get("description", ""),
+                    project_id=new_project_id,
+                    status=t_status,
+                    priority=t.get("priority") or "Medium",
+                    due_date=t.get("due_date"),
+                    assignee_id=t_assignee_id,
+                    created_by_id=current_user.id
+                )
+                db.add(new_task)
+            
+            db.commit()
+            
+        elif action == "create_task" and res_dict.get("task_data"):
+            t_data = res_dict.get("task_data", {})
+            proj_id = t_data.get("project_id")
+            if not proj_id and t_data.get("project_name"):
+                p_match = db.query(models.Project).filter(models.Project.name.ilike(f"%{t_data['project_name']}%")).first()
+                if p_match:
+                    proj_id = p_match.id
+            if not proj_id:
+                first_proj = db.query(models.Project).filter(models.Project.workspace_id == request.workspace_id).first()
+                if first_proj:
+                    proj_id = first_proj.id
+            if proj_id:
+                assignee_id = t_data.get("assignee_id")
+                if not assignee_id and t_data.get("assignee_name") and request.frontend_context:
+                    for m in request.frontend_context.get("members", []):
+                        m_name = m.get("name") or m.get("full_name") or ""
+                        if t_data["assignee_name"].lower() in m_name.lower():
+                            assignee_id = m.get("id")
+                            break
+                task_schema = schemas.TaskCreate(
+                    name=t_data.get("name") or "New Task",
+                    description=t_data.get("description") or "",
+                    project_id=proj_id,
+                    priority=t_data.get("priority") or "Medium",
+                    due_date=t_data.get("due_date"),
+                    assignee_id=assignee_id
+                )
+                created_task = crud.create_task(db=db, task=task_schema, user_id=current_user.id)
+                if created_task:
+                    db.commit()
+                    db.refresh(created_task)
+                    new_task_id = created_task.id
+
+        elif action == "create_event" and res_dict.get("event_data"):
+            e_data = res_dict.get("event_data", {})
+            event_schema = schemas.EventCreate(
+                title=e_data.get("title") or "New Meeting",
+                date=e_data.get("date") or "Today",
+                type=e_data.get("category") or "Meeting",
+                description=e_data.get("description") or ""
+            )
+            created_event = crud.create_event(db=db, event=event_schema, user_id=current_user.id)
+            if created_event:
+                db.commit()
+                db.refresh(created_event)
+                new_event_id = created_event.id
+            
+        return AIChatResponse(
+            response_message=response_message,
+            new_project_id=new_project_id,
+            new_task_id=new_task_id,
+            new_event_id=new_event_id
+        )
+        
+    except Exception as e:
+        print(f"\\n--- AI CHAT ERROR --- \\n{str(e)}\\n-----------------\\n")
+        raise HTTPException(status_code=500, detail=f"AI Chat Error: {str(e)}")

@@ -54,8 +54,12 @@ async def import_project_from_excel(
         desc_idx = next((i for i, h in enumerate(headers) if h in ['description', 'desc']), None)
         status_idx = next((i for i, h in enumerate(headers) if h == 'status'), None)
         priority_idx = next((i for i, h in enumerate(headers) if h == 'priority'), None)
-        assignee_idx = next((i for i, h in enumerate(headers) if h in ['assignee email', 'assignee', 'email']), None)
+        assignee_idx = next((i for i, h in enumerate(headers) if h in ['assignee email', 'assignee', 'email', 'assignee name']), None)
         project_idx = next((i for i, h in enumerate(headers) if h in ['project', 'project name']), None)
+        due_date_idx = next((i for i, h in enumerate(headers) if h in ['due date', 'due', 'deadline', 'end date']), None)
+        
+        workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
+        workspace_members = workspace.members if workspace else []
         
         created_projects = {}
         fallback_project_name = project_name or file.filename.rsplit('.', 1)[0]
@@ -87,16 +91,34 @@ async def import_project_from_excel(
             priority = str(row[priority_idx]).strip() if priority_idx is not None and len(row) > priority_idx and row[priority_idx] else "Medium"
             if priority.lower() == "none": priority = "Medium"
             
-            assignee_email = str(row[assignee_idx]).strip() if assignee_idx is not None and len(row) > assignee_idx and row[assignee_idx] else None
-            if assignee_email and assignee_email.lower() == "none": assignee_email = None
+            assignee_val = str(row[assignee_idx]).strip() if assignee_idx is not None and len(row) > assignee_idx and row[assignee_idx] else None
+            if assignee_val and assignee_val.lower() in ["none", "nan", ""]: assignee_val = None
             
             assignee_id = current_user.id
-            if assignee_email:
-                assignee_user = db.query(models.User).filter(models.User.email == assignee_email).first()
-                if assignee_user:
-                    assignee_id = assignee_user.id
-                    if assignee_user not in project.members:
-                        project.members.append(assignee_user)
+            if assignee_val:
+                search_val = assignee_val.lower()
+                matched_user = None
+                for member in workspace_members:
+                    if (member.email and search_val == member.email.lower()) or \
+                       (member.full_name and search_val == member.full_name.lower()) or \
+                       (member.username and search_val == member.username.lower()):
+                        matched_user = member
+                        break
+                        
+                if matched_user:
+                    assignee_id = matched_user.id
+                    if matched_user not in project.members:
+                        project.members.append(matched_user)
+                        
+            due_date = str(row[due_date_idx]).strip() if due_date_idx is not None and len(row) > due_date_idx and row[due_date_idx] else None
+            if due_date and due_date.lower() in ["none", "nan", ""]: 
+                due_date = None
+            elif due_date and " " in due_date and "-" in due_date:
+                due_date = due_date.split(" ")[0]
+            
+            project.task_counter = (project.task_counter or 0) + 1
+            prefix = project.project_key if project.project_key else "".join([c for c in project.name if c.isalnum()]).upper()[:3]
+            ticket_id = f"{prefix}-{project.task_counter}"
             
             new_task = models.Task(
                 name=title,
@@ -104,7 +126,10 @@ async def import_project_from_excel(
                 status=status,
                 priority=priority,
                 project_id=project.id,
-                assignee_id=assignee_id
+                assignee_id=assignee_id,
+                due_date=due_date,
+                ticket_id=ticket_id,
+                created_by_id=current_user.id
             )
             db.add(new_task)
             

@@ -42,14 +42,14 @@ export default function KanbanBoard({
             </h2>
 
             <span className="ml-auto bg-white/10 text-slate-300 px-2 py-0.5 rounded-full text-xs font-bold border border-white/10">
-              {projectTasks.filter((t) => t.status === colName).length}
+              {projectTasks.filter((t) => (t.status || '').toLowerCase() === (colName || '').toLowerCase()).length}
             </span>
           </div>
 
           {/* Cards */}
           <div className="flex flex-col gap-3 min-h-[500px]">
             {projectTasks
-              .filter((t) => t.status === colName)
+              .filter((t) => (t.status || '').toLowerCase() === (colName || '').toLowerCase())
               .sort((a, b) => (a.position || 0) - (b.position || 0))
               .map((task) => (
                 <div

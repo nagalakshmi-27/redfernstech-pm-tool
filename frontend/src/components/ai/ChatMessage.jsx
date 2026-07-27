@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import AppContext from "../../context/AppContext";
 import {
   Sparkles,
   Copy,
@@ -15,6 +16,8 @@ export default function ChatMessage({
   onSave,
   onCancel,
 }) {
+  const { currentUser } = useContext(AppContext);
+  const userInitial = currentUser?.full_name?.charAt(0).toUpperCase() || currentUser?.username?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase() || "U";
   const isUser = message.role === "user";
   const isEditing = editingId === message.id;
 
@@ -41,7 +44,7 @@ export default function ChatMessage({
         >
           {isUser ? (
             <span className="text-sm font-semibold">
-              N
+              {userInitial}
             </span>
           ) : (
             <Sparkles size={18} />

@@ -42,7 +42,7 @@ export default function ConversationPanel({
 
     <button
   onClick={() =>
-    setPrompt("Create a Project Management Tool")
+    setPrompt("Create a Project with the following details:\n1. Name: \n2. Members: \n3. Duration: \n4. Columns: ")
   }
   className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 hover:bg-white/[0.05]"
 >
@@ -56,8 +56,7 @@ export default function ConversationPanel({
       </h3>
 
       <p className="mt-1 text-sm leading-6 text-slate-400">
-        Create a complete project with modules,
-        milestones and workflow.
+        Create a project by specifying name, team members, duration, and custom columns.
       </p>
     </div>
 

@@ -75,8 +75,8 @@ useEffect(() => {
   const currentUserRole = activeWorkspaceRole;
   const [highlightProject, setHighlightProject] = useState(false);
 
-  const project = projects.find(p => p.id === parseInt(id));
-  const projectTasks = tasks.filter(t => t.project_id === parseInt(id));
+  const project = useMemo(() => projects.find(p => p.id === parseInt(id)), [projects, id]);
+  const projectTasks = useMemo(() => tasks.filter(t => t.project_id === parseInt(id)), [tasks, id]);
 
   // Edit Task State
   const [showEditModal, setShowEditModal] = useState(false);
@@ -311,12 +311,33 @@ const [tempBoardColumns, setTempBoardColumns] = useState([]);
 
 const [newColumnName, setNewColumnName] = useState("");
 useEffect(() => {
-  setBoardColumns(
-    project?.board_columns?.length
+  const currentCols = project?.board_columns?.length
       ? [...project.board_columns]
-      : [...DEFAULT_COLUMNS]
-  );
-}, [project]);
+      : [...DEFAULT_COLUMNS];
+      
+  const colNames = currentCols.map(c => typeof c === 'string' ? c.toLowerCase() : (c?.name || 'Unknown').toLowerCase());
+  
+  const missing = [];
+  projectTasks.forEach(task => {
+      if (task.status && !colNames.includes(task.status.toLowerCase())) {
+          if (!missing.some(m => m.toLowerCase() === task.status.toLowerCase())) {
+              missing.push(task.status);
+              colNames.push(task.status.toLowerCase());
+          }
+      }
+  });
+
+  const newCols = [...currentCols, ...missing];
+  setBoardColumns(prev => {
+    if (prev.length !== newCols.length) return newCols;
+    for (let i = 0; i < prev.length; i++) {
+      const prevName = typeof prev[i] === 'string' ? prev[i] : (prev[i]?.name || '');
+      const newName = typeof newCols[i] === 'string' ? newCols[i] : (newCols[i]?.name || '');
+      if (prevName !== newName) return newCols;
+    }
+    return prev;
+  });
+}, [JSON.stringify(project?.board_columns), projectTasks]);
 
 useEffect(() => {
   if (!project || !boardColumns.length) return;

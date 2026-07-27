@@ -4,6 +4,7 @@ import AppContext from "./AppContext";
 export function AppProvider({ children }) {
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]); // <--- Starts empty now!
+  const [events, setEvents] = useState([]);
   
   // We keep this fake data for the Teams UI for now
   const [members, setMembers] = useState([]);
@@ -119,6 +120,14 @@ useEffect(() => {
           setTasks(taskData);
         }
 
+        const eventRes = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (eventRes.ok) {
+          const eventData = await eventRes.json();
+          setEvents(eventData);
+        }
+
       } catch (err) {
         console.error("Failed to load data from database", err);
       }
@@ -161,6 +170,8 @@ useEffect(() => {
     setProjects,
     tasks,
     setTasks,
+    events,
+    setEvents,
     members,
     setMembers,
     currentUser,
