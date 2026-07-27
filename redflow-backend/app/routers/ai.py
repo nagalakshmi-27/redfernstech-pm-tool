@@ -79,7 +79,7 @@ from .users import get_current_user, get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from fastapi import Depends
-from .. import models, crud
+from .. import models, crud, schemas
 from datetime import datetime
 
 @router.post("/smart-summary", response_model=SmartSummaryResponse)
