@@ -281,12 +281,24 @@ const [tempBoardColumns, setTempBoardColumns] = useState([]);
 
 const [newColumnName, setNewColumnName] = useState("");
 useEffect(() => {
-  setBoardColumns(
-    project?.board_columns?.length
+  const currentCols = project?.board_columns?.length
       ? [...project.board_columns]
-      : [...DEFAULT_COLUMNS]
-  );
-}, [project]);
+      : [...DEFAULT_COLUMNS];
+      
+  const colNames = currentCols.map(c => typeof c === 'string' ? c.toLowerCase() : (c?.name || 'Unknown').toLowerCase());
+  
+  const missing = [];
+  projectTasks.forEach(task => {
+      if (task.status && !colNames.includes(task.status.toLowerCase())) {
+          if (!missing.some(m => m.toLowerCase() === task.status.toLowerCase())) {
+              missing.push(task.status);
+              colNames.push(task.status.toLowerCase());
+          }
+      }
+  });
+
+  setBoardColumns([...currentCols, ...missing]);
+}, [project, projectTasks]);
 
 useEffect(() => {
   if (!project || !boardColumns.length) return;
