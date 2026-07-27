@@ -61,8 +61,8 @@ useEffect(() => {
   const currentUserRole = activeWorkspaceRole;
   const [highlightProject, setHighlightProject] = useState(false);
 
-  const project = projects.find(p => p.id === parseInt(id));
-  const projectTasks = tasks.filter(t => t.project_id === parseInt(id));
+  const project = useMemo(() => projects.find(p => p.id === parseInt(id)), [projects, id]);
+  const projectTasks = useMemo(() => tasks.filter(t => t.project_id === parseInt(id)), [tasks, id]);
 
   // Edit Task State
   const [showEditModal, setShowEditModal] = useState(false);
@@ -297,8 +297,17 @@ useEffect(() => {
       }
   });
 
-  setBoardColumns([...currentCols, ...missing]);
-}, [project, projectTasks]);
+  const newCols = [...currentCols, ...missing];
+  setBoardColumns(prev => {
+    if (prev.length !== newCols.length) return newCols;
+    for (let i = 0; i < prev.length; i++) {
+      const prevName = typeof prev[i] === 'string' ? prev[i] : (prev[i]?.name || '');
+      const newName = typeof newCols[i] === 'string' ? newCols[i] : (newCols[i]?.name || '');
+      if (prevName !== newName) return newCols;
+    }
+    return prev;
+  });
+}, [JSON.stringify(project?.board_columns), projectTasks]);
 
 useEffect(() => {
   if (!project || !boardColumns.length) return;

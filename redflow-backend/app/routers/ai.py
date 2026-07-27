@@ -51,11 +51,17 @@ async def cleanup_note(request: NoteCleanupRequest):
     """
 
     try:
-        # We are trying the newest Gemini 3.5 Flash model here!
-        response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
-            contents=prompt,
-        )
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available model succeeded.")
         clean_html = response.text.replace('```html', '').replace('```', '').strip()
         return NoteCleanupResponse(cleaned_note=clean_html)
     except Exception as e:
@@ -260,10 +266,17 @@ async def get_smart_summary(
     """
 
     try:
-        response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
-            contents=prompt,
-        )
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available model succeeded.")
         clean_html = response.text.replace('```html', '').replace('```', '').strip()
         return SmartSummaryResponse(summary=clean_html)
     except Exception as e:
@@ -292,6 +305,9 @@ class TaskDataSchema(BaseModel):
 class ProjectDataSchema(BaseModel):
     name: str
     description: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    board_columns: Optional[List[str]] = []
     members: Optional[List[str]] = []
     tasks: Optional[List[TaskDataSchema]] = []
 
@@ -392,8 +408,15 @@ async def chat_with_ai(
         {context_str}
         
         If the user asks a question about tasks, projects, meetings, team members, or deadlines, use the CURRENT WORKSPACE CONTEXT to answer it.
-        If the user wants to create a project (e.g. "We need to develop a PM tool" or "Create a project with members X and Y" or any project creation instruction), set action to 'create_project'.
-        When creating a project, you MUST intelligently generate a fitting project name and a rich, professional description based on whatever instructions or context the user provided. If the user mentions specific team members (by email or name), you MUST include those identifiers in the 'members' array of project_data so they get assigned! You should also generate 2-4 realistic initial tasks for the project and assign them to the members if appropriate.
+        If the user wants to create a project (e.g. "We need to develop a PM tool", "Create a project with members X and Y", or filling out details like Name, Members, Duration, Columns), set action to 'create_project'.
+        When creating a project, you MUST intelligently generate and autofill any details based on whatever instructions or context the user provided:
+        1. Name: Use the provided name or generate a fitting, professional name if omitted/blank.
+        2. Description: Always generate a rich, comprehensive, professional description of the project.
+        3. Duration / Dates: If a duration is provided (e.g., "3 weeks", "2 months", "10 days"), calculate 'start_date' as today (in YYYY-MM-DD format) and 'end_date' accordingly. If duration is not specified or left blank, autofill 'start_date' as today and 'end_date' as 30 days from today.
+        4. Columns: If custom column names are provided (e.g. "Backlog, Development, Review, Done"), output them as a list of strings in 'board_columns'. If omitted or left blank, autofill 'board_columns' with ["To Do", "In Progress", "Completed"].
+        5. Members: If specific team members (by email or name) are mentioned, include them in the 'members' array so they get assigned! If omitted or left blank, autofill appropriately.
+        6. Tasks: Generate 2-4 realistic initial tasks for the project and assign them to the members if appropriate.
+
         If the user wants to create a single task (e.g. "Generate a task in the Dummy project to create a design..."), set action to 'create_task' and provide task_data with the correct project_id or project_name from context.
         If the user wants to schedule a meeting or calendar event (e.g. "Add a team meeting tomorrow at 3pm"), set action to 'create_event' and provide event_data with title, date, category='Meeting'.
 
@@ -401,7 +424,7 @@ async def chat_with_ai(
         {{
           "action": "answer" or "create_project" or "create_task" or "create_event",
           "response_message": "your helpful reply confirming what you did or answering the question",
-          "project_data": null or {{ "name": "Generated Project Name", "description": "Comprehensive project description generated from user instructions.", "members": [ "email@example.com", "Member Name" ], "tasks": [ {{ "name": "Initial Task", "description": "Task Desc", "assignee_name": "Member Name" }} ] }},
+          "project_data": null or {{ "name": "Generated Project Name", "description": "Comprehensive project description generated from user instructions.", "start_date": "2026-07-27", "end_date": "2026-08-26", "board_columns": [ "To Do", "In Progress", "Completed" ], "members": [ "email@example.com", "Member Name" ], "tasks": [ {{ "name": "Initial Task", "description": "Task Desc", "assignee_name": "Member Name" }} ] }},
           "task_data": null or {{ "project_id": 123, "project_name": "Name", "name": "Task Name", "description": "Desc", "priority": "High", "due_date": "2026-07-30", "assignee_name": "Member Name" }},
           "event_data": null or {{ "title": "Meeting Title", "date": "2026-07-28", "category": "Meeting", "description": "Desc" }}
         }}
@@ -423,13 +446,23 @@ async def chat_with_ai(
         from google.genai import types
         import json
 
-        response = client.models.generate_content(
-            model='gemini-flash-lite-latest',
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=m_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
+                )
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available AI model succeeded for chat.")
         
         res_text = response.text.replace('```json', '').replace('```', '').strip()
         res_dict = json.loads(res_text)
@@ -442,13 +475,44 @@ async def chat_with_ai(
         new_event_id = None
         
         if action == "create_project" and project_data:
+            import datetime
+            today_str = datetime.date.today().isoformat()
+            default_end_str = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+            p_start = project_data.get("start_date") or today_str
+            p_end = project_data.get("end_date") or default_end_str
+            
+            raw_cols = project_data.get("board_columns", [])
+            formatted_cols = []
+            colors = ["#facc15", "#22d3ee", "#a855f7", "#f97316", "#ec4899", "#4ade80"]
+            icons = ["Clock3", "PlayCircle", "CheckCircle", "FolderKanban", "ListTodo"]
+            if raw_cols and isinstance(raw_cols, list):
+                for idx, c_name in enumerate(raw_cols):
+                    if isinstance(c_name, str) and c_name.strip():
+                        formatted_cols.append({
+                            "name": c_name.strip(),
+                            "icon": icons[idx % len(icons)],
+                            "color": colors[idx % len(colors)]
+                        })
+                    elif isinstance(c_name, dict) and "name" in c_name:
+                        formatted_cols.append(c_name)
+            
+            if not formatted_cols:
+                formatted_cols = [
+                    {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
+                    {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"},
+                    {"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"}
+                ]
+
             new_project = models.Project(
-                name=project_data.get("name", "New Project"),
-                description=project_data.get("description", ""),
+                name=project_data.get("name") or "New Project",
+                description=project_data.get("description") or "",
                 workspace_id=request.workspace_id,
                 created_by_id=current_user.id,
+                start_date=p_start,
+                end_date=p_end,
                 status="Planning",
                 board_type="kanban",
+                board_columns=formatted_cols,
             )
             db.add(new_project)
             db.commit()
@@ -509,11 +573,22 @@ async def chat_with_ai(
                         if u_match:
                             t_assignee_id = u_match.id
                 
+                first_col_name = formatted_cols[0]["name"] if formatted_cols else "To Do"
+                t_status = t.get("status") or first_col_name
+                matched_col = False
+                for c in formatted_cols:
+                    if c["name"].lower() == t_status.lower():
+                        t_status = c["name"]
+                        matched_col = True
+                        break
+                if not matched_col:
+                    t_status = first_col_name
+
                 new_task = models.Task(
                     name=t.get("name", "Task"),
                     description=t.get("description", ""),
                     project_id=new_project_id,
-                    status=t.get("status") or "To Do",
+                    status=t_status,
                     priority=t.get("priority") or "Medium",
                     due_date=t.get("due_date"),
                     assignee_id=t_assignee_id,
