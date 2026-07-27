@@ -11,7 +11,7 @@ export default function Sidebar() {
   const [leaveError, setLeaveError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const [createError, setCreateError] = useState("");
+  const [setCreateError] = useState("");
   
   const [showDropdown, setShowDropdown] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -58,7 +58,6 @@ export default function Sidebar() {
 
   const activeWorkspace = workspaces?.find(w => w.id === Number(activeWorkspaceId));
   const actionWorkspace = workspaces?.find(w => w.id === Number(actionWorkspaceId));
-  const isOwner = activeWorkspaceRole === "Admin";
   const eligibleMembers = members?.filter(m => m.role !== "Client" && m.id !== currentUserId) || [];
   
   const handleLeaveWorkspace = async () => {
@@ -74,7 +73,7 @@ export default function Sidebar() {
         const errData = await response.json();
         setLeaveError(errData.detail || "Failed to leave workspace");
       }
-    } catch (err) {
+    } catch {
       setLeaveError("Failed to connect to server");
     }
   };
@@ -100,7 +99,7 @@ export default function Sidebar() {
         const errData = await response.json();
         setCreateError(errData.detail || "Failed to create workspace");
       }
-    } catch (err) {
+    } catch {
       setCreateError("Failed to connect to server");
     }
   };
@@ -165,7 +164,6 @@ export default function Sidebar() {
   };
 
   const currentUserRole = activeWorkspaceRole;
-  const organizationName = currentUser?.organization_name || "Your Organization";
   return (
     <div className="w-56 h-screen bg-white/5 backdrop-blur-lg border-r border-white/10 text-white flex flex-col overflow-y-auto">
       {/* Logo / App Name */}
@@ -173,18 +171,6 @@ export default function Sidebar() {
   <h1 className="text-2xl font-bold leading-none bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
   RedFerns PM
 </h1>
-
-  <div className="relative group">
-  <p className="text-sm text-slate-400 font-medium mt-1 truncate cursor-default">
-    {organizationName}
-  </p>
-
-  <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-[9999]">
-    <div className="bg-slate-900 border border-white/10 rounded-lg shadow-2xl px-3 py-2 text-sm text-white whitespace-nowrap">
-      {organizationName}
-    </div>
-  </div>
-</div>
 </div>
 
       {/* Workspace Switcher */}

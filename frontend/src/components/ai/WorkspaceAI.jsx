@@ -26,16 +26,27 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 const [chats, setChats] = useState(() => {
   const saved = localStorage.getItem(`workspace_ai_chats_${activeWorkspaceId}`);
   if (saved) {
-    try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map(c => ({
+        ...c,
+        pinned: c.pinned || false,
+        createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+      }));
+    } catch (e) { /* ignore */ }
   }
   return [
     {
       id: 1,
       title: "New Chat",
+      pinned: false,
+      createdAt: new Date(),
       messages: [],
     },
   ];
 });
+const [editingChatId, setEditingChatId] = useState(null);
+const [editingChatTitle, setEditingChatTitle] = useState("");
 
 useEffect(() => {
   if (activeWorkspaceId && chats) {
@@ -48,7 +59,6 @@ useEffect(() => {
     localStorage.setItem(`workspace_ai_active_${activeWorkspaceId}`, activeChat.toString());
   }
 }, [activeChat, activeWorkspaceId]);
-
 const currentChat = chats.find(
   (chat) => chat.id === activeChat
 );
@@ -106,6 +116,8 @@ const handleNewChat = () => {
   const newChat = {
   id: Date.now(),
   title: "New Chat",
+  pinned: false,
+  createdAt: new Date(),
   messages: [],
 };
 
@@ -120,6 +132,9 @@ const handleNewChat = () => {
   setEditingId(null);
 
   setEditedText("");
+
+  setEditingChatId(null);
+setEditingChatTitle("");
 };
 const handleSelectChat = (chatId) => {
   setActiveChat(chatId);
@@ -138,6 +153,81 @@ const handleSelectChat = (chatId) => {
 
   setEditingId(null);
   setEditedText("");
+
+  setEditingChatId(null);
+setEditingChatTitle("");
+};
+const handleRenameChat = (chat) => {
+  setEditingChatId(chat.id);
+  setEditingChatTitle(chat.title);
+};
+
+const handleSaveChatTitle = () => {
+  if (!editingChatTitle.trim()) {
+    setEditingChatId(null);
+    return;
+  }
+
+  setChats((prev) =>
+    prev.map((chat) =>
+      chat.id === editingChatId
+        ? {
+            ...chat,
+            title: editingChatTitle.trim(),
+          }
+        : chat
+    )
+  );
+
+  setEditingChatId(null);
+  setEditingChatTitle("");
+};
+
+const handleTogglePinChat = (chatId) => {
+  setChats((prev) =>
+    prev.map((chat) =>
+      chat.id === chatId
+        ? {
+            ...chat,
+            pinned: !chat.pinned,
+          }
+        : chat
+    )
+  );
+};
+const handleDeleteChat = (chatId) => {
+  const remainingChats = chats.filter((chat) => chat.id !== chatId);
+
+  if (remainingChats.length === 0) {
+    const newChat = {
+      id: Date.now(),
+      title: "New Chat",
+      pinned: false,
+      messages: [],
+    };
+
+    setChats([newChat]);
+    setActiveChat(newChat.id);
+    setView("home");
+    return;
+  }
+
+  setChats(remainingChats);
+
+  if (activeChat === chatId) {
+    setActiveChat(remainingChats[0].id);
+
+    if (remainingChats[0].messages.length === 0) {
+      setView("home");
+    } else {
+      setView("chat");
+    }
+  }
+};
+
+const handleCancelRename = () => {
+  setEditingChatId(null);
+  setEditingChatTitle("");
 };
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -368,13 +458,24 @@ sm:w-14
   <div className="relative flex h-full">
 
   <ChatSidebar
-    chats={chats}
-    activeChat={activeChat}
-    onSelectChat={handleSelectChat}
-    onNewChat={handleNewChat}
-    isSidebarOpen={isSidebarOpen}
-    setIsSidebarOpen={setIsSidebarOpen}
-  />
+  chats={chats}
+  activeChat={activeChat}
+  onSelectChat={handleSelectChat}
+  onNewChat={handleNewChat}
+  isSidebarOpen={isSidebarOpen}
+  setIsSidebarOpen={setIsSidebarOpen}
+
+  editingChatId={editingChatId}
+  editingChatTitle={editingChatTitle}
+  setEditingChatTitle={setEditingChatTitle}
+
+  onRenameChat={handleRenameChat}
+  onSaveChatTitle={handleSaveChatTitle}
+  onCancelRename={handleCancelRename}
+
+  onTogglePinChat={handleTogglePinChat}
+  onDeleteChat={handleDeleteChat}
+/>
 
   <div
   className={`
