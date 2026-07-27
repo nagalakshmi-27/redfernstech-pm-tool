@@ -13,6 +13,7 @@ export default function AIHeader({
     <div
   className={`
     flex
+    h-[88px]
     items-center
     justify-between
     border-b
@@ -21,7 +22,6 @@ export default function AIHeader({
     transition-all
     duration-300
 
-    py-3 sm:py-4 lg:py-5
     ${isSidebarOpen ? "px-4 sm:px-6 lg:px-8" : "px-3 sm:px-4"}
   `}
 >

@@ -45,7 +45,7 @@ export default function ChatSidebar({
 `}
 >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-3 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
+      <div className="flex h-[88px] items-center justify-between border-b border-white/10 px-3 sm:px-4 whitespace-nowrap">
         <span
   className={`truncate text-sm sm:text-base font-semibold text-white transition-opacity duration-300 ${
             isSidebarOpen ? "opacity-100" : "opacity-0"
