@@ -692,21 +692,7 @@ const isMissed =
   </p>
 
   <div className="flex flex-wrap items-center gap-3">
-  <span
-    className={`px-2 py-1 text-xs font-bold rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)] border ${
-      event.category === "Deadline"
-        ? "bg-red-500/20 text-red-300 border-red-500/30"
-        : event.category === "Meeting"
-        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-        : event.category === "Sprint"
-        ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-        : event.category === "Release"
-        ? "bg-green-500/20 text-green-300 border-green-500/30"
-        : "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
-    }`}
-  >
-    {event.category}
-  </span>
+  
 
   <button
     onClick={(e) => {
