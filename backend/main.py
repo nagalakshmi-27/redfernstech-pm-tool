@@ -16,6 +16,12 @@ except Exception:
 
 try:
     with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE projects ADD COLUMN is_archived BOOLEAN DEFAULT FALSE"))
+except Exception as e:
+    print(f"Migration error for projects is_archived: {e}")
+
+try:
+    with engine.begin() as conn:
         conn.execute(text("ALTER TABLE activities ADD COLUMN ticket_id VARCHAR"))
 except Exception:
     pass
@@ -41,8 +47,8 @@ except Exception:
 try:
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE tasks ADD COLUMN updated_at TIMESTAMP"))
-except Exception as e:
-    print(f"Migration error: {e}")
+except Exception:
+    pass
 
 app = FastAPI(title="RedFlow API")
 

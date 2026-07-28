@@ -87,6 +87,7 @@ class Project(Base):
     start_date = Column(String, nullable=True) 
     end_date = Column(String, nullable=True)   
     status = Column(String, default="Planning") 
+    is_archived = Column(Boolean, default=False)
     created_by_id = Column(Integer, ForeignKey("users.id"), index=True)
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
     

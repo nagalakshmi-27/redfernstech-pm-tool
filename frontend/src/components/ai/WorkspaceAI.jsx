@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import AppContext from "../../context/AppContext";
 import AIHeader from "./AIHeader";
@@ -9,9 +10,12 @@ import ChatMessage from "./ChatMessage";
 import ChatSidebar from "./ChatSidebar";
 
 export default function WorkspaceAI() {
+  const navigate = useNavigate();
   const { activeWorkspaceId, workspaces, projects, setProjects, tasks, setTasks, events, setEvents, members, currentUser } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
+  const [selectedFiles, setSelectedFiles] = useState([]);
 const [view, setView] = useState("home");
 const [copied, setCopied] = useState(false);
 const [editingId, setEditingId] = useState(null);
@@ -88,27 +92,96 @@ const handleEdit = (message) => {
   setEditingId(message.id);
   setEditedText(message.content);
 };
-const handleSave = () => {
+const handleSave = async () => {
+  const currentChatData = chats.find(c => c.id === activeChat);
+  if (!currentChatData) return;
+
+  const msgIndex = currentChatData.messages.findIndex(m => m.id === editingId);
+  if (msgIndex === -1) return;
+
+  const currentHistory = currentChatData.messages.slice(0, msgIndex).map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+
+  const promptToSend = editedText.trim();
+  if (!promptToSend) return;
+
+  const updatedUserMessage = {
+    ...currentChatData.messages[msgIndex],
+    content: promptToSend,
+  };
+
+  const newMessages = [...currentChatData.messages.slice(0, msgIndex), updatedUserMessage];
+
   setChats((prev) =>
-  prev.map((chat) =>
-    chat.id === activeChat
-      ? {
-          ...chat,
-          messages: chat.messages.map((msg) =>
-            msg.id === editingId
-              ? {
-                  ...msg,
-                  content: editedText,
-                }
-              : msg
-          ),
-        }
-      : chat
-  )
-);
+    prev.map((chat) =>
+      chat.id === activeChat ? { ...chat, messages: newMessages } : chat
+    )
+  );
 
   setEditingId(null);
   setEditedText("");
+  setIsTyping(true);
+
+  try {
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("workspace_id", Number(activeWorkspaceId));
+    formData.append("message", promptToSend);
+    if (selectedModel) formData.append("model", selectedModel);
+    formData.append("history", JSON.stringify(currentHistory));
+    formData.append("frontend_context", JSON.stringify({
+      workspaces: workspaces || [],
+      projects: projects || [],
+      tasks: tasks || [],
+      events: events || [],
+      members: members || [],
+      currentUser: currentUser || {},
+    }));
+
+    const originalRawFiles = currentChatData.messages[msgIndex].rawFiles || [];
+    originalRawFiles.forEach(file => {
+      formData.append("files", file);
+    });
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+
+    let assistantContent = "Sorry, I encountered an error while processing your request.";
+    let newProjectId = null;
+    if (response.ok) {
+      const data = await response.json();
+      assistantContent = data.response_message || "Done!";
+      newProjectId = data.new_project_id;
+
+      if (data.new_project_id || data.new_task_id || data.new_event_id) {
+        try {
+          const projRes = await fetch(`${import.meta.env.VITE_API_URL}/projects/?workspace_id=${activeWorkspaceId}`, { headers: { "Authorization": `Bearer ${token}` } });
+          if (projRes.ok && setProjects) setProjects(await projRes.json());
+          const taskRes = await fetch(`${import.meta.env.VITE_API_URL}/tasks/?workspace_id=${activeWorkspaceId}`, { headers: { "Authorization": `Bearer ${token}` } });
+          if (taskRes.ok && setTasks) setTasks(await taskRes.json());
+          const eventRes = await fetch(`${import.meta.env.VITE_API_URL}/events/?workspace_id=${activeWorkspaceId}`, { headers: { "Authorization": `Bearer ${token}` } });
+          if (eventRes.ok && setEvents) setEvents(await eventRes.json());
+        } catch (err) { console.error("Failed to refetch after AI creation:", err); }
+      }
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      assistantContent = errData.detail || "Error connecting to AI service.";
+    }
+
+    const assistantMessage = { id: Date.now() + 1, role: "assistant", content: assistantContent, ...(newProjectId && { new_project_id: newProjectId }) };
+    setChats((prev) => prev.map((chat) => chat.id === activeChat ? { ...chat, messages: [...chat.messages, assistantMessage] } : chat));
+  } catch (error) {
+    console.error("AI chat edit error:", error);
+    const errorMessage = { id: Date.now() + 1, role: "assistant", content: "Network error. Please check your connection and try again." };
+    setChats((prev) => prev.map((chat) => chat.id === activeChat ? { ...chat, messages: [...chat.messages, errorMessage] } : chat));
+  } finally {
+    setIsTyping(false);
+  }
 };
 const handleCancel = () => {
   setEditingId(null);
@@ -247,7 +320,7 @@ const handleCancelRename = () => {
   setEditingChatTitle("");
 };
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() && selectedFiles.length === 0) return;
 
     if (editingId !== null) {
       setChats((prev) =>
@@ -273,14 +346,19 @@ const handleCancelRename = () => {
       setPrompt("");
       setView("chat");
     } else {
-      const promptToSend = prompt.trim();
+      const fileMetas = selectedFiles.map(f => ({ name: f.name, size: f.size }));
+      const promptToSend = prompt.trim() || "Create a project from the attached document(s).";
+      const rawFiles = [...selectedFiles];
       setPrompt("");
       setView("chat");
+      setSelectedFiles([]);
 
       const userMessage = {
         id: Date.now(),
         role: "user",
         content: promptToSend,
+        files: fileMetas,
+        rawFiles: rawFiles,
       };
 
       const currentHistory = (currentChat?.messages || []).map(m => ({
@@ -308,31 +386,39 @@ const handleCancelRename = () => {
 
       try {
         const token = localStorage.getItem("token");
+        const formData = new FormData();
+        
+        formData.append("workspace_id", Number(activeWorkspaceId));
+        formData.append("message", promptToSend);
+        if (selectedModel) formData.append("model", selectedModel);
+        formData.append("history", JSON.stringify(currentHistory));
+        formData.append("frontend_context", JSON.stringify({
+          workspaces: workspaces || [],
+          projects: projects || [],
+          tasks: tasks || [],
+          events: events || [],
+          members: members || [],
+          currentUser: currentUser || {},
+        }));
+        
+        selectedFiles.forEach(file => {
+          formData.append("files", file);
+        });
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            workspace_id: Number(activeWorkspaceId),
-            message: promptToSend,
-            history: currentHistory,
-            frontend_context: {
-              workspaces: workspaces || [],
-              projects: projects || [],
-              tasks: tasks || [],
-              events: events || [],
-              members: members || [],
-              currentUser: currentUser || {},
-            }
-          }),
+          body: formData,
         });
 
         let assistantContent = "Sorry, I encountered an error while processing your request.";
+        let newProjectId = null;
         if (response.ok) {
           const data = await response.json();
           assistantContent = data.response_message || "Done!";
+          newProjectId = data.new_project_id;
 
           if (data.new_project_id || data.new_task_id || data.new_event_id) {
             try {
@@ -350,7 +436,7 @@ const handleCancelRename = () => {
                 const taskData = await taskRes.json();
                 setTasks(taskData);
               }
-              const eventRes = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
+              const eventRes = await fetch(`${import.meta.env.VITE_API_URL}/events/?workspace_id=${activeWorkspaceId}`, {
                 headers: { "Authorization": `Bearer ${token}` }
               });
               if (eventRes.ok && setEvents) {
@@ -358,7 +444,7 @@ const handleCancelRename = () => {
                 setEvents(eventData);
               }
             } catch (err) {
-              console.error("Error refreshing workspace data:", err);
+              console.error("Failed to refetch after AI creation:", err);
             }
           }
         } else {
@@ -370,6 +456,7 @@ const handleCancelRename = () => {
           id: Date.now() + 1,
           role: "assistant",
           content: assistantContent,
+          ...(newProjectId && { new_project_id: newProjectId })
         };
 
         setChats((prev) =>
@@ -564,6 +651,10 @@ onDeleteChat={handleDeleteChat}
               setEditedText={setEditedText}
               onSave={handleSave}
               onCancel={handleCancel}
+              onProjectRedirect={(projectId) => {
+                navigate(`/projects/${projectId}`);
+                setIsOpen(false);
+              }}
             />
           ))}
 
@@ -580,6 +671,10 @@ onDeleteChat={handleDeleteChat}
   setPrompt={setPrompt}
   onGenerate={handleGenerate}
   isTyping={isTyping}
+  selectedModel={selectedModel}
+  setSelectedModel={setSelectedModel}
+  selectedFiles={selectedFiles}
+  setSelectedFiles={setSelectedFiles}
 />
 
   </div>

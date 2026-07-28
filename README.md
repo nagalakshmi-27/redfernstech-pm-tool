@@ -24,7 +24,7 @@ Follow these steps to run the application locally on your machine.
 
 Open a terminal and navigate to the backend directory:
 ```bash
-cd redflow-backend
+cd backend
 ```
 
 Create and activate a virtual environment (Windows):
@@ -39,7 +39,7 @@ pip install -r requirements.txt
 ```
 
 Set up your Environment Variables:
-Create a `.env` file in the `redflow-backend` folder with the following variables:
+Create a `.env` file in the `backend` folder with the following variables:
 ```env
 # Example Database Configuration
 DATABASE_URL=postgresql://postgres:password@localhost:5432/redflow
