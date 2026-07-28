@@ -4,6 +4,9 @@ export default function DeleteProjectModal({
   onClose,
   onDelete,
   projectName,
+  title = "Delete Project",
+  description = "Are you sure you want to delete",
+  confirmButtonText = "Delete Project",
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   if (!open) return null;
@@ -21,11 +24,11 @@ export default function DeleteProjectModal({
 >
 
         <h2 className="text-2xl font-bold text-white mb-3">
-          Delete Project
+          {title}
         </h2>
 
         <p className="text-slate-300 leading-7">
-          Are you sure you want to delete
+          {description}
           <span className="font-semibold text-white">
             {" "}{projectName}
           </span>
@@ -60,7 +63,10 @@ export default function DeleteProjectModal({
 </button>
 
           <button
-  onClick={onDelete}
+  onClick={() => {
+  setConfirmDelete(false);
+  onDelete();
+}}
   disabled={!confirmDelete}
   className={`px-4 py-2 rounded-lg text-white transition ${
     confirmDelete
@@ -68,7 +74,7 @@ export default function DeleteProjectModal({
       : "bg-red-600/40 cursor-not-allowed opacity-60"
   }`}
 >
-  Delete Project
+  {confirmButtonText}
 </button>
         </div>
 

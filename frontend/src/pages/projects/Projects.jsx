@@ -1,5 +1,5 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AppContext from "../../context/AppContext";
 import {
@@ -12,13 +12,14 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  Archive,
+MoreHorizontal,
 } from "lucide-react";
 import DeleteProjectModal from "./components/DeleteProjectModal";
 
 export default function Projects() {
-  const { projects, setProjects, members, activeWorkspaceId, workspaces, activeWorkspaceRole } = useContext(AppContext);
+  const { projects, setProjects, members, activeWorkspaceId, activeWorkspaceRole } = useContext(AppContext);
   const navigate = useNavigate();
-  const currentUserId = Number(localStorage.getItem("userId"));
   const currentUserRole = activeWorkspaceRole;
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState("");
@@ -35,11 +36,16 @@ const [importProjectName, setImportProjectName] = useState("");
 const [uploading, setUploading] = useState(false);
 const [showDeleteModal, setShowDeleteModal] = useState(false);
 const [projectToDelete, setProjectToDelete] = useState(null);
+const [showArchiveDrawer, setShowArchiveDrawer] = useState(false);
+const [openMenuId, setOpenMenuId] = useState(null);
+const [archiveSearch, setArchiveSearch] = useState("");
+const menuRef = useRef(null);
   const totalProjects = projects.length;
   const planningProjects = projects.filter((p) => p.calculated_status === "Planning").length;
   const inProgressProjects = projects.filter((p) => p.calculated_status === "In Progress").length;
   const completedProjects = projects.filter((p) => p.calculated_status === "Completed").length;
-
+  const [showDeleteArchivedModal, setShowDeleteArchivedModal] = useState(false);
+const [archivedProjectToDelete, setArchivedProjectToDelete] = useState(null);
   const handleCreateProject = async () => {
     if (!projectName.trim()) { alert("Project Name is required"); return; }
     if (!projectDescription.trim()) { alert("Project Description is required"); return; }
@@ -189,13 +195,61 @@ const displayedMembers = showAllMembers
   ? filteredMembers
   : filteredMembers.slice(0, 5);
 
+const handleRestoreProject = (projectId) => {
+  setProjects((prevProjects) =>
+    prevProjects.map((project) =>
+      project.id === projectId
+        ? { ...project, archived: false }
+        : project
+    )
+  );
+
+  setOpenMenuId(null);
+};
+const handleDeleteArchivedProject = () => {
+  if (!archivedProjectToDelete) return;
+
+  setProjects((prevProjects) =>
+    prevProjects.filter(
+      (project) => project.id !== archivedProjectToDelete.id
+    )
+  );
+
+  setShowDeleteArchivedModal(false);
+  setArchivedProjectToDelete(null);
+};
+
+const filteredArchivedProjects = projects.filter(
+  (project) =>
+    project.archived &&
+    project.name.toLowerCase().includes(archiveSearch.toLowerCase())
+);
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (menuRef.current && !menuRef.current.contains(event.target)) {
+      setOpenMenuId(null);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+
   return (
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white">Projects</h1>
         {currentUserRole === "Admin" && (
   <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-
+    <button
+    onClick={() => setShowArchiveDrawer(true)}
+    className="border border-white/10 rounded-lg p-2 text-slate-300 hover:bg-white/10 transition"
+  >
+    <Archive size={20} />
+  </button>
     <button
       onClick={() => setShowImportModal(true)}
       className="border border-cyan-500 text-cyan-400 px-4 py-2 rounded-lg font-medium hover:bg-cyan-500/10 transition-all"
@@ -267,14 +321,15 @@ setShowModal(true);
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {projects.map((project) => {
-          // Backend-calculated dynamic properties!
-          const dynamicStatus = project.calculated_status;
-          const progress = project.progress;
+  {projects
+    .filter((project) => !project.archived)
+    .map((project) => {
+      const dynamicStatus = project.calculated_status;
+      const progress = project.progress;
+      const memberArray = project.members || [];
 
-          const memberArray = project.members || [];
 
-          return (
+      return (
             <div 
               key={project.id} 
               className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] p-4 md:p-6 cursor-pointer hover:bg-white/10 hover:border-cyan-400/50 transition-all group relative"
@@ -538,6 +593,151 @@ setShowModal(true);
     </div>
   </div>
 )}
+{showArchiveDrawer && (
+  <>
+    {/* Backdrop */}
+    <div
+      className="fixed inset-0 bg-black/50 z-40"
+      onClick={() => setShowArchiveDrawer(false)}
+    />
+
+    {/* Drawer */}
+    <div className="fixed top-0 right-0 h-full w-full sm:w-[420px] md:w-[450px] bg-[#141B2D] border-l border-white/10 shadow-2xl z-50 flex flex-col">
+
+      {/* Header */}
+      <div className="flex items-center justify-between p-5 border-b border-white/10">
+        <h2 className="text-xl font-semibold text-white">
+          Archived Projects
+        </h2>
+
+        <button
+          onClick={() => setShowArchiveDrawer(false)}
+          className="text-slate-400 hover:text-white text-xl"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Search */}
+<div className="px-5 py-4 border-b border-white/10">
+  <div className="relative">
+    <Search
+      size={18}
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+    />
+
+    <input
+      type="text"
+      placeholder="Search archived projects..."
+      value={archiveSearch}
+      onChange={(e) => setArchiveSearch(e.target.value)}
+      className="w-full pl-10 pr-4 py-2.5 bg-black/20 border border-white/10 rounded-lg text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+    />
+  </div>
+</div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto p-4">
+
+        {projects.filter(project => project.archived).length === 0 ? (
+
+          <div className="flex h-full flex-col items-center justify-center text-center">
+
+            <Archive size={50} className="text-slate-500 mb-4" />
+
+            <h3 className="text-lg font-medium text-white">
+              No Archived Projects
+            </h3>
+
+            <p className="mt-2 text-sm text-slate-400">
+              Archived projects will appear here.
+            </p>
+
+          </div>
+
+        ) : (
+
+          filteredArchivedProjects.map(project => (
+
+              <div
+  key={project.id}
+  className="relative mb-3 rounded-xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition"
+>
+  <div className="flex items-start justify-between gap-3">
+
+    <div className="min-w-0 flex-1">
+      <h3 className="text-white font-semibold text-lg break-words">
+        {project.name}
+      </h3>
+
+      <p className="text-sm text-slate-400 mt-1 break-words">
+        {project.description}
+      </p>
+    </div>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setOpenMenuId(
+          openMenuId === project.id ? null : project.id
+        );
+      }}
+      className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition"
+    >
+      <MoreHorizontal size={20} className="text-slate-300" />
+    </button>
+    {openMenuId === project.id && (
+  <div
+    ref={menuRef}
+    className="absolute right-5 top-14 w-52 rounded-xl border border-white/10 bg-[#1E2639] shadow-2xl overflow-hidden z-50"
+  >
+    <button
+      onClick={() => handleRestoreProject(project.id)}
+      className="w-full px-4 py-3 text-left text-white hover:bg-cyan-500/10 transition"
+    >
+      Restore Project
+    </button>
+
+    <div className="border-t border-white/10" />
+
+    <button
+  onClick={() => {
+    setArchivedProjectToDelete(project);
+    setShowDeleteArchivedModal(true);
+    setOpenMenuId(null);
+  }}
+  className="w-full px-4 py-3 text-left text-red-400 hover:bg-red-500/10 transition"
+>
+  Delete Forever
+</button>
+
+  </div>
+)}
+
+  </div>
+</div>
+
+            ))
+
+        )}
+
+      </div>
+
+    </div>
+  </>
+)}
+<DeleteProjectModal
+  open={showDeleteArchivedModal}
+  onClose={() => {
+    setShowDeleteArchivedModal(false);
+    setArchivedProjectToDelete(null);
+  }}
+  onDelete={handleDeleteArchivedProject}
+  projectName={archivedProjectToDelete?.name}
+  title="Delete Project Permanently"
+  description="Are you sure you want to permanently delete"
+  confirmButtonText="Delete Forever"
+/>
 
 <DeleteProjectModal
   open={showDeleteModal}
