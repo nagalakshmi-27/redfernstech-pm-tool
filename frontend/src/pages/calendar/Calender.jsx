@@ -1,7 +1,13 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import AppContext from "../../context/AppContext";
-import { CalendarDays, Clock, CheckCircle, XCircle } from "lucide-react";
+import {
+  CalendarDays,
+  Calendar as CalendarIcon,
+  Clock,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 export default function Calendar() {
   const { tasks, members, events: manualEvents, setEvents: setManualEvents } = useContext(AppContext);
@@ -31,7 +37,10 @@ export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [activeCard, setActiveCard] = useState("date");
+  const [showEventListModal, setShowEventListModal] = useState(false);
+const [modalType, setModalType] = useState("all");
+const eventDateRef = useRef(null);
   const handleAddEvent = async () => {
     if (!eventTitle.trim()) {
       alert("Event Title is required");
@@ -256,9 +265,106 @@ const totalEvents =
     eventDate.getFullYear() === currentMonth.getFullYear()
   );
 });
-const filteredEvents = selectedEvents.filter((event) =>
+const cardFilteredEvents = (() => {
+  switch (activeCard) {
+    case "pending":
+      return selectedEvents.filter(
+        (event) => event.status === "Upcoming"
+      );
+
+    case "completed":
+      return selectedEvents.filter(
+        (event) => event.status === "Completed"
+      );
+
+    case "missed":
+      return selectedEvents.filter((event) => {
+        const daysRemaining = Math.ceil(
+          (new Date(event.date).setHours(0, 0, 0, 0) -
+            new Date().setHours(0, 0, 0, 0)) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        return (
+          daysRemaining < 0 &&
+          event.status !== "Completed" &&
+          event.status !== "Cancelled"
+        );
+      });
+
+    default:
+      return selectedEvents;
+  }
+})();
+
+const filteredEvents = cardFilteredEvents.filter((event) =>
   event.title.toLowerCase().includes(searchTerm.toLowerCase())
 );
+
+const allFilteredEvents = (() => {
+  let list = [...events];
+
+  switch (activeCard) {
+    case "pending":
+      list = list.filter((event) => event.status === "Upcoming");
+      break;
+
+    case "completed":
+      list = list.filter((event) => event.status === "Completed");
+      break;
+
+    case "missed":
+      list = list.filter((event) => {
+        const daysRemaining = Math.ceil(
+          (new Date(event.date).setHours(0, 0, 0, 0) -
+            new Date().setHours(0, 0, 0, 0)) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        return (
+          daysRemaining < 0 &&
+          event.status !== "Completed" &&
+          event.status !== "Cancelled"
+        );
+      });
+      break;
+
+    default:
+      break;
+  }
+
+  return list.filter((event) =>
+    event.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+})();
+
+const modalEvents = (() => {
+  switch (modalType) {
+    case "pending":
+      return events.filter((event) => event.status === "Upcoming");
+
+    case "completed":
+      return events.filter((event) => event.status === "Completed");
+
+    case "missed":
+      return events.filter((event) => {
+        const daysRemaining = Math.ceil(
+          (new Date(event.date).setHours(0, 0, 0, 0) -
+            new Date().setHours(0, 0, 0, 0)) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        return (
+          daysRemaining < 0 &&
+          event.status !== "Completed" &&
+          event.status !== "Cancelled"
+        );
+      });
+
+    default:
+      return events;
+  }
+})();
 
   return (
     <MainLayout>
@@ -282,7 +388,15 @@ const filteredEvents = selectedEvents.filter((event) =>
 </div>
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-cyan-500">
+  <div
+  onClick={() => {
+  setModalType("all");
+  setShowEventListModal(true);
+}}
+  className={`cursor-pointer bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-cyan-500 transition-all duration-300 hover:scale-[1.02] ${
+    activeCard === "all" ? "ring-2 ring-cyan-400" : ""
+  }`}
+>
   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
     <div>
       <p className="text-slate-400 text-base font-medium">
@@ -298,7 +412,15 @@ const filteredEvents = selectedEvents.filter((event) =>
   </div>
 </div>
 
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-yellow-400">
+  <div
+  onClick={() => {
+  setModalType("pending");
+  setShowEventListModal(true);
+}}
+  className={`cursor-pointer bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-yellow-400 transition-all duration-300 hover:scale-[1.02] ${
+    activeCard === "pending" ? "ring-2 ring-yellow-400" : ""
+  }`}
+>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-slate-400 text-base font-medium">
@@ -314,7 +436,15 @@ const filteredEvents = selectedEvents.filter((event) =>
   </div>
 </div>
 
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-green-400">
+  <div
+  onClick={() => {
+  setModalType("completed");
+  setShowEventListModal(true);
+}}
+  className={`cursor-pointer bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-green-400 transition-all duration-300 hover:scale-[1.02] ${
+    activeCard === "completed" ? "ring-2 ring-green-400" : ""
+  }`}
+>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-slate-400 text-base font-medium">
@@ -330,7 +460,15 @@ const filteredEvents = selectedEvents.filter((event) =>
   </div>
 </div>
 
-  <div className="bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-red-400">
+  <div
+  onClick={() => {
+  setModalType("missed");
+  setShowEventListModal(true);
+}}
+  className={`cursor-pointer bg-white/5 backdrop-blur-md p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 border-l-4 border-l-red-400 transition-all duration-300 hover:scale-[1.02] ${
+    activeCard === "missed" ? "ring-2 ring-red-400" : ""
+  }`}
+>
   <div className="flex justify-between items-center">
     <div>
       <p className="text-slate-400 text-base font-medium">
@@ -536,9 +674,18 @@ const isMissed =
   event.status !== "Cancelled";
   return (
     <div
-      key={event.id}
-      className="bg-white/5 border border-white/10 p-3 rounded-xl"
-    >
+  key={event.id}
+  onClick={() => {
+    const date = new Date(event.date);
+
+    setCurrentMonth(
+      new Date(date.getFullYear(), date.getMonth(), 1)
+    );
+
+    setSelectedDate(date.getDate());
+  }}
+  className="bg-white/5 border border-white/10 p-3 rounded-xl cursor-pointer hover:border-cyan-400 hover:bg-white/10 transition"
+>
                       <div className="flex justify-between items-center">
   <p className="font-semibold text-white">
     {event.title}
@@ -562,7 +709,10 @@ const isMissed =
   </span>
 
   <button
-    onClick={() => toggleEventStatus(event.id, event.status)}
+    onClick={(e) => {
+  e.stopPropagation();
+  toggleEventStatus(event.id, event.status);
+}}
     className={`relative w-10 h-5 rounded-full transition-all ${
       event.status === "Completed"
         ? "bg-green-500"
@@ -616,14 +766,20 @@ const isMissed =
 </span>
 <div className="flex flex-wrap gap-4 mt-2">
   <button
-    onClick={() => handleEditEvent(event)}
+    onClick={(e) => {
+  e.stopPropagation();
+  handleEditEvent(event);
+}}
     className="text-cyan-400 hover:text-cyan-300 text-sm font-medium transition"
   >
     Edit
   </button>
 
   <button
-    onClick={() => handleDeleteEvent(event.id)}
+    onClick={(e) => {
+  e.stopPropagation();
+  handleDeleteEvent(event.id);
+}}
     className="text-red-400 hover:text-red-300 text-sm font-medium transition"
   >
     Delete
@@ -671,18 +827,28 @@ const isMissed =
               </div>
 
               <div>
-                <label className="block mb-2 font-medium text-slate-300">
-                  Event Date
-                </label>
+  <label className="block mb-2 font-medium text-slate-300">
+    Event Date
+  </label>
 
-                <input
-  type="date"
-  value={eventDate}
-  min={new Date().toISOString().split("T")[0]}
-  onChange={(e) => setEventDate(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-white placeholder-slate-500 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500"
+  <div className="relative">
+    <input
+      ref={eventDateRef}
+      type="date"
+      value={eventDate}
+      min={new Date().toISOString().split("T")[0]}
+      max="9999-12-31"
+      onChange={(e) => setEventDate(e.target.value)}
+      className="w-full bg-black/20 border border-white/10 text-white p-3 pr-12 rounded-lg focus:outline-none focus:border-cyan-500 appearance-none [color-scheme:dark]"
+    />
+
+    <CalendarIcon
+  size={18}
+  onClick={() => eventDateRef.current?.showPicker()}
+  className="absolute right-4 top-1/2 -translate-y-1/2 text-white cursor-pointer z-20"
 />
-              </div>
+  </div>
+</div>
               <div>
   <label className="block mb-2 font-medium text-slate-300">
     Status
@@ -742,6 +908,70 @@ const isMissed =
           </div>
         </div>
       )}
+
+      {showEventListModal && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-slate-900 border border-white/10 rounded-2xl w-[90%] max-w-2xl p-6">
+
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-2xl font-bold text-white">
+          {modalType === "all" && "Total Events"}
+          {modalType === "pending" && "Pending Events"}
+          {modalType === "completed" && "Completed Events"}
+          {modalType === "missed" && "Missed Events"}
+        </h2>
+
+        <button
+          onClick={() => setShowEventListModal(false)}
+          className="text-slate-400 hover:text-white text-xl"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="space-y-3 max-h-[500px] overflow-y-auto">
+  {modalEvents.length > 0 ? (
+    modalEvents.map((event) => (
+      <div
+        key={event.id}
+        onClick={() => {
+          const date = new Date(event.date);
+
+          setCurrentMonth(
+            new Date(date.getFullYear(), date.getMonth(), 1)
+          );
+
+          setSelectedDate(date.getDate());
+
+          setShowEventListModal(false);
+        }}
+        className="bg-white/5 border border-white/10 rounded-xl p-4 cursor-pointer hover:border-cyan-400 hover:bg-white/10 transition"
+      >
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold text-white">
+            {event.title}
+          </h3>
+
+          <span className="text-sm text-slate-400">
+            {event.date}
+          </span>
+        </div>
+
+        <p className="text-sm text-slate-400 mt-2">
+          Status: {event.status}
+        </p>
+      </div>
+    ))
+  ) : (
+    <p className="text-slate-400 text-center py-6">
+      No events found.
+    </p>
+  )}
+</div>
+
+    </div>
+  </div>
+)}
     </MainLayout>
   );
 }
