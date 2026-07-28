@@ -97,21 +97,32 @@ useEffect(() => {
       setTimeout(() => setHighlightedTaskId(null), 4000);
     }
   };
-  const handleArchiveProject = () => {
-  setProjects((prevProjects) =>
-    prevProjects.map((p) =>
-      p.id === project.id
-        ? {
-            ...p,
-            archived: true,
-          }
-        : p
-    )
-  );
-
-  setShowArchiveProjectModal(false);
-  navigate("/projects");
-};
+  const handleArchiveProject = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/projects/${project.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_archived: true }),
+      });
+      if (res.ok) {
+        setProjects((prevProjects) =>
+          prevProjects.map((p) =>
+            p.id === project.id
+              ? { ...p, is_archived: true, archived: true }
+              : p
+          )
+        );
+        setShowArchiveProjectModal(false);
+        navigate("/projects");
+      }
+    } catch (err) {
+      console.error("Failed to archive project", err);
+    }
+  };
 
   const [taskName, setTaskName] = useState("");
   const [taskDescription, setTaskDescription] = useState("");

@@ -195,33 +195,55 @@ const displayedMembers = showAllMembers
   ? filteredMembers
   : filteredMembers.slice(0, 5);
 
-const handleRestoreProject = (projectId) => {
-  setProjects((prevProjects) =>
-    prevProjects.map((project) =>
-      project.id === projectId
-        ? { ...project, archived: false }
-        : project
-    )
-  );
-
-  setOpenMenuId(null);
+const handleRestoreProject = async (projectId) => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ is_archived: false }),
+    });
+    if (res.ok) {
+      setProjects((prevProjects) =>
+        prevProjects.map((project) =>
+          project.id === projectId
+            ? { ...project, is_archived: false, archived: false }
+            : project
+        )
+      );
+      setOpenMenuId(null);
+    }
+  } catch (err) {
+    console.error("Failed to restore project", err);
+  }
 };
-const handleDeleteArchivedProject = () => {
+const handleDeleteArchivedProject = async () => {
   if (!archivedProjectToDelete) return;
 
-  setProjects((prevProjects) =>
-    prevProjects.filter(
-      (project) => project.id !== archivedProjectToDelete.id
-    )
-  );
-
-  setShowDeleteArchivedModal(false);
-  setArchivedProjectToDelete(null);
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/projects/${archivedProjectToDelete.id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (res.ok) {
+      setProjects((prevProjects) =>
+        prevProjects.filter((project) => project.id !== archivedProjectToDelete.id)
+      );
+      setShowDeleteArchivedModal(false);
+      setArchivedProjectToDelete(null);
+    }
+  } catch (err) {
+    console.error("Failed to delete archived project", err);
+  }
 };
 
 const filteredArchivedProjects = projects.filter(
   (project) =>
-    project.archived &&
+    project.is_archived &&
     project.name.toLowerCase().includes(archiveSearch.toLowerCase())
 );
 useEffect(() => {
@@ -322,7 +344,7 @@ setShowModal(true);
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
   {projects
-    .filter((project) => !project.archived)
+    .filter((project) => !project.is_archived)
     .map((project) => {
       const dynamicStatus = project.calculated_status;
       const progress = project.progress;
@@ -639,7 +661,7 @@ setShowModal(true);
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4">
 
-        {projects.filter(project => project.archived).length === 0 ? (
+        {projects.filter(project => project.is_archived).length === 0 ? (
 
           <div className="flex h-full flex-col items-center justify-center text-center">
 

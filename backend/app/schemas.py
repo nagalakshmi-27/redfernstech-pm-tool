@@ -110,6 +110,7 @@ class ProjectBase(BaseModel):
     start_date: Optional[str] = None 
     end_date: Optional[str] = None
     status: Optional[str] = "Planning"
+    is_archived: Optional[bool] = False
     board_type: Optional[str] = "kanban"
     board_columns: Optional[List[BoardColumn]] = [
         {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
@@ -152,6 +153,7 @@ class ProjectUpdate(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     status: Optional[str] = None
+    is_archived: Optional[bool] = None
     member_ids: Optional[List[int]] = None
     board_type: Optional[str] = None
     board_columns: Optional[List[BoardColumn]] = None

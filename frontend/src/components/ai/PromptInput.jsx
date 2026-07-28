@@ -17,12 +17,13 @@ export default function PromptInput({
   isTyping,
   selectedModel,
   setSelectedModel,
+  selectedFiles,
+  setSelectedFiles,
 }) {
     const textareaRef = useRef(null);
     const imageInputRef = useRef(null);
 const documentInputRef = useRef(null);
     const [showUploadMenu, setShowUploadMenu] = useState(false);
-const [selectedFiles, setSelectedFiles] = useState([]);
 const [previewImage, setPreviewImage] = useState(null);
 const getFileIcon = (file) => {
   if (!file) return <FileText className="h-5 w-5 text-cyan-400" />;

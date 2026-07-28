@@ -217,6 +217,7 @@ def create_project(db: Session, project: schemas.ProjectCreate, user_id: int):
         start_date=project.start_date,
         end_date=project.end_date,
         status=project.status,
+        is_archived=project.is_archived,
         created_by_id=user_id,
         workspace_id=project.workspace_id,
         board_type=project.board_type,

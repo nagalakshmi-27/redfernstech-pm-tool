@@ -72,7 +72,7 @@ class SmartSummaryResponse(BaseModel):
 from .users import get_current_user, get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from fastapi import Depends
+from fastapi import Depends, Form, File, UploadFile
 from .. import models, crud, schemas
 from datetime import datetime
 
@@ -331,11 +331,33 @@ class AIChatResponse(BaseModel):
 
 @router.post("/chat", response_model=AIChatResponse)
 async def chat_with_ai(
-    request: AIChatRequest,
+    workspace_id: int = Form(...),
+    message: str = Form(...),
+    model: Optional[str] = Form(None),
+    history: str = Form("[]"),
+    frontend_context: str = Form("{}"),
+    files: List[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    import json
     try:
+        # Create a dummy request object to match existing code
+        class DummyRequest:
+            pass
+        request = DummyRequest()
+        request.workspace_id = workspace_id
+        request.message = message
+        request.model = model
+        
+        history_obj = json.loads(history)
+        class DummyHistory:
+            def __init__(self, role, content):
+                self.role = role
+                self.content = content
+        request.history = [DummyHistory(h.get("role", "user"), h.get("content", "")) for h in history_obj]
+        request.frontend_context = json.loads(frontend_context)
+        
         # 1. Build workspace context directly from frontend state if available
         context_str = "CURRENT WORKSPACE CONTEXT (FROM FRONTEND STATE):\n"
         if request.frontend_context:
@@ -404,7 +426,8 @@ async def chat_with_ai(
         3. Duration / Dates: If a duration is provided (e.g., "3 weeks", "2 months", "10 days"), calculate 'start_date' as today (in YYYY-MM-DD format) and 'end_date' accordingly. If duration is not specified or left blank, autofill 'start_date' as today and 'end_date' as 30 days from today.
         4. Columns: If custom column names are provided (e.g. "Backlog, Development, Review, Done"), output them as a list of strings in 'board_columns'. If omitted or left blank, autofill 'board_columns' with ["To Do", "In Progress", "Completed"].
         5. Members: If specific team members (by email or name) are mentioned, include them in the 'members' array so they get assigned! If omitted or left blank, autofill appropriately.
-        6. Tasks: Generate 2-4 realistic initial tasks for the project and assign them to the members if appropriate.
+        6. Tasks: If NO document is attached, generate 3-5 realistic tasks based on the prompt. 
+        7. ATTACHED DOCUMENTS (PRDs/Requirements): If the user attaches a document (like a PRD), you MUST set action to 'create_project'. DO NOT just copy the feature names as tasks, and DO NOT limit yourself to 5 tasks! Instead, act like an expert Project Manager and Software Architect. Intelligently break down the project into 15 to 30 highly granular, actionable engineering and development tasks required to build the project from scratch (e.g., "Design Database Schema", "Develop User Authentication API", "Create React component for Room Booking", "Setup CI/CD Pipeline"). Generate a comprehensive and detailed list of these small, actionable pieces of work. This rule OVERRIDES rule 6 if a document is present!
 
         If the user wants to create a single task (e.g. "Generate a task in the Dummy project to create a design..."), set action to 'create_task' and provide task_data with the correct project_id or project_name from context.
         If the user wants to schedule a meeting or calendar event (e.g. "Add a team meeting tomorrow at 3pm"), set action to 'create_event' and provide event_data with title, date, category='Meeting'.
@@ -412,7 +435,7 @@ async def chat_with_ai(
         CRITICAL: You MUST respond in pure JSON matching this structure:
         {{
           "action": "answer" or "create_project" or "create_task" or "create_event",
-          "response_message": "your helpful reply confirming what you did or answering the question",
+          "response_message": "For answer/task/event: your helpful reply. For create_project: Keep it brief. Only explain on what basis and assumptions you generated the TASKS (e.g., how you broke down the PRD). Do NOT list details about the project name, duration, columns, or members.",
           "project_data": null or {{ "name": "Generated Project Name", "description": "Comprehensive project description generated from user instructions.", "start_date": "2026-07-27", "end_date": "2026-08-26", "board_columns": [ "To Do", "In Progress", "Completed" ], "members": [ "email@example.com", "Member Name" ], "tasks": [ {{ "name": "Initial Task", "description": "Task Desc", "assignee_name": "Member Name" }} ] }},
           "task_data": null or {{ "project_id": 123, "project_name": "Name", "name": "Task Name", "description": "Desc", "priority": "High", "due_date": "2026-07-30", "assignee_name": "Member Name" }},
           "event_data": null or {{ "title": "Meeting Title", "date": "2026-07-28", "category": "Meeting", "description": "Desc" }}
@@ -430,7 +453,21 @@ async def chat_with_ai(
                 
         prompt_text += f"--- NEW USER MESSAGE ---\n[USER]: {request.message}\n\n[AI ASSISTANT]:"
         
-        contents = [prompt_text]
+        # Handle file uploads to Gemini
+        gemini_uploaded_files = []
+        if files:
+            import shutil
+            for f in files:
+                # Save file temporarily
+                file_path = f"uploads/{f.filename}"
+                with open(file_path, "wb") as buffer:
+                    shutil.copyfileobj(f.file, buffer)
+                
+                # Upload to Gemini
+                uploaded_file = client.files.upload(file=file_path)
+                gemini_uploaded_files.append(uploaded_file)
+        
+        contents = gemini_uploaded_files + [prompt_text]
 
         from google.genai import types
         import json
@@ -495,12 +532,18 @@ async def chat_with_ai(
             if not formatted_cols:
                 formatted_cols = [
                     {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
-                    {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"},
-                    {"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"}
+                    {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"}
                 ]
+            
+            # Ensure "Completed" is always the final column and remove any AI-generated duplicates
+            formatted_cols = [c for c in formatted_cols if c.get("name", "").lower() not in ["completed", "finished", "done"]]
+            formatted_cols.append({"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"})
 
+            proj_name = project_data.get("name") or "New Project"
+            project_key = crud.generate_project_key(db, proj_name, request.workspace_id)
+            
             new_project = models.Project(
-                name=project_data.get("name") or "New Project",
+                name=proj_name,
                 description=project_data.get("description") or "",
                 workspace_id=request.workspace_id,
                 created_by_id=current_user.id,
@@ -509,6 +552,8 @@ async def chat_with_ai(
                 status="Planning",
                 board_type="kanban",
                 board_columns=formatted_cols,
+                project_key=project_key,
+                task_counter=0
             )
             db.add(new_project)
             db.commit()
@@ -580,6 +625,9 @@ async def chat_with_ai(
                 if not matched_col:
                     t_status = first_col_name
 
+                new_project.task_counter += 1
+                ticket_id = f"{new_project.project_key}-{new_project.task_counter}"
+
                 new_task = models.Task(
                     name=t.get("name", "Task"),
                     description=t.get("description", ""),
@@ -588,7 +636,9 @@ async def chat_with_ai(
                     priority=t.get("priority") or "Medium",
                     due_date=t.get("due_date"),
                     assignee_id=t_assignee_id,
-                    created_by_id=current_user.id
+                    created_by_id=current_user.id,
+                    ticket_id=ticket_id,
+                    position=float(new_project.task_counter * 1024)
                 )
                 db.add(new_task)
             

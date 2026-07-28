@@ -15,6 +15,7 @@ export default function ChatMessage({
   setEditedText,
   onSave,
   onCancel,
+  onProjectRedirect,
 }) {
   const { currentUser } = useContext(AppContext);
   const userInitial = currentUser?.full_name?.charAt(0).toUpperCase() || currentUser?.username?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase() || "U";
@@ -63,7 +64,7 @@ export default function ChatMessage({
   }`}
 >
   {isEditing ? (
-  <div className="space-y-3">
+  <div className="space-y-3 w-[80vw] sm:w-[400px] lg:w-[500px] max-w-full">
     <textarea
       value={editedText}
       onChange={(e) => setEditedText(e.target.value)}
@@ -111,9 +112,33 @@ export default function ChatMessage({
 
   </div>
 ) : (
-  <p className="break-words whitespace-pre-wrap text-sm sm:text-base leading-6 sm:leading-7">
-    {message.content}
-  </p>
+  <>
+    <p className="break-words whitespace-pre-wrap text-sm sm:text-base leading-6 sm:leading-7">
+      {message.content}
+    </p>
+    {message.files && message.files.length > 0 && (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {message.files.map((f, idx) => (
+          <div key={idx} className="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-sm text-cyan-100 border border-cyan-500/30">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span className="truncate max-w-[150px]">{f.name}</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </>
+)}
+
+{message.new_project_id && (
+  <div className="mt-4 border-t border-white/10 pt-4">
+    <button
+      onClick={() => onProjectRedirect && onProjectRedirect(message.new_project_id)}
+      className="flex items-center gap-2 rounded-lg bg-cyan-500/20 px-4 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-cyan-500/30 border border-cyan-500/50"
+    >
+      <Sparkles size={16} />
+      View Created Project
+    </button>
+  </div>
 )}
 </div>
 

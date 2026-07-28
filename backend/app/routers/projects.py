@@ -9,6 +9,18 @@ import io
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
+from sqlalchemy import text
+from app.database import engine
+
+@router.get("/fix-db")
+def fix_db():
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN is_archived BOOLEAN DEFAULT FALSE"))
+        return {"status": "success", "message": "Added is_archived column."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @router.get("/", response_model=List[schemas.ProjectResponse])
 def read_projects(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=workspace_id)
