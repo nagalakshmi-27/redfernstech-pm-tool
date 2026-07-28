@@ -53,16 +53,13 @@
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
-/* ============================= */
-/* Dashboard Custom Scrollbar */
-/* ============================= */
-
+/* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
 }
 
-/* Chrome, Edge & Safari */
+/* Chrome / Edge */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -72,11 +69,17 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  transition: background 0.2s ease;
+  background: rgba(255, 255, 255, 0);
+  border-radius: 9999px;
+  transition: background 0.25s ease;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+/* Show on hover */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Darker while dragging */
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.6);
 }

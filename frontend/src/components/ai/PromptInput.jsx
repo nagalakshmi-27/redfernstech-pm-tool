@@ -1,5 +1,14 @@
-import { useEffect, useRef } from "react";
-import { Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Sparkles,
+  Plus,
+  FileText,
+  Image,
+  X,
+  FileSpreadsheet,
+  FileCode,
+  Presentation,
+} from "lucide-react";
 
 export default function PromptInput({
   prompt,
@@ -8,13 +17,56 @@ export default function PromptInput({
   isTyping,
 }) {
     const textareaRef = useRef(null);
+    const imageInputRef = useRef(null);
+const documentInputRef = useRef(null);
+    const [showUploadMenu, setShowUploadMenu] = useState(false);
+const [selectedFiles, setSelectedFiles] = useState([]);
+const [previewImage, setPreviewImage] = useState(null);
+const getFileIcon = (file) => {
+  if (!file) return <FileText className="h-5 w-5 text-cyan-400" />;
+
+  const extension = file.name.split(".").pop()?.toLowerCase();
+
+  switch (extension) {
+    case "pdf":
+    case "doc":
+    case "docx":
+    case "txt":
+      return <FileText className="h-5 w-5 text-cyan-400" />;
+
+    case "xls":
+    case "xlsx":
+    case "csv":
+      return <FileSpreadsheet className="h-5 w-5 text-green-400" />;
+
+    case "ppt":
+    case "pptx":
+      return <Presentation className="h-5 w-5 text-orange-400" />;
+
+    case "json":
+    case "xml":
+      return <FileCode className="h-5 w-5 text-violet-400" />;
+
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+    case "webp":
+      return <Image className="h-5 w-5 text-pink-400" />;
+
+    default:
+      return <FileText className="h-5 w-5 text-cyan-400" />;
+  }
+};
     useEffect(() => {
   const textarea = textareaRef.current;
 
   if (!textarea) return;
 
   textarea.style.height = "auto";
-  textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+textarea.style.height = `${Math.min(textarea.scrollHeight, 250)}px`;
+textarea.style.overflowY =
+  textarea.scrollHeight > 250 ? "auto" : "hidden";
 }, [prompt]);
   return (
 <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
@@ -24,21 +76,140 @@ export default function PromptInput({
       </label>
 
       <div
-        className="
-  flex
-  items-end
-  rounded-2xl
-  sm:rounded-3xl
-          border
-          border-white/10
-          bg-white/[0.03]
-          p-1.5
-          transition-all
-          duration-300
-          focus-within:border-cyan-400/40
-          focus-within:shadow-[0_0_30px_rgba(34,211,238,0.15)]
-        "
-      >
+  className="
+    rounded-2xl
+    sm:rounded-3xl
+    border
+    border-white/10
+    bg-white/[0.03]
+    p-3
+    transition-all
+    duration-300
+    focus-within:border-cyan-400/40
+    focus-within:shadow-[0_0_30px_rgba(34,211,238,0.15)]
+  "
+>
+
+  {selectedFiles.length > 0 && (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+
+      {selectedFiles.map((file, index) => (
+
+        <div
+  key={index}
+  onClick={() => {
+    if (file.type.startsWith("image/")) {
+      setPreviewImage(URL.createObjectURL(file));
+    }
+  }}
+  className="flex cursor-pointer items-center gap-2 rounded-xl border border-cyan-500/20 bg-slate-800 px-3 py-2"
+>
+
+          <div className="rounded-lg bg-cyan-500/10 p-2">
+            {getFileIcon(file)}
+          </div>
+
+          <div className="flex flex-col">
+            <span className="max-w-[140px] truncate text-sm text-white">
+              {file.name}
+            </span>
+
+            <span className="text-xs text-slate-400">
+              {(file.size / 1024).toFixed(1)} KB
+            </span>
+          </div>
+
+          <button
+  type="button"
+  onClick={(e) => {
+    e.stopPropagation();
+
+    setSelectedFiles((prev) =>
+      prev.filter((_, i) => i !== index)
+    );
+  }}
+  className="rounded-full p-1 hover:bg-red-500/10"
+>
+            <X className="h-4 w-4 text-slate-400 hover:text-red-400" />
+          </button>
+
+        </div>
+
+      ))}
+
+    </div>
+  )}
+
+  <div className="flex items-end">
+        <div className="relative mb-1 ml-2 mr-2">
+  <button
+    type="button"
+    onClick={() => setShowUploadMenu(!showUploadMenu)}
+    className="
+      flex
+      h-10
+      w-10
+      shrink-0
+      items-center
+      justify-center
+      rounded-full
+      text-slate-400
+      transition
+      hover:bg-white/10
+      hover:text-white
+    "
+  >
+    <Plus
+  className={`h-5 w-5 transition-transform duration-200 ${
+    showUploadMenu ? "rotate-45" : ""
+  }`}
+/>
+  </button>
+
+  {showUploadMenu && (
+    <div
+      className="
+        absolute
+        bottom-12
+        left-0
+        w-64
+        overflow-hidden
+        rounded-2xl
+        border
+        border-white/10
+        bg-[#141B2D]
+        shadow-2xl
+        z-50
+      "
+    >
+      <button
+  onClick={() => {
+    setShowUploadMenu(false);
+    documentInputRef.current?.click();
+  }}
+  className="flex w-full items-center gap-3 px-4 py-3 text-slate-200 hover:bg-cyan-500/10 transition"
+>
+  <FileText className="h-5 w-5 text-cyan-400" />
+  <span>Upload Document</span>
+</button>
+
+
+
+<button
+  onClick={() => {
+    setShowUploadMenu(false);
+    imageInputRef.current?.click();
+  }}
+  className="flex w-full items-center gap-3 px-4 py-3 text-slate-200 hover:bg-cyan-500/10 transition"
+>
+  <Image className="h-5 w-5 text-emerald-400" />
+  <span>Upload Image</span>
+</button>
+
+<div className="border-t border-white/10" />
+    </div>
+  )}
+</div>
 
         <textarea
         ref={textareaRef}
@@ -52,7 +223,9 @@ export default function PromptInput({
   const textarea = textareaRef.current;
   if (textarea) {
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+textarea.style.height = `${Math.min(textarea.scrollHeight, 250)}px`;
+textarea.style.overflowY =
+  textarea.scrollHeight > 250 ? "auto" : "hidden";
   }
 }}
   onKeyDown={(e) => {
@@ -61,14 +234,37 @@ export default function PromptInput({
       onGenerate();
     }
   }}
+  onPaste={(e) => {
+  const items = e.clipboardData?.items;
+
+  if (!items) return;
+
+  const pastedFiles = [];
+
+  for (const item of items) {
+    if (item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+
+      if (file) {
+        pastedFiles.push(file);
+      }
+    }
+  }
+
+  if (pastedFiles.length > 0) {
+    e.preventDefault();
+    setSelectedFiles((prev) => [...prev, ...pastedFiles]);
+  }
+}}
   className="
-  min-w-0
+  custom-scrollbar
   flex-1
+  min-w-0
   resize-none
-  overflow-hidden
+  overflow-y-auto
   border-none
   bg-transparent
-  px-3 sm:px-4
+  px-3
   py-2
   text-sm
   sm:text-base
@@ -84,6 +280,7 @@ export default function PromptInput({
           onClick={onGenerate}
           disabled={isTyping}
           className={`
+  ml-auto
   flex
   shrink-0
   items-center
@@ -115,9 +312,69 @@ export default function PromptInput({
   Generate
 </span>
         </button>
+        </div>
 
-      </div>
+            </div>
 
+      <input
+  ref={documentInputRef}
+  type="file"
+  multiple
+  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.json,.xml"
+  className="hidden"
+  onChange={(e) => {
+  const files = Array.from(e.target.files || []);
+
+  if (files.length > 0) {
+    setSelectedFiles((prev) => [...prev, ...files]);
+  }
+
+  e.target.value = "";
+}}
+/>
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+  const files = Array.from(e.target.files || []);
+
+if (files.length > 0) {
+  setSelectedFiles((prev) => [...prev, ...files]);
+}
+
+e.target.value = "";
+}}
+      />
+
+    {previewImage && (
+  <div
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6"
+    onClick={() => setPreviewImage(null)}
+  >
+    <div
+      className="relative max-h-[90vh] max-w-[90vw]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => setPreviewImage(null)}
+        className="absolute -right-3 -top-3 rounded-full bg-slate-800 p-2 text-white hover:bg-slate-700"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      <img
+        src={previewImage}
+        alt="Preview"
+        className="max-h-[85vh] rounded-xl object-contain"
+      />
     </div>
+  </div>
+)}
+
+</div>
   );
 }
