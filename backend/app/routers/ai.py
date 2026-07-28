@@ -8,18 +8,6 @@ load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
-# ----- NEW DIAGNOSTIC TRICK -----
-# This will print all available models to your terminal when the server starts
-try:
-    print("\n--- AVAILABLE MODELS FOR YOUR KEY ---")
-    for m in client.models.list():
-        # Only print models that support text generation
-        if "generateContent" in m.supported_actions:
-            print(m.name)
-    print("--------------------------------------\n")
-except Exception as e:
-    print("Could not list models:", e)
-# --------------------------------
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
 
