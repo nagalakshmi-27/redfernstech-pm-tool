@@ -12,6 +12,7 @@ export default function WorkspaceAI() {
   const { activeWorkspaceId, workspaces, projects, setProjects, tasks, setTasks, events, setEvents, members, currentUser } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
 const [view, setView] = useState("home");
 const [copied, setCopied] = useState(false);
 const [editingId, setEditingId] = useState(null);
@@ -317,6 +318,7 @@ const handleCancelRename = () => {
           body: JSON.stringify({
             workspace_id: Number(activeWorkspaceId),
             message: promptToSend,
+            model: selectedModel,
             history: currentHistory,
             frontend_context: {
               workspaces: workspaces || [],
@@ -580,6 +582,8 @@ onDeleteChat={handleDeleteChat}
   setPrompt={setPrompt}
   onGenerate={handleGenerate}
   isTyping={isTyping}
+  selectedModel={selectedModel}
+  setSelectedModel={setSelectedModel}
 />
 
   </div>

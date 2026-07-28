@@ -292,6 +292,7 @@ class AIChatRequest(BaseModel):
     message: str
     history: List[AIChatHistoryItem] = []
     frontend_context: Optional[dict] = None
+    model: Optional[str] = None
 
 class TaskDataSchema(BaseModel):
     name: str
@@ -447,6 +448,13 @@ async def chat_with_ai(
         import json
 
         models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        
+        if hasattr(request, 'model') and request.model:
+            # If the user selected a model, put it at the front of the list
+            if request.model in models_to_try:
+                models_to_try.remove(request.model)
+            models_to_try.insert(0, request.model)
+
         response = None
         for m_name in models_to_try:
             try:
