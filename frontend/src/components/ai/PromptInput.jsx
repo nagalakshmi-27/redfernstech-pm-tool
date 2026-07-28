@@ -78,16 +78,6 @@ textarea.style.overflowY =
         <label className="block text-xs sm:text-sm font-semibold text-slate-300">
           Ask Workspace AI
         </label>
-        <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel && setSelectedModel(e.target.value)}
-          className="text-xs bg-[#1e293b] border border-white/10 rounded-lg px-2 py-1 text-slate-300 outline-none focus:border-cyan-500/50"
-        >
-          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
-          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-        </select>
       </div>
 
       <div
