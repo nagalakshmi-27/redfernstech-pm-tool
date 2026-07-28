@@ -1,6 +1,7 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import AppContext from "../context/AppContext";
+import { Calendar } from "lucide-react";
 
 export default function CreateIssueModal({ 
   defaultProjectId = "", 
@@ -43,7 +44,9 @@ const filteredMembers = members.filter((member) => {
   (projectMember) => projectMember.id === member.id
 );
 });
-  const [dueDate, setDueDate] = useState(defaultDueDate);
+const [dueDate, setDueDate] = useState(defaultDueDate);
+const dueDateRef = useRef(null);
+  
 
   useEffect(() => {
     if (defaultTaskDescription) setTaskDescription(defaultTaskDescription);
@@ -311,14 +314,23 @@ const filteredMembers = members.filter((member) => {
       Due Date
     </label>
 
-    <input
-  type="date"
-  value={dueDate}
-  min={new Date().toISOString().split("T")[0]}
-  max="9999-12-31"
-  onChange={(e) => setDueDate(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition [color-scheme:dark]"
-/>
+    <div className="relative">
+  <input
+    ref={dueDateRef}
+    type="date"
+    value={dueDate}
+    min={new Date().toISOString().split("T")[0]}
+    max="9999-12-31"
+    onChange={(e) => setDueDate(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 pr-12 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 transition appearance-none [color-scheme:dark]"
+  />
+
+  <Calendar
+    size={18}
+    onClick={() => dueDateRef.current?.showPicker()}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-white cursor-pointer z-20"
+  />
+</div>
   </div>
 
 </div>

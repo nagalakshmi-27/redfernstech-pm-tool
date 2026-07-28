@@ -14,6 +14,7 @@ import {
   Users,
   Archive,
 MoreHorizontal,
+Calendar,
 } from "lucide-react";
 import DeleteProjectModal from "./components/DeleteProjectModal";
 
@@ -40,6 +41,8 @@ const [showArchiveDrawer, setShowArchiveDrawer] = useState(false);
 const [openMenuId, setOpenMenuId] = useState(null);
 const [archiveSearch, setArchiveSearch] = useState("");
 const menuRef = useRef(null);
+const startDateRef = useRef(null);
+const endDateRef = useRef(null);
   const totalProjects = projects.length;
   const planningProjects = projects.filter((p) => p.calculated_status === "Planning").length;
   const inProgressProjects = projects.filter((p) => p.calculated_status === "In Progress").length;
@@ -490,26 +493,44 @@ setShowModal(true);
 
               <div>
                 <label className="block mb-2 font-medium text-slate-300">Start Date</label>
-                <input
-  type="date"
-  value={startDate}
-  min={new Date().toISOString().split("T")[0]}
-  max="9999-12-31"
-  onChange={(e) => setStartDate(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
+                <div className="relative">
+  <input
+    ref={startDateRef}
+    type="date"
+    value={startDate}
+    min={new Date().toISOString().split("T")[0]}
+    max="9999-12-31"
+    onChange={(e) => setStartDate(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-white p-3 pr-12 rounded-lg focus:outline-none focus:border-cyan-500 appearance-none [color-scheme:dark]"
+  />
+
+  <Calendar
+  size={18}
+  onClick={() => startDateRef.current?.showPicker()}
+  className="absolute right-4 top-1/2 -translate-y-1/2 text-white cursor-pointer z-10"
 />
+</div>
               </div>
 
               <div>
                 <label className="block mb-2 font-medium text-slate-300">End Date</label>
-                <input
-  type="date"
-  value={endDate}
-  min={startDate || new Date().toISOString().split("T")[0]}
-  max="9999-12-31"
-  onChange={(e) => setEndDate(e.target.value)}
-  className="w-full bg-black/20 border border-white/10 text-slate-200 p-3 rounded-lg focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
+                <div className="relative">
+  <input
+  ref={endDateRef}
+    type="date"
+    value={endDate}
+    min={startDate || new Date().toISOString().split("T")[0]}
+    max="9999-12-31"
+    onChange={(e) => setEndDate(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-white p-3 pr-12 rounded-lg focus:outline-none focus:border-cyan-500 appearance-none"
+  />
+
+  <Calendar
+  size={18}
+  onClick={() => endDateRef.current?.showPicker()}
+  className="absolute right-4 top-1/2 -translate-y-1/2 text-white cursor-pointer z-10"
 />
+</div>
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
