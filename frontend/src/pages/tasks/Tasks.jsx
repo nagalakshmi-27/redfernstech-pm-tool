@@ -1,9 +1,16 @@
 import MainLayout from "../../layouts/MainLayout";
-import { useState, useContext } from "react";
+import { useState, useContext, useRef, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Bug, CheckSquare, Clock, Trash2 } from "lucide-react";
+import {
+  Bug,
+  CheckSquare,
+  Clock,
+  Trash2,
+  MoreVertical,
+} from "lucide-react";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
+import MyTasksBulkActions from "./components/MyTasksBulkActions";
 
 export default function Tasks() {
   const { tasks, setTasks, projects, members, activeWorkspaceRole } = useContext(AppContext);
@@ -12,6 +19,26 @@ export default function Tasks() {
   const navigate = useNavigate();
   
   const [activeView, setActiveView] = useState("Tasks"); // "Tasks" or "Backlog"
+  const [selectedTasks, setSelectedTasks] = useState([]);
+const [showBulkMenu, setShowBulkMenu] = useState(false);
+
+const bulkMenuRef = useRef(null);
+useEffect(() => {
+  function handleClickOutside(event) {
+    if (
+      bulkMenuRef.current &&
+      !bulkMenuRef.current.contains(event.target)
+    ) {
+      setShowBulkMenu(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
   if (currentUserRole === "Client") {
     return <Navigate to="/dashboard" replace />;
@@ -89,7 +116,8 @@ export default function Tasks() {
         <div className="flex items-center gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-white">My Tasks</h1>
           
-          <div className="flex bg-black/40 p-1 rounded-lg border border-white/10 sm:ml-4">
+          <div className="flex items-center gap-2 sm:ml-4">
+  <div className="flex bg-black/40 p-1 rounded-lg border border-white/10">
             <button
               onClick={() => setActiveView("Tasks")}
               className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
@@ -116,7 +144,19 @@ export default function Tasks() {
               )}
             </button>
           </div>
+          <MyTasksBulkActions
+  displayTasks={displayTasks}
+  selectedTasks={selectedTasks}
+  setSelectedTasks={setSelectedTasks}
+  showBulkMenu={showBulkMenu}
+  setShowBulkMenu={setShowBulkMenu}
+  bulkMenuRef={bulkMenuRef}
+  tasks={tasks}
+  setTasks={setTasks}
+/>
+          </div>
         </div>
+        
         <CreateIssueModal />
       </div>
 
@@ -125,6 +165,9 @@ export default function Tasks() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/10 bg-black/20 text-xs uppercase text-slate-400">
+              {selectedTasks.length > 0 && (
+  <th className="w-12 p-4"></th>
+)}
                 <th className="p-4 font-semibold whitespace-nowrap">Ticket ID</th>
                 <th className="p-4 font-semibold whitespace-nowrap">Title</th>
                 <th className="p-4 font-semibold whitespace-nowrap">Project</th>
@@ -153,6 +196,27 @@ export default function Tasks() {
                     onClick={() => handleTaskClick(task)}
                     className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group"
                   >
+                    {selectedTasks.length > 0 && (
+    <td
+      className="p-4"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <input
+        type="checkbox"
+        checked={selectedTasks.includes(task.id)}
+        onChange={(e) => {
+          if (e.target.checked) {
+            setSelectedTasks([...selectedTasks, task.id]);
+          } else {
+            setSelectedTasks(
+              selectedTasks.filter((id) => id !== task.id)
+            );
+          }
+        }}
+        className="w-4 h-4 cursor-pointer"
+      />
+    </td>
+  )}
                     <td className="p-4 align-middle">
                       <span className="text-xs font-bold text-slate-300 bg-black/30 px-2 py-1 rounded border border-white/5">
                         {task.ticket_id || `TSK-${task.id}`}
