@@ -20,7 +20,8 @@ export default function Tasks() {
   
   const [activeView, setActiveView] = useState("Tasks"); // "Tasks" or "Backlog"
   const [selectedTasks, setSelectedTasks] = useState([]);
-const [showBulkMenu, setShowBulkMenu] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [showBulkMenu, setShowBulkMenu] = useState(false);
 
 const bulkMenuRef = useRef(null);
 useEffect(() => {
@@ -153,6 +154,8 @@ useEffect(() => {
   bulkMenuRef={bulkMenuRef}
   tasks={tasks}
   setTasks={setTasks}
+  isSelectMode={isSelectMode}
+  setIsSelectMode={setIsSelectMode}
 />
           </div>
         </div>
@@ -196,7 +199,7 @@ useEffect(() => {
                     onClick={() => handleTaskClick(task)}
                     className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group"
                   >
-                    {selectedTasks.length > 0 && (
+                    {(selectedTasks.length > 0 || isSelectMode) && (
     <td
       className="p-4"
       onClick={(e) => e.stopPropagation()}

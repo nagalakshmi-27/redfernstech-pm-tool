@@ -332,6 +332,7 @@ const [showAllMembers, setShowAllMembers] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
 
 const [selectedTasks, setSelectedTasks] = useState({});
+const [selectModeColumn, setSelectModeColumn] = useState(null);
 const [bulkActionTaskIds, setBulkActionTaskIds] = useState([]);
 const [activeColumn, setActiveColumn] = useState(null);
 
@@ -1171,6 +1172,8 @@ const handleBoardViewChange = async (type) => {
 
   selectedTasks={selectedTasks}
   setSelectedTasks={setSelectedTasks}
+  selectModeColumn={selectModeColumn}
+  setSelectModeColumn={setSelectModeColumn}
 
   activeColumn={activeColumn}
   setActiveColumn={setActiveColumn}
@@ -1219,6 +1222,33 @@ setBulkActionTaskIds={setBulkActionTaskIds}
         handleDeleteTask={handleDeleteTask}
         openTask={handleOpenTask}
         highlightedTaskId={highlightedTaskId}
+        handleDeleteSelectedTasks={handleDeleteSelectedTasks}
+        handleAssignSelectedTasks={handleAssignSelectedTasks}
+        selectedTasks={selectedTasks}
+        setSelectedTasks={setSelectedTasks}
+        selectModeColumn={selectModeColumn}
+        setSelectModeColumn={setSelectModeColumn}
+        activeColumn={activeColumn}
+        setActiveColumn={setActiveColumn}
+        showBulkMenu={showBulkMenu}
+        setShowBulkMenu={setShowBulkMenu}
+        showAssignMemberModal={showAssignMemberModal}
+        setShowAssignMemberModal={setShowAssignMemberModal}
+        selectedMemberId={selectedMemberId}
+        setSelectedMemberId={setSelectedMemberId}
+        showChangePriorityModal={showChangePriorityModal}
+        setShowChangePriorityModal={setShowChangePriorityModal}
+        selectedPriority={selectedPriority}
+        setSelectedPriority={setSelectedPriority}
+        showMoveSelectedModal={showMoveSelectedModal}
+        setShowMoveSelectedModal={setShowMoveSelectedModal}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        bulkMenuRef={bulkMenuRef}
+        showDeleteModal={showDeleteModal}
+        setShowDeleteModal={setShowDeleteModal}
+        bulkActionTaskIds={bulkActionTaskIds}
+        setBulkActionTaskIds={setBulkActionTaskIds}
       />
     )}
 
@@ -1231,6 +1261,33 @@ setBulkActionTaskIds={setBulkActionTaskIds}
         handleDeleteTask={handleDeleteTask}
         openTask={handleOpenTask}
         highlightedTaskId={highlightedTaskId}
+        handleDeleteSelectedTasks={handleDeleteSelectedTasks}
+        handleAssignSelectedTasks={handleAssignSelectedTasks}
+        selectedTasks={selectedTasks}
+        setSelectedTasks={setSelectedTasks}
+        selectModeColumn={selectModeColumn}
+        setSelectModeColumn={setSelectModeColumn}
+        activeColumn={activeColumn}
+        setActiveColumn={setActiveColumn}
+        showBulkMenu={showBulkMenu}
+        setShowBulkMenu={setShowBulkMenu}
+        showAssignMemberModal={showAssignMemberModal}
+        setShowAssignMemberModal={setShowAssignMemberModal}
+        selectedMemberId={selectedMemberId}
+        setSelectedMemberId={setSelectedMemberId}
+        showChangePriorityModal={showChangePriorityModal}
+        setShowChangePriorityModal={setShowChangePriorityModal}
+        selectedPriority={selectedPriority}
+        setSelectedPriority={setSelectedPriority}
+        showMoveSelectedModal={showMoveSelectedModal}
+        setShowMoveSelectedModal={setShowMoveSelectedModal}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        bulkMenuRef={bulkMenuRef}
+        showDeleteModal={showDeleteModal}
+        setShowDeleteModal={setShowDeleteModal}
+        bulkActionTaskIds={bulkActionTaskIds}
+        setBulkActionTaskIds={setBulkActionTaskIds}
       />
     )}
 

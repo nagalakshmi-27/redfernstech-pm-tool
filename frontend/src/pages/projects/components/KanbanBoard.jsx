@@ -24,6 +24,8 @@ export default function KanbanBoard({
   highlightedTaskId,
 selectedTasks,
 setSelectedTasks,
+selectModeColumn,
+setSelectModeColumn,
 activeColumn,
 setActiveColumn,
 showBulkMenu,
@@ -89,6 +91,8 @@ setBulkActionTaskIds,
   column={colName}
   selectedTasks={selectedTasks}
   setSelectedTasks={setSelectedTasks}
+  selectModeColumn={selectModeColumn}
+  setSelectModeColumn={setSelectModeColumn}
   projectTasks={projectTasks}
 
   activeColumn={activeColumn}
@@ -171,7 +175,7 @@ setBulkActionTaskIds={setBulkActionTaskIds}
     {task.issue_type || "Task"}
   </span>
 
-  {(selectedTasks[colName] || []).length > 0 && (
+  {( (selectedTasks[colName] || []).length > 0 || selectModeColumn === colName ) && (
     <input
       type="checkbox"
       checked={

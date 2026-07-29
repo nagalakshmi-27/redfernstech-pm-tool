@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, Bug, CheckSquare, Hash } from "lucide-react";
+import BulkTaskActions from "./BulkTaskActions";
 
 export default function ScrumBoard({
   columns,
@@ -14,6 +15,33 @@ export default function ScrumBoard({
   handleDeleteTask,
   openTask,
   highlightedTaskId,
+  selectedTasks,
+  setSelectedTasks,
+  selectModeColumn,
+  setSelectModeColumn,
+  activeColumn,
+  setActiveColumn,
+  showBulkMenu,
+  setShowBulkMenu,
+  handleDeleteSelectedTasks,
+  handleAssignSelectedTasks,
+  showAssignMemberModal,
+  setShowAssignMemberModal,
+  selectedMemberId,
+  setSelectedMemberId,
+  showChangePriorityModal,
+  setShowChangePriorityModal,
+  selectedPriority,
+  setSelectedPriority,
+  showMoveSelectedModal,
+  setShowMoveSelectedModal,
+  selectedStatus,
+  setSelectedStatus,
+  bulkMenuRef,
+  showDeleteModal,
+  setShowDeleteModal,
+  bulkActionTaskIds,
+  setBulkActionTaskIds,
 }) {
   return (
     <div className="space-y-6">
@@ -114,6 +142,39 @@ export default function ScrumBoard({
           {projectTasks.filter(task => (task.status || '').toLowerCase() === (colName || '').toLowerCase()).length}
         </span>
 
+        <BulkTaskActions
+          column={colName}
+          selectedTasks={selectedTasks}
+          setSelectedTasks={setSelectedTasks}
+          selectModeColumn={selectModeColumn}
+          setSelectModeColumn={setSelectModeColumn}
+          projectTasks={projectTasks}
+          activeColumn={activeColumn}
+          setActiveColumn={setActiveColumn}
+          showBulkMenu={showBulkMenu}
+          setShowBulkMenu={setShowBulkMenu}
+          handleDeleteSelectedTasks={handleDeleteSelectedTasks}
+          handleAssignSelectedTasks={handleAssignSelectedTasks}
+          members={members}
+          showAssignMemberModal={showAssignMemberModal}
+          setShowAssignMemberModal={setShowAssignMemberModal}
+          selectedMemberId={selectedMemberId}
+          setSelectedMemberId={setSelectedMemberId}
+          showChangePriorityModal={showChangePriorityModal}
+          setShowChangePriorityModal={setShowChangePriorityModal}
+          selectedPriority={selectedPriority}
+          setSelectedPriority={setSelectedPriority}
+          showMoveSelectedModal={showMoveSelectedModal}
+          setShowMoveSelectedModal={setShowMoveSelectedModal}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          bulkMenuRef={bulkMenuRef}
+          showDeleteModal={showDeleteModal}
+          setShowDeleteModal={setShowDeleteModal}
+          bulkActionTaskIds={bulkActionTaskIds}
+          setBulkActionTaskIds={setBulkActionTaskIds}
+        />
+
       </div>
 
       <div className="space-y-3">
@@ -137,21 +198,47 @@ export default function ScrumBoard({
   onClick={() => openTask(task)}
 >
           <div className="flex items-center justify-between">
-            <span className="text-xs text-cyan-300 font-semibold">
+            <span className="text-xs text-cyan-300 font-semibold flex items-center gap-1">
+              <Hash size={11} />
               {task.ticket_id || `TSK-${task.id}`}
             </span>
-
-            <span
-              className={`text-xs px-2 py-1 rounded-full ${
-                task.priority === "High"
-                  ? "bg-red-500/20 text-red-300"
-                  : task.priority === "Medium"
-                  ? "bg-yellow-500/20 text-yellow-300"
-                  : "bg-green-500/20 text-green-300"
-              }`}
-            >
-              {task.priority}
-            </span>
+            
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${
+                  task.priority === "High"
+                    ? "bg-red-500/20 text-red-300"
+                    : task.priority === "Medium"
+                    ? "bg-yellow-500/20 text-yellow-300"
+                    : "bg-green-500/20 text-green-300"
+                }`}
+              >
+                {task.priority}
+              </span>
+              
+              {( (selectedTasks[colName] || []).length > 0 || selectModeColumn === colName ) && (
+                <input
+                  type="checkbox"
+                  checked={(selectedTasks[colName] || []).includes(task.id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    if (e.target.checked) {
+                      setSelectedTasks(prev => ({
+                        ...prev,
+                        [colName]: [...(prev[colName] || []), task.id]
+                      }));
+                    } else {
+                      setSelectedTasks(prev => ({
+                        ...prev,
+                        [colName]: (prev[colName] || []).filter(id => id !== task.id)
+                      }));
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-3.5 h-3.5 cursor-pointer accent-cyan-500 mt-0.5 ml-1"
+                />
+              )}
+            </div>
           </div>
 
           <h4 className="mt-3 text-white font-medium">

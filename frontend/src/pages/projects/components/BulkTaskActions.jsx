@@ -5,7 +5,10 @@ export default function BulkTaskActions({
   column,
   selectedTasks,
   setSelectedTasks,
+  selectModeColumn,
+  setSelectModeColumn,
   projectTasks,
+  isListBoard = false,
 
   activeColumn,
   setActiveColumn,
@@ -43,25 +46,22 @@ setBulkActionTaskIds,
   setActiveColumn(column);
   setShowBulkMenu(true);
 };
-  const selectedTasksInColumn = projectTasks.filter(
-  (task) =>
-    (task.status || "").toLowerCase() ===
-      (column || "").toLowerCase() &&
-    (selectedTasks[column] || []).includes(task.id)
-);
+  const relevantTasks = isListBoard ? projectTasks : projectTasks.filter(
+    (task) =>
+      (task.status || "").toLowerCase() ===
+      (column || "").toLowerCase()
+  );
+
+  const selectedTasksInColumn = relevantTasks.filter(
+    (task) => (selectedTasks[column] || []).includes(task.id)
+  );
 
 const selectedTaskIdsInColumn = selectedTasksInColumn.map(
   (task) => task.id
 );
 
   const handleSelectAll = () => {
-  const columnTasks = projectTasks
-    .filter(
-      (task) =>
-        (task.status || "").toLowerCase() ===
-        (column || "").toLowerCase()
-    )
-    .map((task) => task.id);
+  const columnTasks = relevantTasks.map((task) => task.id);
 
   const allSelected = columnTasks.every((id) =>
   (selectedTasks[column] || []).includes(id)
@@ -99,25 +99,37 @@ setShowBulkMenu(false);
         {showBulkMenu && activeColumn === column && (
           <div className="absolute right-0 mt-2 w-44 rounded-xl bg-[#1e293b] border border-white/10 shadow-lg z-50">
             <button
-  onClick={handleSelectAll}
-  className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"
->
-  {(() => {
-  const columnTasks = projectTasks.filter(
-    (task) =>
-      (task.status || "").toLowerCase() ===
-      (column || "").toLowerCase()
-  );
-
-  const allSelected =
-  columnTasks.length > 0 &&
-  columnTasks.every((task) =>
-    (selectedTasks[column] || []).includes(task.id)
-  );
-
-  return allSelected ? "Deselect All" : "Select All";
-})()}
-</button>
+              onClick={handleSelectAll}
+              className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10 border-b border-white/5"
+            >
+              {(() => {
+                const columnTasks = isListBoard ? projectTasks : projectTasks.filter(
+                  (task) =>
+                    (task.status || "").toLowerCase() ===
+                    (column || "").toLowerCase()
+                );
+                const allSelected =
+                  columnTasks.length > 0 &&
+                  columnTasks.every((task) =>
+                    (selectedTasks[column] || []).includes(task.id)
+                  );
+                return allSelected ? "Deselect All" : "Select All";
+              })()}
+            </button>
+            <button
+              onClick={() => {
+                if (selectModeColumn === column) {
+                  setSelectModeColumn(null);
+                  setSelectedTasks((prev) => ({ ...prev, [column]: [] }));
+                } else {
+                  setSelectModeColumn(column);
+                }
+                setShowBulkMenu(false);
+              }}
+              className="w-full text-left px-4 py-2 hover:bg-white/10 text-sm text-white"
+            >
+              {selectModeColumn === column ? "Cancel Selection" : "Select"}
+            </button>
 
             {selectedTasksInColumn.length > 0 && (
   <>

@@ -59,7 +59,7 @@ async def import_project_from_excel(
             
         headers = [str(h).lower().strip() if h else "" for h in rows[0]]
         
-        task_name_idx = next((i for i, h in enumerate(headers) if h in ['task name', 'title', 'name']), None)
+        task_name_idx = next((i for i, h in enumerate(headers) if h in ['task name', 'title', 'name', 'task']), None)
         if task_name_idx is None:
             raise HTTPException(status_code=400, detail="Could not find a 'Task Name' column.")
             
@@ -68,7 +68,7 @@ async def import_project_from_excel(
         priority_idx = next((i for i, h in enumerate(headers) if h == 'priority'), None)
         assignee_idx = next((i for i, h in enumerate(headers) if h in ['assignee email', 'assignee', 'email', 'assignee name']), None)
         project_idx = next((i for i, h in enumerate(headers) if h in ['project', 'project name']), None)
-        due_date_idx = next((i for i, h in enumerate(headers) if h in ['due date', 'due', 'deadline', 'end date']), None)
+        due_date_idx = next((i for i, h in enumerate(headers) if h in ['due date', 'due', 'deadline', 'end date', 'date']), None)
         
         workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
         workspace_members = workspace.members if workspace else []
