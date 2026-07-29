@@ -165,7 +165,7 @@ useEffect(() => {
   const [showArchiveProjectModal, setShowArchiveProjectModal] = useState(false);
   const [taskVisibility, setTaskVisibility] = useState("everyone");
   const [taskViewers, setTaskViewers] = useState([]);
-  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   useEffect(() => {
     if (project) {
       setTaskVisibility(project.task_visibility || "everyone");
@@ -331,10 +331,9 @@ const [showAllMembers, setShowAllMembers] = useState(false);
 
   const [showCustomizeBoard, setShowCustomizeBoard] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [selectionMode, setSelectionMode] = useState(false);
 
-const [selectedTasks, setSelectedTasks] = useState([]);
-
+const [selectedTasks, setSelectedTasks] = useState({});
+const [bulkActionTaskIds, setBulkActionTaskIds] = useState([]);
 const [activeColumn, setActiveColumn] = useState(null);
 
 const [showBulkMenu, setShowBulkMenu] = useState(false);
@@ -656,12 +655,6 @@ useEffect(() => {
   const handleDeleteSelectedTasks = async (taskIds) => {
   if (taskIds.length === 0) return;
 
-  const confirmDelete = window.confirm(
-    `Delete ${taskIds.length} selected task(s)?`
-  );
-
-  if (!confirmDelete) return;
-
   try {
     await Promise.all(
       taskIds.map((id) =>
@@ -678,8 +671,8 @@ useEffect(() => {
       prev.filter((task) => !taskIds.includes(task.id))
     );
 
-    setSelectedTasks([]);
-    setSelectionMode(false);
+    setSelectedTasks({});
+setActiveColumn(null);
   } catch (err) {
     console.error(err);
     alert("Failed to delete selected tasks.");
@@ -730,8 +723,8 @@ const handleAssignSelectedTasks = async (taskIds, memberId) => {
       )
     );
 
-    setSelectedTasks([]);
-    setSelectionMode(false);
+    setSelectedTasks({});
+setActiveColumn(null);
     setSelectedMemberId("");
     setShowAssignMemberModal(false);
   } catch (err) {
@@ -784,8 +777,8 @@ const handleChangePrioritySelectedTasks = async (taskIds, priority) => {
       )
     );
 
-    setSelectedTasks([]);
-    setSelectionMode(false);
+    setSelectedTasks({});
+setActiveColumn(null);
     setSelectedPriority("");
     setShowChangePriorityModal(false);
   } catch (err) {
@@ -838,8 +831,8 @@ const handleMoveSelectedTasks = async (taskIds, status) => {
       )
     );
 
-    setSelectedTasks([]);
-    setSelectionMode(false);
+    setSelectedTasks({});
+setActiveColumn(null);
     setSelectedStatus("");
     setShowMoveSelectedModal(false);
   } catch (err) {
@@ -1228,9 +1221,6 @@ const handleBoardViewChange = async (type) => {
   openTask={handleOpenTask}
   highlightedTaskId={highlightedTaskId}
 
-  selectionMode={selectionMode}
-  setSelectionMode={setSelectionMode}
-
   selectedTasks={selectedTasks}
   setSelectedTasks={setSelectedTasks}
 
@@ -1257,6 +1247,11 @@ setShowMoveSelectedModal={setShowMoveSelectedModal}
 selectedStatus={selectedStatus}
 setSelectedStatus={setSelectedStatus}
 bulkMenuRef={bulkMenuRef}
+
+showDeleteModal={showDeleteModal}
+setShowDeleteModal={setShowDeleteModal}
+bulkActionTaskIds={bulkActionTaskIds}
+setBulkActionTaskIds={setBulkActionTaskIds}
 />
     )}
 
@@ -1794,7 +1789,7 @@ bulkMenuRef={bulkMenuRef}
     setSelectedMemberId("");
   }}
   onAssign={() => {
-    handleAssignSelectedTasks(selectedTasks, selectedMemberId);
+    handleAssignSelectedTasks(bulkActionTaskIds, selectedMemberId);
   }}
 />
 
@@ -1808,7 +1803,7 @@ bulkMenuRef={bulkMenuRef}
   }}
   onUpdate={() => {
   handleChangePrioritySelectedTasks(
-    selectedTasks,
+    bulkActionTaskIds,
     selectedPriority
   );
 }}
@@ -1824,10 +1819,24 @@ bulkMenuRef={bulkMenuRef}
   }}
   onMove={() => {
   handleMoveSelectedTasks(
-    selectedTasks,
+    bulkActionTaskIds,
     selectedStatus
   );
 }}
+/>
+<DeleteProjectModal
+  open={showDeleteModal}
+  onClose={() => setShowDeleteModal(false)}
+  onDelete={() => {
+    handleDeleteSelectedTasks(bulkActionTaskIds);
+    setShowDeleteModal(false);
+  }}
+  itemName={`${bulkActionTaskIds.length} selected task${
+  bulkActionTaskIds.length > 1 ? "s" : ""
+}`}
+  title="Delete Selected Tasks"
+  description="Are you sure you want to permanently delete"
+  confirmButtonText="Delete Selected"
 />
     </MainLayout>
   );

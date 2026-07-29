@@ -3,7 +3,7 @@ export default function DeleteProjectModal({
   open,
   onClose,
   onDelete,
-  projectName,
+  itemName,
   title = "Delete Project",
   description = "Are you sure you want to delete",
   confirmButtonText = "Delete Project",
@@ -30,8 +30,8 @@ export default function DeleteProjectModal({
         <p className="text-slate-300 leading-7">
           {description}
           <span className="font-semibold text-white">
-            {" "}{projectName}
-          </span>
+  {" "}{itemName}
+</span>
           ?
         </p>
 
