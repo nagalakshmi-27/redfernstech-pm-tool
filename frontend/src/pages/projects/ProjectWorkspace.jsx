@@ -22,6 +22,7 @@ import {
   Eye,
   Archive,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import ProjectTeamModal from "./components/ProjectTeamModal";
 import ProjectChat from "./ProjectChat";
@@ -102,6 +103,7 @@ useEffect(() => {
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const settingsMenuRef = useRef(null);
   const bulkMenuRef = useRef(null);
+  const dueDateRef = useRef(null);
   const closeEditModal = () => {
     setShowEditModal(false);
     if (editingTaskId) {
@@ -1432,13 +1434,23 @@ setBulkActionTaskIds={setBulkActionTaskIds}
       Due Date
     </label>
 
-    <input
-      type="date"
-      value={dueDate}
-      min={new Date().toISOString().split("T")[0]}
-      onChange={(e) => setDueDate(e.target.value)}
-      className="w-full bg-black/20 border border-white/10 text-white p-3 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500"
-    />
+    <div className="relative">
+  <input
+    ref={dueDateRef}
+    type="date"
+    value={dueDate}
+    min={new Date().toISOString().split("T")[0]}
+    max="9999-12-31"
+    onChange={(e) => setDueDate(e.target.value)}
+    className="w-full bg-black/20 border border-white/10 text-white p-3 pr-12 rounded-lg outline-none focus:ring-1 focus:ring-cyan-500 appearance-none [color-scheme:dark]"
+  />
+
+  <Calendar
+    size={18}
+    onClick={() => dueDateRef.current?.showPicker()}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-white cursor-pointer z-20"
+  />
+</div>
   </div>
 
 </div>
