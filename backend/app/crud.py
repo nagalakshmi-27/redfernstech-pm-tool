@@ -363,6 +363,10 @@ def update_project(db: Session, project_id: int, project_update: schemas.Project
                     changed_fields.append(key.replace("_", " ").title())
         setattr(db_project, key, value)
         
+    if "board_columns" in update_data:
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(db_project, "board_columns")
+        
     db.commit()
     db.refresh(db_project)
     

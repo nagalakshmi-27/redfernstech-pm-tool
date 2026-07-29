@@ -17,7 +17,7 @@ export default function Calendar() {
   const events = [
     ...manualEvents,
     ...tasks
-      .filter(task => task.assignee_id === currentUserId)
+      .filter(task => task.assignee_id === currentUserId && task.due_date)
       .map(task => ({
       id: `task-${task.id}`, // Add a prefix so it doesn't conflict with event IDs
       title: task.name,

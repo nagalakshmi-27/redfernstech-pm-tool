@@ -338,7 +338,19 @@ useEffect(() => {
       }
   });
 
-  const newCols = [...currentCols, ...missing];
+  let newCols = [...currentCols, ...missing];
+  
+  if (missing.length > 0) {
+    const completedIndex = newCols.findIndex(c => {
+      const name = typeof c === 'string' ? c : (c?.name || '');
+      return name.toLowerCase() === 'completed' || name.toLowerCase() === 'done';
+    });
+    if (completedIndex !== -1 && completedIndex !== newCols.length - 1) {
+      const completedCol = newCols.splice(completedIndex, 1)[0];
+      newCols.push(completedCol);
+    }
+  }
+
   setBoardColumns(prev => {
     if (prev.length !== newCols.length) return newCols;
     for (let i = 0; i < prev.length; i++) {

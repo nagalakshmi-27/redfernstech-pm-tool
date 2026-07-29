@@ -163,7 +163,10 @@ setShowModal(false);
     );
 
     if (!response.ok) {
-      throw new Error("Import failed");
+      const errData = await response.json().catch(() => ({}));
+      const errorMsg = errData.detail || "Import failed";
+      alert(errorMsg);
+      throw new Error(errorMsg);
     }
 
     const data = await response.json();

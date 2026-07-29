@@ -77,6 +77,10 @@ async def import_project_from_excel(
         fallback_project_name = project_name or file.filename.rsplit('.', 1)[0]
         
         for row in rows[1:]:
+            # Skip completely empty rows
+            if not any(cell for cell in row if cell is not None and str(cell).strip() != ""):
+                continue
+                
             proj_name = str(row[project_idx]).strip() if project_idx is not None and len(row) > project_idx and row[project_idx] else ""
             if not proj_name or proj_name.lower() in ["none", "nan"]:
                 proj_name = fallback_project_name
