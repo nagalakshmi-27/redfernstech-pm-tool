@@ -26,17 +26,11 @@ export default function BulkTaskActions({
   selectedMemberId,
   setSelectedMemberId,
 
-  showChangePriorityModal,
-setShowChangePriorityModal,
+  showChangePriorityModal, setShowChangePriorityModal, selectedPriority, setSelectedPriority, showMoveSelectedModal, setShowMoveSelectedModal, selectedStatus, setSelectedStatus,
 
-selectedPriority,
-setSelectedPriority,
+  bulkMenuRef,
 
-showMoveSelectedModal,
-setShowMoveSelectedModal,
-
-selectedStatus,
-setSelectedStatus,
+  
 }) {
   const handleMenuToggle = () => {
     if (activeColumn === column && showBulkMenu) {
@@ -74,7 +68,10 @@ setSelectedStatus,
 
   return (
     <>
-      <div className="relative">
+      <div
+  ref={showBulkMenu && activeColumn === column ? bulkMenuRef : null}
+  className="relative"
+>
         <button
           onClick={handleMenuToggle}
           className="p-1 rounded-md hover:bg-white/10 transition"

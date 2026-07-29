@@ -50,6 +50,8 @@ setShowMoveSelectedModal,
 
 selectedStatus,
 setSelectedStatus,
+
+bulkMenuRef,
 }) {
   return (
     <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
@@ -115,6 +117,8 @@ setShowMoveSelectedModal={setShowMoveSelectedModal}
 
 selectedStatus={selectedStatus}
 setSelectedStatus={setSelectedStatus}
+
+bulkMenuRef={bulkMenuRef}
 />
   </div>
 </div>

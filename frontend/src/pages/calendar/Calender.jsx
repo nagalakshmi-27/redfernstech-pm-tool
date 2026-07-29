@@ -632,9 +632,7 @@ const modalEvents = (() => {
     );
   });
 
-  const pendingCount = dayEvents.filter(
-  (event) => event.status === "Upcoming"
-).length;
+  const pendingCount = dayEvents.filter((event) => !isCompleted(event)).length;
 
   const isPastDeadline =
     new Date(

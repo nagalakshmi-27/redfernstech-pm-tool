@@ -72,6 +72,14 @@ useEffect(() => {
     ) {
       setShowProjectSettings(false);
     }
+
+    if (
+      bulkMenuRef.current &&
+      !bulkMenuRef.current.contains(event.target)
+    ) {
+      setShowBulkMenu(false);
+      setActiveColumn(null);
+    }
   }
 
   document.addEventListener("mousedown", handleClickOutside);
@@ -94,6 +102,7 @@ useEffect(() => {
   const [highlightedTaskId, setHighlightedTaskId] = useState(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const settingsMenuRef = useRef(null);
+  const bulkMenuRef = useRef(null);
   const closeEditModal = () => {
     setShowEditModal(false);
     if (editingTaskId) {
@@ -1247,6 +1256,7 @@ setShowMoveSelectedModal={setShowMoveSelectedModal}
 
 selectedStatus={selectedStatus}
 setSelectedStatus={setSelectedStatus}
+bulkMenuRef={bulkMenuRef}
 />
     )}
 
