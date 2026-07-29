@@ -7,6 +7,7 @@ import {
   Hash,
   Clock,
 } from "lucide-react";
+import BulkTaskActions from "./BulkTaskActions";
 export default function KanbanBoard({
   columns,
   projectTasks,
@@ -21,6 +22,34 @@ export default function KanbanBoard({
   handleDeleteTask,
   openTask,
   highlightedTaskId,
+  selectionMode,
+setSelectionMode,
+selectedTasks,
+setSelectedTasks,
+activeColumn,
+setActiveColumn,
+showBulkMenu,
+setShowBulkMenu,
+handleDeleteSelectedTasks,
+handleAssignSelectedTasks,
+
+showAssignMemberModal,
+setShowAssignMemberModal,
+
+selectedMemberId,
+setSelectedMemberId,
+
+showChangePriorityModal,
+setShowChangePriorityModal,
+
+selectedPriority,
+setSelectedPriority,
+
+showMoveSelectedModal,
+setShowMoveSelectedModal,
+
+selectedStatus,
+setSelectedStatus,
 }) {
   return (
     <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
@@ -35,16 +64,60 @@ export default function KanbanBoard({
         >
           {/* Column Header */}
           <div className="flex items-center gap-2 mb-4 px-2">
-            {getColumnIcon(column)}
+  {getColumnIcon(column)}
 
-            <h2 className="text-lg font-bold text-white">
-              {colName}
-            </h2>
+  <h2 className="text-lg font-bold text-white">
+    {colName}
+  </h2>
 
-            <span className="ml-auto bg-white/10 text-slate-300 px-2 py-0.5 rounded-full text-xs font-bold border border-white/10">
-              {projectTasks.filter((t) => (t.status || '').toLowerCase() === (colName || '').toLowerCase()).length}
-            </span>
-          </div>
+  <div className="ml-auto flex items-center gap-2">
+    <span className="bg-white/10 text-slate-300 px-2 py-0.5 rounded-full text-xs font-bold border border-white/10">
+      {projectTasks.filter(
+        (t) =>
+          (t.status || "").toLowerCase() ===
+          (colName || "").toLowerCase()
+      ).length}
+    </span>
+
+    <BulkTaskActions
+  column={colName}
+  selectionMode={selectionMode}
+  setSelectionMode={setSelectionMode}
+  selectedTasks={selectedTasks}
+  setSelectedTasks={setSelectedTasks}
+  projectTasks={projectTasks}
+
+  activeColumn={activeColumn}
+  setActiveColumn={setActiveColumn}
+
+  showBulkMenu={showBulkMenu}
+  setShowBulkMenu={setShowBulkMenu}
+
+  handleDeleteSelectedTasks={handleDeleteSelectedTasks}
+  handleAssignSelectedTasks={handleAssignSelectedTasks}
+
+  members={members}
+
+  showAssignMemberModal={showAssignMemberModal}
+  setShowAssignMemberModal={setShowAssignMemberModal}
+
+  selectedMemberId={selectedMemberId}
+  setSelectedMemberId={setSelectedMemberId}
+
+  showChangePriorityModal={showChangePriorityModal}
+setShowChangePriorityModal={setShowChangePriorityModal}
+
+selectedPriority={selectedPriority}
+setSelectedPriority={setSelectedPriority}
+
+showMoveSelectedModal={showMoveSelectedModal}
+setShowMoveSelectedModal={setShowMoveSelectedModal}
+
+selectedStatus={selectedStatus}
+setSelectedStatus={setSelectedStatus}
+/>
+  </div>
+</div>
 
           {/* Cards */}
           <div className="flex flex-col gap-3 min-h-[500px]">
@@ -69,21 +142,43 @@ export default function KanbanBoard({
   {task.ticket_id || `TSK-${task.id}`}
 </span>
 
-                    <span
-                      className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-                        task.issue_type === "Bug"
-                          ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                          : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                      }`}
-                    >
-                      {task.issue_type === "Bug" ? (
-                        <Bug size={12} />
-                      ) : (
-                        <CheckSquare size={12} />
-                      )}
+                    <div className="flex items-center gap-2">
+  <span
+    className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+      task.issue_type === "Bug"
+        ? "bg-red-500/20 text-red-300 border border-red-500/30"
+        : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+    }`}
+  >
+    {task.issue_type === "Bug" ? (
+      <Bug size={12} />
+    ) : (
+      <CheckSquare size={12} />
+    )}
 
-                      {task.issue_type || "Task"}
-                    </span>
+    {task.issue_type || "Task"}
+  </span>
+
+  {selectionMode && (
+    <input
+      type="checkbox"
+      checked={selectedTasks.includes(task.id)}
+      onChange={(e) => {
+        e.stopPropagation();
+
+        if (e.target.checked) {
+          setSelectedTasks((prev) => [...prev, task.id]);
+        } else {
+          setSelectedTasks((prev) =>
+            prev.filter((id) => id !== task.id)
+          );
+        }
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className="w-4 h-4 accent-cyan-500 cursor-pointer"
+    />
+  )}
+</div>
                   </div>
 
                   <h3 className="text-md font-semibold text-white mb-1">
@@ -124,44 +219,45 @@ export default function KanbanBoard({
                       )}
                     </div>
 
-                    {(() => {
-                      const assignee = members.find(
-                        (m) => m.id === task.assignee_id
-                      );
-
-                      if (assignee?.profile_image) {
-                        return (
-                          <img
-                            src={
-                              assignee.profile_image.startsWith("http")
-                                ? assignee.profile_image
-                                : `${import.meta.env.VITE_API_URL}${assignee.profile_image}`
-                            }
-                            alt="avatar"
-                            className="w-7 h-7 rounded-full object-cover"
-                          />
-                        );
-                      }
-
-                      return (
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center">
-  <User size={14} />
-</div>
-                      );
-                    })()}
-                  </div>
-
-                  {currentUserRole !== "Client" && (
-                    <button
+                    <div className="flex items-center gap-2">
+  
+    <button
   onClick={(e) => {
     e.stopPropagation();
     handleDeleteTask(task.id);
   }}
-  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition"
+  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-400 hover:text-red-300 p-1 rounded-md hover:bg-red-500/10"
 >
-  <Trash2 size={16} />
+  <Trash2 size={15} />
 </button>
-                  )}
+
+  {(() => {
+    const assignee = members.find(
+      (m) => m.id === task.assignee_id
+    );
+
+    if (assignee?.profile_image) {
+      return (
+        <img
+          src={
+            assignee.profile_image.startsWith("http")
+              ? assignee.profile_image
+              : `${import.meta.env.VITE_API_URL}${assignee.profile_image}`
+          }
+          alt="avatar"
+          className="w-7 h-7 rounded-full object-cover"
+        />
+      );
+    }
+
+    return (
+      <div className="w-7 h-7 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white flex items-center justify-center">
+        <User size={14} />
+      </div>
+    );
+  })()}
+</div>
+                  </div>
                 </div>
               ))}
           </div>
