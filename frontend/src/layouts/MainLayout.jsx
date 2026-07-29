@@ -1,12 +1,12 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
-
+import WorkspaceAI from "../components/ai/WorkspaceAI";
 export default function MainLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden text-slate-200 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950">
 
   {/* Desktop Sidebar */}
   <div className="hidden md:block">
@@ -15,8 +15,8 @@ export default function MainLayout({ children }) {
 
   {/* Mobile Sidebar */}
   {sidebarOpen && (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="w-64 bg-white shadow-lg">
+    <div className="fixed inset-0 z-[9999] flex">
+      <div className="w-56 h-screen bg-slate-900/95 backdrop-blur-xl shadow-2xl border-r border-white/10">
         <Sidebar />
       </div>
 
@@ -33,10 +33,11 @@ export default function MainLayout({ children }) {
       setSidebarOpen={setSidebarOpen}
     />
 
-    <main className="flex-1 bg-slate-100 p-4 md:p-6 overflow-auto">
+    <main className="flex-1 p-4 md:p-6 overflow-auto">
       {children}
     </main>
   </div>
+  <WorkspaceAI />
 </div>
   );
 }

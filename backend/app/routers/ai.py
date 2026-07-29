@@ -1,0 +1,727 @@
+import os
+from google import genai
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
+
+
+router = APIRouter(prefix="/api/ai", tags=["AI"])
+
+class NoteCleanupRequest(BaseModel):
+    raw_note: str
+
+class NoteCleanupResponse(BaseModel):
+    cleaned_note: str
+
+@router.post("/notes/cleanup", response_model=NoteCleanupResponse)
+def cleanup_note(request: NoteCleanupRequest):
+    if not request.raw_note.strip():
+        raise HTTPException(status_code=400, detail="Note content cannot be empty.")
+
+    prompt = f"""
+    You are an expert AI Note taking assistant. 
+    Your job is to take the following messy thoughts and turn them into a clean, 
+    highly organized, and grammatically correct plan. 
+    
+    Rules:
+    - Fix all spelling and grammar mistakes.
+    - Categorize points logically if they are scattered.
+    - CRITICAL: You must return the output as pure HTML elements (e.g., <h1>, <ul>, <li>, <p>, <strong>). 
+    - DO NOT wrap the output in markdown code blocks like ```html ... ```. 
+    - Do not add any conversational text. 
+
+    Raw Note (may contain HTML):
+    {request.raw_note}
+    """
+
+    try:
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available model succeeded.")
+        clean_html = response.text.replace('```html', '').replace('```', '').strip()
+        return NoteCleanupResponse(cleaned_note=clean_html)
+    except Exception as e:
+        print(f"\n--- AI ERROR --- \n{str(e)}\n-----------------\n")
+        raise HTTPException(status_code=500, detail=f"AI Error: {str(e)}")
+
+from typing import List, Optional
+
+class SmartSummaryRequest(BaseModel):
+    start_date: str
+    end_date: str
+    workspace_id: int
+    project_ids: List[int] = []
+    local_start_date: str = None
+    local_end_date: str = None
+
+class SmartSummaryResponse(BaseModel):
+    summary: str
+
+from .users import get_current_user, get_db
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from fastapi import Depends, Form, File, UploadFile
+from .. import models, crud, schemas
+from ..services import calendar_service
+from datetime import datetime
+
+@router.post("/smart-summary", response_model=SmartSummaryResponse)
+def get_smart_summary(
+    request: SmartSummaryRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # Parse ISO date strings to naive datetimes
+        start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00')).replace(tzinfo=None)
+        end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00')).replace(tzinfo=None)
+        
+        # Prevent future dates
+        now = datetime.utcnow()
+        if start_date.date() > now.date() or end_date.date() > now.date():
+            raise HTTPException(status_code=400, detail="Summary dates cannot be in the future.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format.")
+
+    projects = crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=request.workspace_id)
+    allowed_project_ids = [p.id for p in projects]
+
+    if request.project_ids:
+        # Verify user has access to all requested projects
+        for pid in request.project_ids:
+            if pid not in allowed_project_ids:
+                raise HTTPException(status_code=403, detail="You do not have access to one or more selected projects.")
+        target_project_ids = request.project_ids
+    else:
+        target_project_ids = allowed_project_ids
+
+    if not target_project_ids:
+        return SmartSummaryResponse(summary="<p>No projects found or you do not have access to them.</p>")
+
+    activities = db.query(models.Activity).filter(
+        models.Activity.project_id.in_(target_project_ids),
+        models.Activity.created_at >= start_date,
+        models.Activity.created_at <= end_date
+    ).all()
+
+    # Get all tasks for these projects to find comments, attachments, and worklogs
+    all_project_tasks = db.query(models.Task).filter(models.Task.project_id.in_(target_project_ids)).all()
+    task_ids = [t.id for t in all_project_tasks]
+    
+    comments = []
+    attachments = []
+    worklogs = []
+    
+    if task_ids:
+        comments = db.query(models.Comment).filter(
+            models.Comment.task_id.in_(task_ids),
+            models.Comment.created_at >= start_date,
+            models.Comment.created_at <= end_date
+        ).all()
+        
+        attachments = db.query(models.TaskAttachment).filter(
+            models.TaskAttachment.task_id.in_(task_ids),
+            models.TaskAttachment.created_at >= start_date,
+            models.TaskAttachment.created_at <= end_date
+        ).all()
+        
+        worklogs = db.query(models.WorkLog).filter(
+            models.WorkLog.task_id.in_(task_ids),
+            models.WorkLog.created_at >= start_date,
+            models.WorkLog.created_at <= end_date
+        ).all()
+
+    messages = db.query(models.Message).filter(
+        models.Message.project_id.in_(target_project_ids),
+        models.Message.created_at >= start_date,
+        models.Message.created_at <= end_date
+    ).all()
+    
+    wikis = db.query(models.WikiPage).filter(
+        models.WikiPage.project_id.in_(target_project_ids),
+        models.WikiPage.created_at >= start_date,
+        models.WikiPage.created_at <= end_date
+    ).all()
+    
+    wiki_histories = db.query(models.WikiPageHistory).join(models.WikiPage).filter(
+        models.WikiPage.project_id.in_(target_project_ids),
+        models.WikiPageHistory.created_at >= start_date,
+        models.WikiPageHistory.created_at <= end_date
+    ).all()
+
+    if not activities and not comments and not messages and not attachments and not worklogs and not wikis and not wiki_histories:
+        return SmartSummaryResponse(summary="<p>There was no activity in your projects during this time frame.</p>")
+    display_start = request.local_start_date or start_date.strftime('%b %d, %Y')
+    display_end = request.local_end_date or end_date.strftime('%b %d, %Y')
+    
+    prompt = f"Summarize the following project activity between {display_start} and {display_end}:\n\n"
+    
+    for project in projects:
+        p_activities = [a for a in activities if a.project_id == project.id]
+        p_task_ids = [t.id for t in all_project_tasks if t.project_id == project.id]
+        p_comments = [c for c in comments if c.task_id in p_task_ids]
+        p_messages = [m for m in messages if m.project_id == project.id]
+        p_attachments = [a for a in attachments if a.task_id in p_task_ids]
+        p_worklogs = [w for w in worklogs if w.task_id in p_task_ids]
+        p_wikis = [w for w in wikis if w.project_id == project.id]
+        p_wiki_histories = [wh for wh in wiki_histories if wh.page.project_id == project.id]
+        
+        if not any([p_activities, p_comments, p_messages, p_attachments, p_worklogs, p_wikis, p_wiki_histories]):
+            continue
+            
+        prompt += f"\n\n--- ACTIVITY FOR PROJECT: '{project.name}' ---\n"
+        
+        if p_activities:
+            prompt += "Activity Logs:\n"
+            for a in p_activities:
+                author = a.user.full_name or a.user.username if a.user else "Someone"
+                prompt += f"- {author} {a.action} ({a.target_type}: {a.target_name})\n"
+                
+        if p_comments:
+            prompt += "Task Comments:\n"
+            for c in p_comments:
+                author = c.user.full_name or c.user.username if c.user else "Someone"
+                prompt += f"- {author} said: '{c.content}'\n"
+                
+        if p_messages:
+            prompt += "Project Chat Messages:\n"
+            for m in p_messages:
+                author = m.user.full_name or m.user.username if m.user else "Someone"
+                prompt += f"- {author} said: '{m.content}'\n"
+                
+        if p_attachments:
+            prompt += "Attachments:\n"
+            for a in p_attachments:
+                author = a.user.full_name or a.user.username if a.user else "Someone"
+                prompt += f"- {author} uploaded a file: '{a.file_name}' to a task.\n"
+                
+        if p_worklogs:
+            prompt += "Work Logs (Time Logged):\n"
+            task_hours = {}
+            for wl in p_worklogs:
+                task_hours[wl.task_id] = task_hours.get(wl.task_id, 0) + wl.hours_spent
+            for task_id, hours in task_hours.items():
+                task_name = next((t.name for t in all_project_tasks if t.id == task_id), f"Task ID {task_id}")
+                prompt += f"- Total {hours} hours spent on task '{task_name}'.\n"
+                
+        if p_wikis or p_wiki_histories:
+            prompt += "Wiki Document Updates:\n"
+            for w in p_wikis:
+                prompt += f"- New wiki page created: '{w.title}'\n"
+            for wh in p_wiki_histories:
+                author = wh.user.full_name or wh.user.username if wh.user else "Someone"
+                prompt += f"- {author} updated wiki page: '{wh.page.title}'\n"
+            
+    if display_start == display_end:
+        date_string = display_start
+    else:
+        date_string = f"{display_start} - {display_end}"
+
+    prompt += f"""
+    \nYou are an expert PM assistant. 
+    Format your response beautifully using HTML. 
+    You must include a main heading at the very top: <h2>Project Activity Summary ({date_string})</h2>
+    
+    CRITICAL INSTRUCTION: You MUST maintain the Project-by-Project grouping provided in the input data. 
+    Do NOT merge activities from different projects together. 
+    For each project, output EXACTLY like this structure:
+    
+    <strong>Project:</strong> [Project Name]
+    <br/><br/>
+    <strong>Task Progress & Updates</strong>
+    <ul>
+      <li><strong>[Brief Topic]:</strong> [Concise summary of the person's actions, e.g. 'Akansha Thakur successfully moved the task Implement API Auth to Completed.'].</li>
+    </ul>
+    <strong>Team Discussions & Milestones</strong>
+    <ul>
+      <li><strong>[Brief Topic]:</strong> [Concise summary of the chat/discussion, e.g. 'Akansha shared updates...'].</li>
+    </ul>
+    <br/><br/>
+    
+    CRITICAL: You must return the output as pure HTML. DO NOT wrap the output in markdown code blocks like ```html ... ```. 
+    Do not add any conversational text.
+    """
+
+    try:
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available model succeeded.")
+        clean_html = response.text.replace('```html', '').replace('```', '').strip()
+        return SmartSummaryResponse(summary=clean_html)
+    except Exception as e:
+        print(f"\n--- AI ERROR --- \n{str(e)}\n-----------------\n")
+        raise HTTPException(status_code=500, detail=f"AI Error generating summary: {str(e)}")
+
+class AIChatHistoryItem(BaseModel):
+    role: str
+    content: str
+
+class AIChatRequest(BaseModel):
+    workspace_id: int
+    message: str
+    history: List[AIChatHistoryItem] = []
+    frontend_context: Optional[dict] = None
+    model: Optional[str] = None
+
+class TaskDataSchema(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    status: Optional[str] = "To Do"
+    priority: Optional[str] = "Medium"
+    due_date: Optional[str] = None
+    assignee_id: Optional[int] = None
+    assignee_name: Optional[str] = None
+
+class ProjectDataSchema(BaseModel):
+    name: str
+    description: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    board_columns: Optional[List[str]] = []
+    members: Optional[List[str]] = []
+    tasks: Optional[List[TaskDataSchema]] = []
+
+class SingleTaskCreateSchema(BaseModel):
+    project_id: Optional[int] = None
+    project_name: Optional[str] = None
+    name: str
+    description: Optional[str] = ""
+    priority: Optional[str] = "Normal"
+    due_date: Optional[str] = None
+    assignee_id: Optional[int] = None
+    assignee_name: Optional[str] = None
+
+class SingleEventCreateSchema(BaseModel):
+    title: str
+    date: str
+    category: Optional[str] = "Meeting"
+    description: Optional[str] = ""
+
+class AIChatResponseSchema(BaseModel):
+    action: str
+    response_message: str
+    project_data: Optional[ProjectDataSchema] = None
+    task_data: Optional[SingleTaskCreateSchema] = None
+    event_data: Optional[SingleEventCreateSchema] = None
+
+class AIChatResponse(BaseModel):
+    response_message: str
+    new_project_id: Optional[int] = None
+    new_task_id: Optional[int] = None
+    new_event_id: Optional[int] = None
+
+@router.post("/chat", response_model=AIChatResponse)
+def chat_with_ai(
+    workspace_id: int = Form(...),
+    message: str = Form(...),
+    history: str = Form("[]"),
+    frontend_context: str = Form("{}"),
+    model: Optional[str] = Form(None),
+    files: List[UploadFile] = File(default=[]),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    import json
+    try:
+        # Create a dummy request object to match existing code
+        class DummyRequest:
+            pass
+        request = DummyRequest()
+        request.workspace_id = workspace_id
+        request.message = message
+        request.model = model
+        
+        history_obj = json.loads(history)
+        class DummyHistory:
+            def __init__(self, role, content):
+                self.role = role
+                self.content = content
+        request.history = [DummyHistory(h.get("role", "user"), h.get("content", "")) for h in history_obj]
+        request.frontend_context = json.loads(frontend_context)
+        
+        # 1. Build workspace context directly from frontend state if available
+        context_str = "CURRENT WORKSPACE CONTEXT (FROM FRONTEND STATE):\n"
+        if request.frontend_context:
+            fc = request.frontend_context
+            workspaces_data = fc.get("workspaces", [])
+            projects_data = fc.get("projects", [])
+            tasks_data = fc.get("tasks", [])
+            events_data = fc.get("events", [])
+            members_data = fc.get("members", [])
+            current_user_data = fc.get("currentUser", {})
+            
+            context_str += f"Logged in User: {current_user_data.get('full_name') or current_user_data.get('email')} (ID: {current_user_data.get('id')})\n\n"
+            
+            context_str += "--- WORKSPACES ---\n"
+            for ws in workspaces_data:
+                context_str += f"Workspace ID: {ws.get('id')}, Name: '{ws.get('name')}', Role: {ws.get('user_role')}\n"
+                
+            context_str += "\n--- TEAM MEMBERS ---\n"
+            for m in members_data:
+                context_str += f"Member ID: {m.get('id')}, Name: '{m.get('name') or m.get('full_name')}', Email: {m.get('email')}, Role: {m.get('role')}\n"
+                
+            context_str += "\n--- PROJECTS ---\n"
+            if not projects_data:
+                context_str += "(No projects found)\n"
+            else:
+                for p in projects_data:
+                    context_str += f"Project ID: {p.get('id')}, Name: '{p.get('name')}', Status: {p.get('status')}, Description: {p.get('description') or 'None'}\n"
+                    
+            context_str += "\n--- TASKS ---\n"
+            if not tasks_data:
+                context_str += "(No tasks found)\n"
+            else:
+                for t in tasks_data:
+                    assignee_name = t.get('assignee_name') or (t.get('assignee') and (t.get('assignee').get('full_name') or t.get('assignee').get('email'))) or "Unassigned"
+                    context_str += f"Task ID: {t.get('id')}, Project ID: {t.get('project_id')}, Name: '{t.get('name')}', Status: '{t.get('status')}', Priority: '{t.get('priority') or 'Normal'}', Due Date: '{t.get('due_date') or 'No Deadline'}', Assignee: '{assignee_name}', Description: '{t.get('description') or 'None'}'\n"
+                    
+            context_str += "\n--- CALENDAR EVENTS & MEETINGS ---\n"
+            if not events_data:
+                context_str += "(No calendar events found)\n"
+            else:
+                for e in events_data:
+                    context_str += f"Event ID: {e.get('id')}, Title: '{e.get('title')}', Date/Time: '{e.get('date') or e.get('start_time')}', Category: '{e.get('category') or e.get('type') or 'Meeting'}', Status: '{e.get('status')}', Description: '{e.get('description') or 'None'}'\n"
+        else:
+            projects = crud.get_user_projects(db=db, user_id=current_user.id, workspace_id=request.workspace_id)
+            if not projects:
+                context_str += "No projects found.\n"
+            else:
+                for p in projects:
+                    context_str += f"Project: {p.name} (Status: {p.status}, Description: {p.description or 'None'})\n"
+                    for t in p.tasks:
+                        assignee_name = t.assignee.full_name or t.assignee.email if getattr(t, 'assignee', None) else "Unassigned"
+                        context_str += f" - Task ID {t.id}: '{t.name}' | Status: {t.status} | Priority: {t.priority or 'Normal'} | Due Date: {t.due_date or 'No Deadline'} | Assignee: {assignee_name}\n"
+                    
+        user_role = crud.get_user_workspace_role(db, current_user.id, request.workspace_id) or "Member"
+        
+        # Build prompt
+        system_instruction = f"""
+        You are an expert AI Project Management Assistant.
+        Your job is to answer questions about the workspace or automate tasks like creating a project, creating a task, or adding a meeting/event.
+        
+        {context_str}
+        
+        IMPORTANT PERMISSION RULES:
+        The user's current role in this workspace is: '{user_role}'.
+        - Only 'Admin' users can create projects. If the user asks to create a project and their role is NOT 'Admin', you MUST set action to 'answer' and politely inform them they do not have permission.
+        - 'Admin' and 'Member' users can create tasks. If the user asks to create a task and their role is 'Client', you MUST set action to 'answer' and politely inform them they do not have permission. (Note: All roles, including 'Client', CAN create calendar events/meetings).
+        
+        If the user asks a question about tasks, projects, meetings, team members, or deadlines, use the CURRENT WORKSPACE CONTEXT to answer it.
+        If the user wants to create a project (e.g. "We need to develop a PM tool", "Create a project with members X and Y", or filling out details like Name, Members, Duration, Columns), set action to 'create_project' ONLY IF their role is 'Admin'.
+        When creating a project, you MUST intelligently generate and autofill any details based on whatever instructions or context the user provided:
+        1. Name: Use the provided name or generate a fitting, professional name if omitted/blank.
+        2. Description: Always generate a rich, comprehensive, professional description of the project.
+        3. Duration / Dates: If a duration is provided (e.g., "3 weeks", "2 months", "10 days"), calculate 'start_date' as today (in YYYY-MM-DD format) and 'end_date' accordingly. If duration is not specified or left blank, autofill 'start_date' as today and 'end_date' as 30 days from today.
+        4. Columns: If custom column names are provided (e.g. "Backlog, Development, Review, Done"), output them as a list of strings in 'board_columns'. If omitted or left blank, autofill 'board_columns' with ["To Do", "In Progress", "Completed"].
+        5. Members: If specific team members (by email or name) are mentioned, include them in the 'members' array so they get assigned! If omitted or left blank, autofill appropriately.
+        6. Tasks: If NO document is attached, generate 3-5 realistic tasks based on the prompt. 
+        7. ATTACHED DOCUMENTS (PRDs/Requirements): If the user attaches a document (like a PRD), you MUST set action to 'create_project'. DO NOT just copy the feature names as tasks, and DO NOT limit yourself to 5 tasks! Instead, act like an expert Project Manager and Software Architect. Intelligently break down the project into 15 to 30 highly granular, actionable engineering and development tasks required to build the project from scratch (e.g., "Design Database Schema", "Develop User Authentication API", "Create React component for Room Booking", "Setup CI/CD Pipeline"). Generate a comprehensive and detailed list of these small, actionable pieces of work. This rule OVERRIDES rule 6 if a document is present!
+
+        If the user wants to create a single task (e.g. "Generate a task in the Dummy project to create a design..."), set action to 'create_task' (unless they are a 'Client') and provide task_data with the correct project_id or project_name from context.
+        If the user wants to schedule a meeting or calendar event (e.g. "Add a team meeting tomorrow at 3pm"), set action to 'create_event' and provide event_data with title, date, category='Meeting'.
+
+        CRITICAL: You MUST respond in pure JSON matching this structure:
+        {{
+          "action": "answer" or "create_project" or "create_task" or "create_event",
+          "response_message": "For answer/task/event: your helpful reply. For create_project: Keep it brief. Only explain on what basis and assumptions you generated the TASKS (e.g., how you broke down the PRD). Do NOT list details about the project name, duration, columns, or members.",
+          "project_data": null or {{ "name": "Generated Project Name", "description": "Comprehensive project description generated from user instructions.", "start_date": "2026-07-27", "end_date": "2026-08-26", "board_columns": [ "To Do", "In Progress", "Completed" ], "members": [ "email@example.com", "Member Name" ], "tasks": [ {{ "name": "Initial Task", "description": "Task Desc", "assignee_name": "Member Name" }} ] }},
+          "task_data": null or {{ "project_id": 123, "project_name": "Name", "name": "Task Name", "description": "Desc", "priority": "High", "due_date": "2026-07-30", "assignee_name": "Member Name" }},
+          "event_data": null or {{ "title": "Meeting Title", "date": "2026-07-28", "category": "Meeting", "description": "Desc" }}
+        }}
+        Do NOT wrap your response in markdown code blocks like ```json ... ```. Return ONLY valid JSON.
+        """
+        
+        prompt_text = f"{system_instruction}\n\n--- PREVIOUS CONVERSATION HISTORY ---\n"
+        if not request.history:
+            prompt_text += "(No previous messages)\n"
+        else:
+            for msg in request.history:
+                role_label = "USER" if msg.role == "user" else "AI ASSISTANT"
+                prompt_text += f"[{role_label}]: {msg.content}\n\n"
+                
+        prompt_text += f"--- NEW USER MESSAGE ---\n[USER]: {request.message}\n\n[AI ASSISTANT]:"
+        
+        # Handle file uploads to Gemini
+        gemini_uploaded_files = []
+        if files:
+            import shutil
+            for f in files:
+                # Save file temporarily
+                file_path = f"uploads/{f.filename}"
+                with open(file_path, "wb") as buffer:
+                    shutil.copyfileobj(f.file, buffer)
+                
+                # Upload to Gemini
+                uploaded_file = client.files.upload(file=file_path)
+                gemini_uploaded_files.append(uploaded_file)
+        
+        contents = gemini_uploaded_files + [prompt_text]
+
+        from google.genai import types
+        import json
+
+        models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        
+        if hasattr(request, 'model') and request.model:
+            if request.model in models_to_try:
+                models_to_try.remove(request.model)
+            models_to_try.insert(0, request.model)
+
+        response = None
+        for m_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=m_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                    ),
+                )
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+        if not response or not response.text:
+            raise Exception("No available AI model succeeded for chat.")
+        
+        res_text = response.text.replace('```json', '').replace('```', '').strip()
+        res_dict = json.loads(res_text)
+        action = res_dict.get("action", "answer")
+        response_message = res_dict.get("response_message", "")
+        project_data = res_dict.get("project_data")
+        
+        new_project_id = None
+        new_task_id = None
+        new_event_id = None
+        
+        # Enforce RBAC in backend just in case LLM hallucinations bypass instructions
+        if action == "create_project" and user_role != "Admin":
+            action = "answer"
+            response_message = "I apologize, but only Workspace Admins can create new projects."
+            project_data = None
+        elif action == "create_task" and user_role == "Client":
+            action = "answer"
+            response_message = "I apologize, but as a Client, you do not have permission to create tasks."
+            res_dict["task_data"] = None
+        
+        if action == "create_project" and project_data:
+            import datetime
+            today_str = datetime.date.today().isoformat()
+            default_end_str = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+            p_start = project_data.get("start_date") or today_str
+            p_end = project_data.get("end_date") or default_end_str
+            
+            raw_cols = project_data.get("board_columns", [])
+            formatted_cols = []
+            colors = ["#facc15", "#22d3ee", "#a855f7", "#f97316", "#ec4899", "#4ade80"]
+            icons = ["Clock3", "PlayCircle", "CheckCircle", "FolderKanban", "ListTodo"]
+            if raw_cols and isinstance(raw_cols, list):
+                for idx, c_name in enumerate(raw_cols):
+                    if isinstance(c_name, str) and c_name.strip():
+                        formatted_cols.append({
+                            "name": c_name.strip(),
+                            "icon": icons[idx % len(icons)],
+                            "color": colors[idx % len(colors)]
+                        })
+                    elif isinstance(c_name, dict) and "name" in c_name:
+                        formatted_cols.append(c_name)
+            
+            if not formatted_cols:
+                formatted_cols = [
+                    {"name": "To Do", "icon": "Clock3", "color": "#facc15"},
+                    {"name": "In Progress", "icon": "PlayCircle", "color": "#22d3ee"}
+                ]
+            
+            # Ensure "Completed" is always the final column and remove any AI-generated duplicates
+            formatted_cols = [c for c in formatted_cols if c.get("name", "").lower() not in ["completed", "finished", "done"]]
+            formatted_cols.append({"name": "Completed", "icon": "CheckCircle", "color": "#4ade80"})
+
+            proj_name = project_data.get("name") or "New Project"
+            project_key = crud.generate_project_key(db, proj_name, request.workspace_id)
+            
+            new_project = models.Project(
+                name=proj_name,
+                description=project_data.get("description") or "",
+                workspace_id=request.workspace_id,
+                created_by_id=current_user.id,
+                start_date=p_start,
+                end_date=p_end,
+                status="Planning",
+                board_type="kanban",
+                board_columns=formatted_cols,
+                project_key=project_key,
+                task_counter=0
+            )
+            db.add(new_project)
+            db.commit()
+            db.refresh(new_project)
+            new_project_id = new_project.id
+            
+            added_member_ids = {current_user.id}
+            db.execute(
+                models.project_members.insert().values(
+                    user_id=current_user.id,
+                    project_id=new_project_id
+                )
+            )
+            
+            members_data = project_data.get("members", [])
+            for m_str in members_data:
+                if not m_str or not isinstance(m_str, str):
+                    continue
+                found_id = None
+                if request.frontend_context and request.frontend_context.get("members"):
+                    for fc_m in request.frontend_context.get("members", []):
+                        fc_email = fc_m.get("email") or ""
+                        fc_name = fc_m.get("name") or fc_m.get("full_name") or ""
+                        if m_str.lower() == fc_email.lower() or m_str.lower() in fc_name.lower() or fc_name.lower() in m_str.lower():
+                            found_id = fc_m.get("id")
+                            break
+                if not found_id:
+                    u_match = db.query(models.User).filter(
+                        (models.User.email.ilike(f"{m_str}")) | (models.User.full_name.ilike(f"%{m_str}%"))
+                    ).first()
+                    if u_match:
+                        found_id = u_match.id
+                        
+                if found_id and found_id not in added_member_ids:
+                    added_member_ids.add(found_id)
+                    db.execute(
+                        models.project_members.insert().values(
+                            user_id=found_id,
+                            project_id=new_project_id
+                        )
+                    )
+            
+            tasks_data = project_data.get("tasks", [])
+            for t in tasks_data:
+                t_assignee_id = t.get("assignee_id")
+                t_assignee_name = t.get("assignee_name") or t.get("assignee")
+                if not t_assignee_id and t_assignee_name and isinstance(t_assignee_name, str):
+                    if request.frontend_context and request.frontend_context.get("members"):
+                        for fc_m in request.frontend_context.get("members", []):
+                            fc_name = fc_m.get("name") or fc_m.get("full_name") or fc_m.get("email") or ""
+                            if t_assignee_name.lower() in fc_name.lower() or fc_name.lower() in t_assignee_name.lower():
+                                t_assignee_id = fc_m.get("id")
+                                break
+                    if not t_assignee_id:
+                        u_match = db.query(models.User).filter(
+                            (models.User.email.ilike(t_assignee_name)) | (models.User.full_name.ilike(f"%{t_assignee_name}%"))
+                        ).first()
+                        if u_match:
+                            t_assignee_id = u_match.id
+                
+                first_col_name = formatted_cols[0]["name"] if formatted_cols else "To Do"
+                t_status = t.get("status") or first_col_name
+                matched_col = False
+                for c in formatted_cols:
+                    if c["name"].lower() == t_status.lower():
+                        t_status = c["name"]
+                        matched_col = True
+                        break
+                if not matched_col:
+                    t_status = first_col_name
+
+                new_project.task_counter += 1
+                ticket_id = f"{new_project.project_key}-{new_project.task_counter}"
+
+                new_task = models.Task(
+                    name=t.get("name", "Task"),
+                    description=t.get("description", ""),
+                    project_id=new_project_id,
+                    status=t_status,
+                    priority=t.get("priority") or "Medium",
+                    due_date=t.get("due_date"),
+                    assignee_id=t_assignee_id,
+                    created_by_id=current_user.id,
+                    ticket_id=ticket_id,
+                    position=float(new_project.task_counter * 1024)
+                )
+                db.add(new_task)
+            
+            db.commit()
+            
+            # Sync generated tasks with Google Calendar if integrated
+            for task in new_project.tasks:
+                if task.due_date:
+                    calendar_service.sync_task_due_date(task, request.workspace_id, db)
+            
+        elif action == "create_task" and res_dict.get("task_data"):
+            t_data = res_dict.get("task_data", {})
+            proj_id = t_data.get("project_id")
+            if not proj_id and t_data.get("project_name"):
+                p_match = db.query(models.Project).filter(models.Project.name.ilike(f"%{t_data['project_name']}%")).first()
+                if p_match:
+                    proj_id = p_match.id
+            if not proj_id:
+                first_proj = db.query(models.Project).filter(models.Project.workspace_id == request.workspace_id).first()
+                if first_proj:
+                    proj_id = first_proj.id
+            if proj_id:
+                assignee_id = t_data.get("assignee_id")
+                if not assignee_id and t_data.get("assignee_name") and request.frontend_context:
+                    for m in request.frontend_context.get("members", []):
+                        m_name = m.get("name") or m.get("full_name") or ""
+                        if t_data["assignee_name"].lower() in m_name.lower():
+                            assignee_id = m.get("id")
+                            break
+                task_schema = schemas.TaskCreate(
+                    name=t_data.get("name") or "New Task",
+                    description=t_data.get("description") or "",
+                    project_id=proj_id,
+                    priority=t_data.get("priority") or "Medium",
+                    due_date=t_data.get("due_date"),
+                    assignee_id=assignee_id
+                )
+                created_task = crud.create_task(db=db, task=task_schema, user_id=current_user.id)
+                if created_task:
+                    db.commit()
+                    db.refresh(created_task)
+                    new_task_id = created_task.id
+                    if created_task.due_date:
+                        calendar_service.sync_task_due_date(created_task, request.workspace_id, db)
+
+        elif action == "create_event" and res_dict.get("event_data"):
+            e_data = res_dict.get("event_data", {})
+            event_schema = schemas.EventCreate(
+                title=e_data.get("title") or "New Meeting",
+                date=e_data.get("date") or "Today",
+                type=e_data.get("category") or "Meeting",
+                description=e_data.get("description") or ""
+            )
+            created_event = crud.create_event(db=db, event=event_schema, user_id=current_user.id)
+            if created_event:
+                db.commit()
+                db.refresh(created_event)
+                new_event_id = created_event.id
+            
+        return AIChatResponse(
+            response_message=response_message,
+            new_project_id=new_project_id,
+            new_task_id=new_task_id,
+            new_event_id=new_event_id
+        )
+        
+    except Exception as e:
+        print(f"\\n--- AI CHAT ERROR --- \\n{str(e)}\\n-----------------\\n")
+        raise HTTPException(status_code=500, detail=f"AI Chat Error: {str(e)}")

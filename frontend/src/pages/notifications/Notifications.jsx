@@ -1,14 +1,23 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useEffect } from "react";
+import { Bell, BellOff } from "lucide-react";
+
+import AppContext from "../../context/AppContext";
+import { useContext } from "react";
 
 export default function Notifications() {
   const [dbNotifications, setDbNotifications] = useState([]);
+  const { activeWorkspaceId } = useContext(AppContext);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/notifications/`, {
+        const url = activeWorkspaceId 
+            ? `${import.meta.env.VITE_API_URL}/notifications/?workspace_id=${activeWorkspaceId}` 
+            : `${import.meta.env.VITE_API_URL}/notifications/`;
+            
+        const response = await fetch(url, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {
@@ -19,12 +28,12 @@ export default function Notifications() {
         console.error("Failed to fetch notifications");
       }
     };
-    fetchNotifications();
-  }, []);
+    if (activeWorkspaceId) fetchNotifications();
+  }, [activeWorkspaceId]);
 
   return (
     <MainLayout>
-      <h1 className="text-2xl md:text-3xl font-bold mb-6">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">
         Notifications
       </h1>
 
@@ -33,17 +42,25 @@ export default function Notifications() {
   dbNotifications.slice(0, 10).map((activity, index) => (
     <div
       key={activity.id || index}
-      className="bg-white rounded-xl shadow p-4 md:p-5"
+      className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-4 md:p-5"
     >
-      <h3 className="font-semibold break-words text-sm md:text-base">
-        🔔 {activity.message}
-      </h3>
+      <div className="flex items-start gap-3">
+  <Bell
+    size={20}
+    className="text-cyan-400 mt-0.5 flex-shrink-0"
+  />
+
+  <h3 className="font-semibold break-words text-sm md:text-base text-white">
+    {activity.message}
+  </h3>
+</div>
     </div>
   ))
 ) : (
-  <div className="bg-white rounded-xl shadow p-4 md:p-5">
-    No Notifications Yet
-  </div>
+  <div className="bg-white/5 backdrop-blur-md rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.1)] border border-white/10 p-6 flex items-center gap-3 text-slate-300">
+  <BellOff size={22} className="text-slate-400" />
+  <span>No Notifications Yet</span>
+</div>
 )}
       </div>
     </MainLayout>

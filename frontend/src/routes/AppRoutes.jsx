@@ -5,16 +5,27 @@ import Signup from "../pages/auth/Signup";
 import ResetPassword from "../pages/auth/ResetPassword";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import AcceptInvite from "../pages/auth/AcceptInvite";
-
+import VerifyAccount from "../pages/auth/VerifyAccount";
 import Dashboard from "../pages/dashboard/Dashboard";
 import Projects from "../pages/projects/Projects";
+import ProjectWorkspace from "../pages/projects/ProjectWorkspace";
 import Tasks from "../pages/tasks/Tasks";
 import Teams from "../pages/teams/Teams";
 import Calendar from "../pages/calendar/Calender";
 import Notifications from "../pages/notifications/Notifications";
 import Settings from "../pages/settings/Settings";
-
+import Reports from "../pages/reports/Reports";
+import Notebook from "../pages/notebook/Notebook";
+import NoteCleanup from "../pages/notebook/NoteCleanup";
+import Integrations from "../pages/integrations/Integrations";
 import ProtectedRoute from "./ProtectedRoute";
+import CheckEmail from "../pages/auth/CheckEmail";
+import VerifyOTP from "../pages/auth/VerifyOTP";
+import SetPassword from "../pages/auth/SetPassword";
+import Organization from "../pages/organization/Organization";
+import OrganizationSettings from "../pages/organization/OrganizationSettings";
+import WorkspacePending from "../pages/workspace/WorkspacePending";
+import OrganizationSelection from "../pages/auth/OrganizationSelection";
 
 export default function AppRoutes() {
   return (
@@ -25,13 +36,54 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/accept-invite" element={<AcceptInvite />} />
+        <Route path="/verify-account" element={<VerifyAccount />} />
+        <Route path="/check-email" element={<CheckEmail />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/set-password" element={<SetPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:id" element={<ProjectWorkspace />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/teams" element={<Teams />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/notebook" element={<Notebook />} />
+        <Route path="/notebook/cleanup" element={<ProtectedRoute><NoteCleanup /></ProtectedRoute>} />
+<Route
+  path="/organization"
+  element={
+    <ProtectedRoute>
+      <Organization />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/organization-settings"
+  element={
+    <ProtectedRoute>
+      <OrganizationSettings />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/workspace-pending"
+  element={<WorkspacePending />}
+/>
+<Route
+  path="/select-organization"
+  element={<OrganizationSelection />}
+/>
+
       </Routes>
     </BrowserRouter>
   );
