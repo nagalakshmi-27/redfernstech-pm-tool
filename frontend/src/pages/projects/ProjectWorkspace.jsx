@@ -675,16 +675,16 @@ useEffect(() => {
   if (!confirmDelete) return;
 
   try {
-    await Promise.all(
-      taskIds.map((id) =>
-        fetch(`${import.meta.env.VITE_API_URL}/tasks/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-      )
-    );
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/bulk/delete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ task_ids: taskIds })
+    });
+
+    if (!response.ok) throw new Error("Failed to delete tasks");
 
     setTasks((prev) =>
       prev.filter((task) => !taskIds.includes(task.id))
@@ -702,42 +702,21 @@ const handleAssignSelectedTasks = async (taskIds, memberId) => {
   if (!taskIds.length || !memberId) return;
 
   try {
-    const token = localStorage.getItem("token");
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/bulk/assign`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ task_ids: taskIds, assignee_id: Number(memberId) })
+    });
 
-    await Promise.all(
-      taskIds.map(async (taskId) => {
-        const task = tasks.find((t) => t.id === taskId);
-
-        if (!task) return;
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/tasks/${taskId}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              ...task,
-              assignee_id: Number(memberId),
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to assign member");
-        }
-      })
-    );
+    if (!response.ok) throw new Error("Failed to assign tasks");
 
     setTasks((prev) =>
       prev.map((task) =>
         taskIds.includes(task.id)
-          ? {
-              ...task,
-              assignee_id: Number(memberId),
-            }
+          ? { ...task, assignee_id: Number(memberId) }
           : task
       )
     );
@@ -756,42 +735,21 @@ const handleChangePrioritySelectedTasks = async (taskIds, priority) => {
   if (!taskIds.length || !priority) return;
 
   try {
-    const token = localStorage.getItem("token");
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/bulk/priority`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ task_ids: taskIds, priority })
+    });
 
-    await Promise.all(
-      taskIds.map(async (taskId) => {
-        const task = tasks.find((t) => t.id === taskId);
-
-        if (!task) return;
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/tasks/${taskId}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              ...task,
-              priority,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to update priority");
-        }
-      })
-    );
+    if (!response.ok) throw new Error("Failed to update priority");
 
     setTasks((prev) =>
       prev.map((task) =>
         taskIds.includes(task.id)
-          ? {
-              ...task,
-              priority,
-            }
+          ? { ...task, priority }
           : task
       )
     );
@@ -810,42 +768,21 @@ const handleMoveSelectedTasks = async (taskIds, status) => {
   if (!taskIds.length || !status) return;
 
   try {
-    const token = localStorage.getItem("token");
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/tasks/bulk/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ task_ids: taskIds, status })
+    });
 
-    await Promise.all(
-      taskIds.map(async (taskId) => {
-        const task = tasks.find((t) => t.id === taskId);
-
-        if (!task) return;
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/tasks/${taskId}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              ...task,
-              status,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to move task");
-        }
-      })
-    );
+    if (!response.ok) throw new Error("Failed to move tasks");
 
     setTasks((prev) =>
       prev.map((task) =>
         taskIds.includes(task.id)
-          ? {
-              ...task,
-              status,
-            }
+          ? { ...task, status }
           : task
       )
     );

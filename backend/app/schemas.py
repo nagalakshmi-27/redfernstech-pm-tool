@@ -177,6 +177,22 @@ class UserLogin(BaseModel):
     password: str
     device_id: Optional[str] = None
 
+# --- BULK TASKS ---
+class BulkTaskDeleteRequest(BaseModel):
+    task_ids: List[int]
+
+class BulkTaskAssignRequest(BaseModel):
+    task_ids: List[int]
+    assignee_id: int
+
+class BulkTaskPriorityRequest(BaseModel):
+    task_ids: List[int]
+    priority: str
+
+class BulkTaskStatusRequest(BaseModel):
+    task_ids: List[int]
+    status: str
+
 # --- TASKS ---
 class TaskBase(BaseModel):
     name: str

@@ -34,6 +34,26 @@ def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db), current
         
     return new_task
 
+@router.post("/bulk/delete")
+def bulk_delete_tasks(request: schemas.BulkTaskDeleteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    crud.bulk_delete_tasks(db=db, task_ids=request.task_ids, user_id=current_user.id)
+    return {"message": "Tasks deleted successfully"}
+
+@router.put("/bulk/assign")
+def bulk_assign_tasks(request: schemas.BulkTaskAssignRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    crud.bulk_assign_tasks(db=db, task_ids=request.task_ids, assignee_id=request.assignee_id, user_id=current_user.id)
+    return {"message": "Tasks assigned successfully"}
+
+@router.put("/bulk/priority")
+def bulk_update_task_priority(request: schemas.BulkTaskPriorityRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    crud.bulk_update_task_priority(db=db, task_ids=request.task_ids, priority=request.priority, user_id=current_user.id)
+    return {"message": "Tasks priority updated successfully"}
+
+@router.put("/bulk/status")
+def bulk_update_task_status(request: schemas.BulkTaskStatusRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    crud.bulk_update_task_status(db=db, task_ids=request.task_ids, status=request.status, user_id=current_user.id)
+    return {"message": "Tasks status updated successfully"}
+
 @router.put("/{task_id}", response_model=schemas.TaskResponse)
 def update_task(task_id: int, task: schemas.TaskUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Fetch old state before updating

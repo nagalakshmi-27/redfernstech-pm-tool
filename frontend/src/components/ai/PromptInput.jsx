@@ -281,11 +281,35 @@ textarea.style.overflowY =
 "
 />
 
+        <select
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+          className="
+            hidden sm:block
+            ml-auto
+            mr-2
+            bg-slate-800
+            border border-white/10
+            rounded-xl
+            px-3
+            py-2.5
+            text-sm
+            text-white
+            outline-none
+            focus:border-cyan-500/50
+            transition-colors
+            cursor-pointer
+          "
+        >
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        </select>
         <button
           onClick={onGenerate}
           disabled={isTyping}
           className={`
-  ml-auto
   flex
   shrink-0
   items-center

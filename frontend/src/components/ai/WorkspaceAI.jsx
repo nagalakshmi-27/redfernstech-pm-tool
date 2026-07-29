@@ -27,6 +27,17 @@ const [activeChat, setActiveChat] = useState(() => {
 });
 const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+const abortControllerRef = useRef(null);
+
+const handleCloseChat = () => {
+  if (abortControllerRef.current) {
+    abortControllerRef.current.abort();
+    abortControllerRef.current = null;
+  }
+  setIsTyping(false);
+  setIsOpen(false);
+};
+
 const [chats, setChats] = useState(() => {
   const saved = localStorage.getItem(`workspace_ai_chats_${activeWorkspaceId}`);
   if (saved) {
@@ -145,10 +156,14 @@ const handleSave = async () => {
       formData.append("files", file);
     });
 
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
     const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${token}` },
       body: formData,
+      signal: abortControllerRef.current.signal,
     });
 
     let assistantContent = "Sorry, I encountered an error while processing your request.";
@@ -176,6 +191,10 @@ const handleSave = async () => {
     const assistantMessage = { id: Date.now() + 1, role: "assistant", content: assistantContent, ...(newProjectId && { new_project_id: newProjectId }) };
     setChats((prev) => prev.map((chat) => chat.id === activeChat ? { ...chat, messages: [...chat.messages, assistantMessage] } : chat));
   } catch (error) {
+    if (error.name === "AbortError") {
+      console.log("AI chat edit aborted by closing window.");
+      return;
+    }
     console.error("AI chat edit error:", error);
     const errorMessage = { id: Date.now() + 1, role: "assistant", content: "Network error. Please check your connection and try again." };
     setChats((prev) => prev.map((chat) => chat.id === activeChat ? { ...chat, messages: [...chat.messages, errorMessage] } : chat));
@@ -405,12 +424,16 @@ const handleCancelRename = () => {
           formData.append("files", file);
         });
 
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
           },
           body: formData,
+          signal: abortControllerRef.current.signal,
         });
 
         let assistantContent = "Sorry, I encountered an error while processing your request.";
@@ -470,6 +493,18 @@ const handleCancelRename = () => {
           )
         );
       } catch (error) {
+        if (error.name === "AbortError") {
+          console.log("AI request aborted by closing window.");
+          // Remove the user message that was optimistically added
+          setChats(prev => prev.map(chat => {
+            if (chat.id !== activeChat) return chat;
+            return {
+              ...chat,
+              messages: chat.messages.filter(m => m.id !== userMessage.id)
+            };
+          }));
+          return;
+        }
         console.error("AI chat error:", error);
         const errorMessage = {
           id: Date.now() + 1,
@@ -535,7 +570,7 @@ sm:w-14
           {/* Background Overlay */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsOpen(false)}
+            onClick={handleCloseChat}
           />
 
           {/* Modal */}
@@ -600,7 +635,7 @@ onDeleteChat={handleDeleteChat}
 >
 
     <AIHeader
-  onClose={() => setIsOpen(false)}
+  onClose={handleCloseChat}
   isSidebarOpen={isSidebarOpen}
   setIsSidebarOpen={setIsSidebarOpen}
 />
@@ -653,7 +688,7 @@ onDeleteChat={handleDeleteChat}
               onCancel={handleCancel}
               onProjectRedirect={(projectId) => {
                 navigate(`/projects/${projectId}`);
-                setIsOpen(false);
+                handleCloseChat();
               }}
             />
           ))}

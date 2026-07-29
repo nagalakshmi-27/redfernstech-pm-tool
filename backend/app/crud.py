@@ -556,6 +556,36 @@ def delete_task(db: Session, task_id: int, user_id: int):
     db.commit()
     return True
 
+# --- BULK TASKS ---
+def bulk_delete_tasks(db: Session, task_ids: List[int], user_id: int):
+    tasks = db.query(models.Task).filter(models.Task.id.in_(task_ids)).all()
+    for task in tasks:
+        db.delete(task)
+    db.commit()
+    return True
+
+def bulk_assign_tasks(db: Session, task_ids: List[int], assignee_id: int, user_id: int):
+    tasks = db.query(models.Task).filter(models.Task.id.in_(task_ids)).all()
+    for task in tasks:
+        task.assignee_id = assignee_id
+    db.commit()
+    return True
+
+def bulk_update_task_priority(db: Session, task_ids: List[int], priority: str, user_id: int):
+    tasks = db.query(models.Task).filter(models.Task.id.in_(task_ids)).all()
+    for task in tasks:
+        task.priority = priority
+    db.commit()
+    return True
+
+def bulk_update_task_status(db: Session, task_ids: List[int], status: str, user_id: int):
+    tasks = db.query(models.Task).filter(models.Task.id.in_(task_ids)).all()
+    for task in tasks:
+        task.status = status
+    db.commit()
+    return True
+
+
 def get_teammates(db: Session, workspace_id: Optional[int], account_id: int):
     users_dict = {}
     

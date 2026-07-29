@@ -18,7 +18,7 @@ class NoteCleanupResponse(BaseModel):
     cleaned_note: str
 
 @router.post("/notes/cleanup", response_model=NoteCleanupResponse)
-async def cleanup_note(request: NoteCleanupRequest):
+def cleanup_note(request: NoteCleanupRequest):
     if not request.raw_note.strip():
         raise HTTPException(status_code=400, detail="Note content cannot be empty.")
 
@@ -43,7 +43,7 @@ async def cleanup_note(request: NoteCleanupRequest):
         response = None
         for m_name in models_to_try:
             try:
-                response = await client.aio.models.generate_content(model=m_name, contents=prompt)
+                response = client.models.generate_content(model=m_name, contents=prompt)
                 if response and response.text:
                     break
             except Exception:
@@ -77,7 +77,7 @@ from .. import models, crud, schemas
 from datetime import datetime
 
 @router.post("/smart-summary", response_model=SmartSummaryResponse)
-async def get_smart_summary(
+def get_smart_summary(
     request: SmartSummaryRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -258,7 +258,7 @@ async def get_smart_summary(
         response = None
         for m_name in models_to_try:
             try:
-                response = await client.aio.models.generate_content(model=m_name, contents=prompt)
+                response = client.models.generate_content(model=m_name, contents=prompt)
                 if response and response.text:
                     break
             except Exception:
@@ -330,11 +330,12 @@ class AIChatResponse(BaseModel):
     new_event_id: Optional[int] = None
 
 @router.post("/chat", response_model=AIChatResponse)
-async def chat_with_ai(
+def chat_with_ai(
     workspace_id: int = Form(...),
     message: str = Form(...),
     history: str = Form("[]"),
     frontend_context: str = Form("{}"),
+    model: Optional[str] = Form(None),
     files: List[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -347,6 +348,7 @@ async def chat_with_ai(
         request = DummyRequest()
         request.workspace_id = workspace_id
         request.message = message
+        request.model = model
         
         history_obj = json.loads(history)
         class DummyHistory:
@@ -462,7 +464,7 @@ async def chat_with_ai(
                     shutil.copyfileobj(f.file, buffer)
                 
                 # Upload to Gemini
-                uploaded_file = await client.aio.files.upload(file=file_path)
+                uploaded_file = client.files.upload(file=file_path)
                 gemini_uploaded_files.append(uploaded_file)
         
         contents = gemini_uploaded_files + [prompt_text]
@@ -471,10 +473,16 @@ async def chat_with_ai(
         import json
 
         models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
+        
+        if hasattr(request, 'model') and request.model:
+            if request.model in models_to_try:
+                models_to_try.remove(request.model)
+            models_to_try.insert(0, request.model)
+
         response = None
         for m_name in models_to_try:
             try:
-                response = await client.aio.models.generate_content(
+                response = client.models.generate_content(
                     model=m_name,
                     contents=contents,
                     config=types.GenerateContentConfig(
