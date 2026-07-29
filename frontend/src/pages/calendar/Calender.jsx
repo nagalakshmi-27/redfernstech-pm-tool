@@ -93,7 +93,17 @@ const navigate = useNavigate();
     };
 
     if (editingEventId) {
-      alert("Editing manual events is not yet supported by the backend!");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/events/${editingEventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(eventData)
+      });
+      if (response.ok) {
+        const updatedEvent = await response.json();
+        setManualEvents(manualEvents.map(e => e.id === editingEventId ? updatedEvent : e));
+      } else {
+        alert("Failed to update event.");
+      }
     } else {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/events/`, {
         method: "POST",

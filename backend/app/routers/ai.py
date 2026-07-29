@@ -43,7 +43,7 @@ async def cleanup_note(request: NoteCleanupRequest):
         response = None
         for m_name in models_to_try:
             try:
-                response = client.models.generate_content(model=m_name, contents=prompt)
+                response = await client.aio.models.generate_content(model=m_name, contents=prompt)
                 if response and response.text:
                     break
             except Exception:
@@ -258,7 +258,7 @@ async def get_smart_summary(
         response = None
         for m_name in models_to_try:
             try:
-                response = client.models.generate_content(model=m_name, contents=prompt)
+                response = await client.aio.models.generate_content(model=m_name, contents=prompt)
                 if response and response.text:
                     break
             except Exception:
@@ -333,7 +333,6 @@ class AIChatResponse(BaseModel):
 async def chat_with_ai(
     workspace_id: int = Form(...),
     message: str = Form(...),
-    model: Optional[str] = Form(None),
     history: str = Form("[]"),
     frontend_context: str = Form("{}"),
     files: List[UploadFile] = File(default=[]),
@@ -348,7 +347,6 @@ async def chat_with_ai(
         request = DummyRequest()
         request.workspace_id = workspace_id
         request.message = message
-        request.model = model
         
         history_obj = json.loads(history)
         class DummyHistory:
@@ -464,7 +462,7 @@ async def chat_with_ai(
                     shutil.copyfileobj(f.file, buffer)
                 
                 # Upload to Gemini
-                uploaded_file = client.files.upload(file=file_path)
+                uploaded_file = await client.aio.files.upload(file=file_path)
                 gemini_uploaded_files.append(uploaded_file)
         
         contents = gemini_uploaded_files + [prompt_text]
@@ -473,17 +471,10 @@ async def chat_with_ai(
         import json
 
         models_to_try = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-lite-latest']
-        
-        if hasattr(request, 'model') and request.model:
-            # If the user selected a model, put it at the front of the list
-            if request.model in models_to_try:
-                models_to_try.remove(request.model)
-            models_to_try.insert(0, request.model)
-
         response = None
         for m_name in models_to_try:
             try:
-                response = client.models.generate_content(
+                response = await client.aio.models.generate_content(
                     model=m_name,
                     contents=contents,
                     config=types.GenerateContentConfig(
