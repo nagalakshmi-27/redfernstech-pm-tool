@@ -171,8 +171,7 @@ setBulkActionTaskIds={setBulkActionTaskIds}
     {task.issue_type || "Task"}
   </span>
 
-  {activeColumn === colName &&
-  (selectedTasks[colName] || []).length > 0 && (
+  {(selectedTasks[colName] || []).length > 0 && (
     <input
       type="checkbox"
       checked={

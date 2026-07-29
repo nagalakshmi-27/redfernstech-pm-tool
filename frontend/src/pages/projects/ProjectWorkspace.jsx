@@ -74,12 +74,11 @@ useEffect(() => {
     }
 
     if (
-      bulkMenuRef.current &&
-      !bulkMenuRef.current.contains(event.target)
-    ) {
-      setShowBulkMenu(false);
-      setActiveColumn(null);
-    }
+  bulkMenuRef.current &&
+  !bulkMenuRef.current.contains(event.target)
+) {
+  setShowBulkMenu(false);
+}
   }
 
   document.addEventListener("mousedown", handleClickOutside);
