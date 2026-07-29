@@ -3,8 +3,6 @@ import AssignMemberModal from "./AssignMemberModal";
 
 export default function BulkTaskActions({
   column,
-  selectionMode,
-  setSelectionMode,
   selectedTasks,
   setSelectedTasks,
   projectTasks,
@@ -29,18 +27,32 @@ export default function BulkTaskActions({
   showChangePriorityModal, setShowChangePriorityModal, selectedPriority, setSelectedPriority, showMoveSelectedModal, setShowMoveSelectedModal, selectedStatus, setSelectedStatus,
 
   bulkMenuRef,
+  showDeleteModal,
+setShowDeleteModal,
+bulkActionTaskIds,
+setBulkActionTaskIds,
 
   
 }) {
   const handleMenuToggle = () => {
-    if (activeColumn === column && showBulkMenu) {
-      setShowBulkMenu(false);
-      setActiveColumn(null);
-    } else {
-      setActiveColumn(column);
-      setShowBulkMenu(true);
-    }
-  };
+  if (activeColumn === column && showBulkMenu) {
+    setShowBulkMenu(false);
+    return;
+  }
+
+  setActiveColumn(column);
+  setShowBulkMenu(true);
+};
+  const selectedTasksInColumn = projectTasks.filter(
+  (task) =>
+    (task.status || "").toLowerCase() ===
+      (column || "").toLowerCase() &&
+    (selectedTasks[column] || []).includes(task.id)
+);
+
+const selectedTaskIdsInColumn = selectedTasksInColumn.map(
+  (task) => task.id
+);
 
   const handleSelectAll = () => {
   const columnTasks = projectTasks
@@ -52,20 +64,25 @@ export default function BulkTaskActions({
     .map((task) => task.id);
 
   const allSelected = columnTasks.every((id) =>
-    selectedTasks.includes(id)
-  );
+  (selectedTasks[column] || []).includes(id)
+);
 
   if (allSelected) {
-    setSelectedTasks([]);
-    setSelectionMode(false);
-  } else {
-    setSelectedTasks(columnTasks);
-    setSelectionMode(true);
-  }
+  setSelectedTasks((prev) => ({
+    ...prev,
+    [column]: [],
+  }));
 
-  setShowBulkMenu(false);
+  setActiveColumn(null);
+}else {
+  setSelectedTasks((prev) => ({
+    ...prev,
+    [column]: columnTasks,
+  }));
+}
+
+setShowBulkMenu(false);
 };
-
   return (
     <>
       <div
@@ -85,29 +102,40 @@ export default function BulkTaskActions({
   onClick={handleSelectAll}
   className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"
 >
-  {projectTasks
-    .filter(
-      (task) =>
-        (task.status || "").toLowerCase() ===
-        (column || "").toLowerCase()
-    )
-    .every((task) => selectedTasks.includes(task.id))
-    ? "Deselect All"
-    : "Select All"}
+  {(() => {
+  const columnTasks = projectTasks.filter(
+    (task) =>
+      (task.status || "").toLowerCase() ===
+      (column || "").toLowerCase()
+  );
+
+  const allSelected =
+  columnTasks.length > 0 &&
+  columnTasks.every((task) =>
+    (selectedTasks[column] || []).includes(task.id)
+  );
+
+  return allSelected ? "Deselect All" : "Select All";
+})()}
 </button>
 
-            {selectedTasks.length > 0 && (
+            {selectedTasksInColumn.length > 0 && (
   <>
     <button
-      onClick={() => handleDeleteSelectedTasks(selectedTasks)}
+      onClick={() => {
+  setBulkActionTaskIds(selectedTaskIdsInColumn);
+  setShowDeleteModal(true);
+  setShowBulkMenu(false);
+}}
       className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
     >
-      Delete Selected ({selectedTasks.length})
+      Delete Selected ({selectedTasksInColumn.length})
     </button>
 
     <button
       onClick={() => {
-        setShowAssignMemberModal(true);
+        setBulkActionTaskIds(selectedTaskIdsInColumn);
+setShowAssignMemberModal(true);
         setShowBulkMenu(false);
       }}
       className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"
@@ -117,7 +145,8 @@ export default function BulkTaskActions({
 
     <button
   onClick={() => {
-    setShowChangePriorityModal(true);
+    setBulkActionTaskIds(selectedTaskIdsInColumn);
+setShowChangePriorityModal(true);
     setShowBulkMenu(false);
   }}
   className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"
@@ -127,7 +156,8 @@ export default function BulkTaskActions({
 
     <button
   onClick={() => {
-    setShowMoveSelectedModal(true);
+    setBulkActionTaskIds(selectedTaskIdsInColumn);
+setShowMoveSelectedModal(true);
     setShowBulkMenu(false);
   }}
   className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10"

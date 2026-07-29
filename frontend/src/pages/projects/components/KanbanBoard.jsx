@@ -22,8 +22,6 @@ export default function KanbanBoard({
   handleDeleteTask,
   openTask,
   highlightedTaskId,
-  selectionMode,
-setSelectionMode,
 selectedTasks,
 setSelectedTasks,
 activeColumn,
@@ -52,6 +50,12 @@ selectedStatus,
 setSelectedStatus,
 
 bulkMenuRef,
+
+showDeleteModal,
+setShowDeleteModal,
+
+bulkActionTaskIds,
+setBulkActionTaskIds,
 }) {
   return (
     <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
@@ -83,8 +87,6 @@ bulkMenuRef,
 
     <BulkTaskActions
   column={colName}
-  selectionMode={selectionMode}
-  setSelectionMode={setSelectionMode}
   selectedTasks={selectedTasks}
   setSelectedTasks={setSelectedTasks}
   projectTasks={projectTasks}
@@ -119,6 +121,12 @@ selectedStatus={selectedStatus}
 setSelectedStatus={setSelectedStatus}
 
 bulkMenuRef={bulkMenuRef}
+
+showDeleteModal={showDeleteModal}
+setShowDeleteModal={setShowDeleteModal}
+
+bulkActionTaskIds={bulkActionTaskIds}
+setBulkActionTaskIds={setBulkActionTaskIds}
 />
   </div>
 </div>
@@ -163,20 +171,28 @@ bulkMenuRef={bulkMenuRef}
     {task.issue_type || "Task"}
   </span>
 
-  {selectionMode && (
+  {(selectedTasks[colName] || []).length > 0 && (
     <input
       type="checkbox"
-      checked={selectedTasks.includes(task.id)}
+      checked={
+  (selectedTasks[colName] || []).includes(task.id)
+}
       onChange={(e) => {
         e.stopPropagation();
 
         if (e.target.checked) {
-          setSelectedTasks((prev) => [...prev, task.id]);
-        } else {
-          setSelectedTasks((prev) =>
-            prev.filter((id) => id !== task.id)
-          );
-        }
+  setSelectedTasks((prev) => ({
+    ...prev,
+    [colName]: [...(prev[colName] || []), task.id],
+  }));
+} else {
+  setSelectedTasks((prev) => ({
+    ...prev,
+    [colName]: (prev[colName] || []).filter(
+      (id) => id !== task.id
+    ),
+  }));
+}
       }}
       onClick={(e) => e.stopPropagation()}
       className="w-4 h-4 accent-cyan-500 cursor-pointer"
