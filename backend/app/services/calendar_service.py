@@ -46,6 +46,12 @@ def sync_task_due_date(task: models.Task, workspace_id: int, db: Session):
         # Target calendar (usually "primary")
         target_calendar = "primary"
         
+        try:
+            cal_info = service.calendars().get(calendarId=target_calendar).execute()
+            time_zone = cal_info.get('timeZone', 'UTC')
+        except Exception:
+            time_zone = 'UTC'
+        
         # Determine if it's a date or datetime string
         is_datetime = "T" in task.due_date
         
@@ -55,19 +61,21 @@ def sync_task_due_date(task: models.Task, workspace_id: int, db: Session):
         }
         
         if is_datetime:
-            event['start'] = {'dateTime': task.due_date}
-            event['end'] = {'dateTime': task.due_date}
+            event['start'] = {'dateTime': task.due_date, 'timeZone': time_zone}
+            event['end'] = {'dateTime': task.due_date, 'timeZone': time_zone}
         else:
             from datetime import datetime, timedelta
             try:
                 # If it's a simple YYYY-MM-DD
-                start_date = datetime.strptime(task.due_date.split(" ")[0], "%Y-%m-%d").date()
-                end_date = start_date + timedelta(days=1)
+                start_date = datetime.strptime(task.due_date.split(" ")[0], "%Y-%m-%d")
+                # Set time to 11 AM on the deadline date
+                start_datetime = start_date.replace(hour=11, minute=0, second=0)
+                end_datetime = start_datetime + timedelta(hours=1)
                 
-                event['start'] = {'date': start_date.isoformat()}
-                event['end'] = {'date': end_date.isoformat()}
+                event['start'] = {'dateTime': start_datetime.isoformat(), 'timeZone': time_zone}
+                event['end'] = {'dateTime': end_datetime.isoformat(), 'timeZone': time_zone}
             except ValueError:
-                # Fallback if the string is weird but doesn't have a T
+                # Fallback if the string is weird
                 event['start'] = {'date': task.due_date}
                 event['end'] = {'date': task.due_date}
             
@@ -75,4 +83,14 @@ def sync_task_due_date(task: models.Task, workspace_id: int, db: Session):
         logger.info(f"Event created: {event_result.get('htmlLink')}")
         
     except Exception as e:
-        logger.error(f"Failed to sync with Google Calendar: {e}")
+        import traceback
+        if hasattr(e, 'content'):
+            logger.error(f"Google Calendar API Error: {e.content}")
+        elif hasattr(e, 'read'):
+            try:
+                logger.error(f"Google Calendar API HTTP Error: {e.read().decode('utf-8')}")
+            except Exception:
+                logger.error(f"Failed to sync with Google Calendar: {e}")
+        else:
+            logger.error(f"Failed to sync with Google Calendar: {e}")
+            logger.error(traceback.format_exc())

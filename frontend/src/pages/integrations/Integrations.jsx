@@ -19,6 +19,14 @@ export default function Integrations() {
   const canConfigure = true;
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get("error");
+    if (errorParam === "oauth_failed") {
+      alert("Failed to connect to integration provider. Please try again or check your credentials.");
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     if (activeWorkspaceId) {
       fetchIntegrations();
     }
@@ -44,18 +52,7 @@ export default function Integrations() {
     setConnecting(provider);
     
     if (provider === "google_calendar") {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/workspaces/${activeWorkspaceId}/integrations/google/auth-url`, {
-          headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          window.location.href = data.auth_url;
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to get Google Auth URL", err);
-      }
+      alert("Google Calendar integration is temporarily disabled. Coming soon!");
       setConnecting(null);
       return;
     }
@@ -245,11 +242,9 @@ export default function Integrations() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      {app.provider !== "google_calendar" && (
-                        <span className="bg-slate-500/20 text-slate-400 border border-slate-500/30 px-3 py-1 rounded-full text-xs font-bold">
-                          Coming Soon
-                        </span>
-                      )}
+                      <span className="bg-slate-500/20 text-slate-400 border border-slate-500/30 px-3 py-1 rounded-full text-xs font-bold">
+                        Coming Soon
+                      </span>
                       {canConfigure && (
                         <button
                           onClick={() => handleConnect(app.provider)}

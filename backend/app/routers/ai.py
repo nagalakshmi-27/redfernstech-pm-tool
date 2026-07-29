@@ -74,6 +74,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from fastapi import Depends, Form, File, UploadFile
 from .. import models, crud, schemas
+from ..services import calendar_service
 from datetime import datetime
 
 @router.post("/smart-summary", response_model=SmartSummaryResponse)
@@ -411,6 +412,8 @@ def chat_with_ai(
                         assignee_name = t.assignee.full_name or t.assignee.email if getattr(t, 'assignee', None) else "Unassigned"
                         context_str += f" - Task ID {t.id}: '{t.name}' | Status: {t.status} | Priority: {t.priority or 'Normal'} | Due Date: {t.due_date or 'No Deadline'} | Assignee: {assignee_name}\n"
                     
+        user_role = crud.get_user_workspace_role(db, current_user.id, request.workspace_id) or "Member"
+        
         # Build prompt
         system_instruction = f"""
         You are an expert AI Project Management Assistant.
@@ -418,8 +421,13 @@ def chat_with_ai(
         
         {context_str}
         
+        IMPORTANT PERMISSION RULES:
+        The user's current role in this workspace is: '{user_role}'.
+        - Only 'Admin' users can create projects. If the user asks to create a project and their role is NOT 'Admin', you MUST set action to 'answer' and politely inform them they do not have permission.
+        - 'Admin' and 'Member' users can create tasks. If the user asks to create a task and their role is 'Client', you MUST set action to 'answer' and politely inform them they do not have permission. (Note: All roles, including 'Client', CAN create calendar events/meetings).
+        
         If the user asks a question about tasks, projects, meetings, team members, or deadlines, use the CURRENT WORKSPACE CONTEXT to answer it.
-        If the user wants to create a project (e.g. "We need to develop a PM tool", "Create a project with members X and Y", or filling out details like Name, Members, Duration, Columns), set action to 'create_project'.
+        If the user wants to create a project (e.g. "We need to develop a PM tool", "Create a project with members X and Y", or filling out details like Name, Members, Duration, Columns), set action to 'create_project' ONLY IF their role is 'Admin'.
         When creating a project, you MUST intelligently generate and autofill any details based on whatever instructions or context the user provided:
         1. Name: Use the provided name or generate a fitting, professional name if omitted/blank.
         2. Description: Always generate a rich, comprehensive, professional description of the project.
@@ -429,7 +437,7 @@ def chat_with_ai(
         6. Tasks: If NO document is attached, generate 3-5 realistic tasks based on the prompt. 
         7. ATTACHED DOCUMENTS (PRDs/Requirements): If the user attaches a document (like a PRD), you MUST set action to 'create_project'. DO NOT just copy the feature names as tasks, and DO NOT limit yourself to 5 tasks! Instead, act like an expert Project Manager and Software Architect. Intelligently break down the project into 15 to 30 highly granular, actionable engineering and development tasks required to build the project from scratch (e.g., "Design Database Schema", "Develop User Authentication API", "Create React component for Room Booking", "Setup CI/CD Pipeline"). Generate a comprehensive and detailed list of these small, actionable pieces of work. This rule OVERRIDES rule 6 if a document is present!
 
-        If the user wants to create a single task (e.g. "Generate a task in the Dummy project to create a design..."), set action to 'create_task' and provide task_data with the correct project_id or project_name from context.
+        If the user wants to create a single task (e.g. "Generate a task in the Dummy project to create a design..."), set action to 'create_task' (unless they are a 'Client') and provide task_data with the correct project_id or project_name from context.
         If the user wants to schedule a meeting or calendar event (e.g. "Add a team meeting tomorrow at 3pm"), set action to 'create_event' and provide event_data with title, date, category='Meeting'.
 
         CRITICAL: You MUST respond in pure JSON matching this structure:
@@ -505,6 +513,16 @@ def chat_with_ai(
         new_project_id = None
         new_task_id = None
         new_event_id = None
+        
+        # Enforce RBAC in backend just in case LLM hallucinations bypass instructions
+        if action == "create_project" and user_role != "Admin":
+            action = "answer"
+            response_message = "I apologize, but only Workspace Admins can create new projects."
+            project_data = None
+        elif action == "create_task" and user_role == "Client":
+            action = "answer"
+            response_message = "I apologize, but as a Client, you do not have permission to create tasks."
+            res_dict["task_data"] = None
         
         if action == "create_project" and project_data:
             import datetime
@@ -643,6 +661,11 @@ def chat_with_ai(
             
             db.commit()
             
+            # Sync generated tasks with Google Calendar if integrated
+            for task in new_project.tasks:
+                if task.due_date:
+                    calendar_service.sync_task_due_date(task, request.workspace_id, db)
+            
         elif action == "create_task" and res_dict.get("task_data"):
             t_data = res_dict.get("task_data", {})
             proj_id = t_data.get("project_id")
@@ -675,6 +698,8 @@ def chat_with_ai(
                     db.commit()
                     db.refresh(created_task)
                     new_task_id = created_task.id
+                    if created_task.due_date:
+                        calendar_service.sync_task_due_date(created_task, request.workspace_id, db)
 
         elif action == "create_event" and res_dict.get("event_data"):
             e_data = res_dict.get("event_data", {})

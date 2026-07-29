@@ -19,14 +19,14 @@ public_router = APIRouter(
     tags=["Integrations Public"]
 )
 
-@router.get("/", response_model=List[schemas.IntegrationResponse])
+@router.get("", response_model=List[schemas.IntegrationResponse])
 def get_integrations(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Verify workspace membership
     workspace = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
         
-    is_member = current_user.id == workspace.owner_id or any(w.id == workspace_id for w in current_user.workspaces)
+    is_member = current_user.is_owner or any(w.id == workspace_id for w in current_user.workspaces)
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to access this workspace's integrations")
         
@@ -39,7 +39,7 @@ def connect_integration(workspace_id: int, provider: str, integration_data: sche
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
         
-    is_member = current_user.id == workspace.owner_id or any(w.id == workspace_id for w in current_user.workspaces)
+    is_member = current_user.is_owner or any(w.id == workspace_id for w in current_user.workspaces)
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to configure integrations")
         
@@ -78,7 +78,7 @@ def disconnect_integration(workspace_id: int, provider: str, db: Session = Depen
     if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
         
-    is_member = current_user.id == workspace.owner_id or any(w.id == workspace_id for w in current_user.workspaces)
+    is_member = current_user.is_owner or any(w.id == workspace_id for w in current_user.workspaces)
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to configure integrations")
         
@@ -122,7 +122,15 @@ def google_callback(state: str, code: str, request: Request, db: Session = Depen
             "redirect_uri": os.getenv("GOOGLE_REDIRECT_URI")
         }).encode("utf-8")
         
-        req = urllib.request.Request("https://oauth2.googleapis.com/token", data=data)
+        req = urllib.request.Request(
+            "https://oauth2.googleapis.com/token", 
+            data=data,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json"
+            }
+        )
         with urllib.request.urlopen(req) as response:
             token_data = json.loads(response.read())
             
@@ -159,6 +167,10 @@ def google_callback(state: str, code: str, request: Request, db: Session = Depen
         
     except Exception as e:
         import logging
-        logging.getLogger(__name__).error(f"OAuth Error: {e}")
+        logger = logging.getLogger(__name__)
+        if hasattr(e, 'read'):
+            logger.error(f"OAuth HTTP Error: {e.read().decode('utf-8')}")
+        else:
+            logger.error(f"OAuth Error: {e}")
         frontend_url = os.getenv("FRONTEND_URL", "https://main.d2zlo70oepu5a3.amplifyapp.com").split(",")[0]
         return RedirectResponse(url=f"{frontend_url}/integrations?error=oauth_failed")

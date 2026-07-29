@@ -22,7 +22,7 @@ const [editingId, setEditingId] = useState(null);
 const [editedText, setEditedText] = useState("");
 const [isTyping, setIsTyping] = useState(false);
 const [activeChat, setActiveChat] = useState(() => {
-  const saved = localStorage.getItem(`workspace_ai_active_${activeWorkspaceId}`);
+  const saved = localStorage.getItem(`workspace_ai_active_${activeWorkspaceId}_${currentUser?.id}`);
   return saved ? Number(saved) : 1;
 });
 const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -39,7 +39,7 @@ const handleCloseChat = () => {
 };
 
 const [chats, setChats] = useState(() => {
-  const saved = localStorage.getItem(`workspace_ai_chats_${activeWorkspaceId}`);
+  const saved = localStorage.getItem(`workspace_ai_chats_${activeWorkspaceId}_${currentUser?.id}`);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -62,20 +62,47 @@ const [chats, setChats] = useState(() => {
     },
   ];
 });
+
 const [editingChatId, setEditingChatId] = useState(null);
 const [editingChatTitle, setEditingChatTitle] = useState("");
 
 useEffect(() => {
-  if (activeWorkspaceId && chats) {
-    localStorage.setItem(`workspace_ai_chats_${activeWorkspaceId}`, JSON.stringify(chats));
+  if (activeWorkspaceId && currentUser?.id) {
+    const savedChats = localStorage.getItem(`workspace_ai_chats_${activeWorkspaceId}_${currentUser.id}`);
+    if (savedChats) {
+      try {
+        const parsed = JSON.parse(savedChats);
+        setChats(parsed.map(c => ({
+          ...c,
+          pinned: c.pinned || false,
+          archived: c.archived || false,
+          createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+        })));
+      } catch(e) {}
+    } else {
+      setChats([{ id: 1, title: "New Chat", pinned: false, archived: false, createdAt: new Date(), messages: [] }]);
+    }
+    
+    const savedActive = localStorage.getItem(`workspace_ai_active_${activeWorkspaceId}_${currentUser.id}`);
+    if (savedActive) {
+      setActiveChat(Number(savedActive));
+    } else {
+      setActiveChat(1);
+    }
   }
-}, [chats, activeWorkspaceId]);
+}, [activeWorkspaceId, currentUser?.id]);
 
 useEffect(() => {
-  if (activeWorkspaceId && activeChat) {
-    localStorage.setItem(`workspace_ai_active_${activeWorkspaceId}`, activeChat.toString());
+  if (activeWorkspaceId && currentUser?.id && chats) {
+    localStorage.setItem(`workspace_ai_chats_${activeWorkspaceId}_${currentUser.id}`, JSON.stringify(chats));
   }
-}, [activeChat, activeWorkspaceId]);
+}, [chats, activeWorkspaceId, currentUser?.id]);
+
+useEffect(() => {
+  if (activeWorkspaceId && currentUser?.id && activeChat) {
+    localStorage.setItem(`workspace_ai_active_${activeWorkspaceId}_${currentUser.id}`, activeChat.toString());
+  }
+}, [activeChat, activeWorkspaceId, currentUser?.id]);
 const currentChat = chats.find(
   (chat) => chat.id === activeChat
 );
