@@ -1,5 +1,10 @@
 import { useContext, useState, useEffect, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+  useParams,
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import AppContext from "../../context/AppContext";
 import CreateIssueModal from "../../components/CreateIssueModal";
@@ -33,10 +38,15 @@ import { iconLibrary } from "../../utils/iconLibrary";
 import EditProjectModal from "./components/EditProjectModal";
 import DeleteProjectModal from "./components/DeleteProjectModal";
 import TaskVisibilityModal from "./components/TaskVisibilityModal";
+import BulkTaskActions from "./components/BulkTaskActions";
+import AssignMemberModal from "./components/AssignMemberModal";
+import ChangePriorityModal from "./components/ChangePriorityModal";
+import MoveSelectedModal from "./components/MoveSelectedModal";
 
 export default function ProjectWorkspace() {
   const { id } = useParams();
-  const navigate = useNavigate();
+const navigate = useNavigate();
+const [searchParams] = useSearchParams();
   const {
   projects,
   setProjects,
@@ -62,6 +72,14 @@ useEffect(() => {
     ) {
       setShowProjectSettings(false);
     }
+
+    if (
+      bulkMenuRef.current &&
+      !bulkMenuRef.current.contains(event.target)
+    ) {
+      setShowBulkMenu(false);
+      setActiveColumn(null);
+    }
   }
 
   document.addEventListener("mousedown", handleClickOutside);
@@ -84,6 +102,7 @@ useEffect(() => {
   const [highlightedTaskId, setHighlightedTaskId] = useState(null);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const settingsMenuRef = useRef(null);
+  const bulkMenuRef = useRef(null);
   const closeEditModal = () => {
     setShowEditModal(false);
     if (editingTaskId) {
@@ -312,6 +331,22 @@ const [showAllMembers, setShowAllMembers] = useState(false);
 
   const [showCustomizeBoard, setShowCustomizeBoard] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+
+const [selectedTasks, setSelectedTasks] = useState([]);
+
+const [activeColumn, setActiveColumn] = useState(null);
+
+const [showBulkMenu, setShowBulkMenu] = useState(false);
+const [showAssignMemberModal, setShowAssignMemberModal] = useState(false);
+const [showChangePriorityModal, setShowChangePriorityModal] = useState(false);
+
+const [selectedPriority, setSelectedPriority] = useState("");
+const [showMoveSelectedModal, setShowMoveSelectedModal] = useState(false);
+
+const [selectedStatus, setSelectedStatus] = useState("");
+const [selectedMemberId, setSelectedMemberId] = useState("");
+
   const [boardColumns, setBoardColumns] = useState(
   project?.board_columns?.length
     ? [...project.board_columns]
@@ -415,6 +450,33 @@ useEffect(() => {
       }
     }
   }, [projectTasks, showEditModal, id]);
+
+  useEffect(() => {
+  const highlightTaskId = searchParams.get("highlightTask");
+
+  if (!highlightTaskId || projectTasks.length === 0) return;
+
+  setActiveTab("Board");
+
+  setTimeout(() => {
+    const element = document.getElementById(
+      `task-card-${highlightTaskId}`
+    );
+
+    if (element) {
+      setHighlightedTaskId(Number(highlightTaskId));
+
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      setTimeout(() => {
+        setHighlightedTaskId(null);
+      }, 4000);
+    }
+  }, 300);
+}, [searchParams, projectTasks]);
 
   useEffect(() => {
   if (location.state?.highlightProjectId) {
@@ -602,6 +664,201 @@ useEffect(() => {
       alert("Error deleting task"); 
     }
   };
+
+  const handleDeleteSelectedTasks = async (taskIds) => {
+  if (taskIds.length === 0) return;
+
+  const confirmDelete = window.confirm(
+    `Delete ${taskIds.length} selected task(s)?`
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    await Promise.all(
+      taskIds.map((id) =>
+        fetch(`${import.meta.env.VITE_API_URL}/tasks/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+      )
+    );
+
+    setTasks((prev) =>
+      prev.filter((task) => !taskIds.includes(task.id))
+    );
+
+    setSelectedTasks([]);
+    setSelectionMode(false);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete selected tasks.");
+  }
+};
+
+const handleAssignSelectedTasks = async (taskIds, memberId) => {
+  if (!taskIds.length || !memberId) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    await Promise.all(
+      taskIds.map(async (taskId) => {
+        const task = tasks.find((t) => t.id === taskId);
+
+        if (!task) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/tasks/${taskId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              ...task,
+              assignee_id: Number(memberId),
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to assign member");
+        }
+      })
+    );
+
+    setTasks((prev) =>
+      prev.map((task) =>
+        taskIds.includes(task.id)
+          ? {
+              ...task,
+              assignee_id: Number(memberId),
+            }
+          : task
+      )
+    );
+
+    setSelectedTasks([]);
+    setSelectionMode(false);
+    setSelectedMemberId("");
+    setShowAssignMemberModal(false);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to assign member.");
+  }
+};
+
+const handleChangePrioritySelectedTasks = async (taskIds, priority) => {
+  if (!taskIds.length || !priority) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    await Promise.all(
+      taskIds.map(async (taskId) => {
+        const task = tasks.find((t) => t.id === taskId);
+
+        if (!task) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/tasks/${taskId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              ...task,
+              priority,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to update priority");
+        }
+      })
+    );
+
+    setTasks((prev) =>
+      prev.map((task) =>
+        taskIds.includes(task.id)
+          ? {
+              ...task,
+              priority,
+            }
+          : task
+      )
+    );
+
+    setSelectedTasks([]);
+    setSelectionMode(false);
+    setSelectedPriority("");
+    setShowChangePriorityModal(false);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to update priority.");
+  }
+};
+
+const handleMoveSelectedTasks = async (taskIds, status) => {
+  if (!taskIds.length || !status) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    await Promise.all(
+      taskIds.map(async (taskId) => {
+        const task = tasks.find((t) => t.id === taskId);
+
+        if (!task) return;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/tasks/${taskId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              ...task,
+              status,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to move task");
+        }
+      })
+    );
+
+    setTasks((prev) =>
+      prev.map((task) =>
+        taskIds.includes(task.id)
+          ? {
+              ...task,
+              status,
+            }
+          : task
+      )
+    );
+
+    setSelectedTasks([]);
+    setSelectionMode(false);
+    setSelectedStatus("");
+    setShowMoveSelectedModal(false);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to move selected tasks.");
+  }
+};
 
 const columns = boardColumns;
 const getColumnIcon = (column) => {
@@ -967,20 +1224,52 @@ const handleBoardViewChange = async (type) => {
     {/* Kanban Board */}
     {(!boardType || boardType === "kanban") && (
       <KanbanBoard
-        columns={columns}
-        projectTasks={projectTasks}
-        members={members}
-        currentUserRole={currentUserRole}
-        handleDragStart={handleDragStart}
-        handleDragOver={handleDragOver}
-        handleDropOnColumn={handleDropOnColumn}
-        handleDropOnCard={handleDropOnCard}
-        getColumnIcon={getColumnIcon}
-        getColumnColor={getColumnColor}
-        handleDeleteTask={handleDeleteTask}
-        openTask={handleOpenTask}
-        highlightedTaskId={highlightedTaskId}
-      />
+  columns={columns}
+  projectTasks={projectTasks}
+  members={members}
+  currentUserRole={currentUserRole}
+  handleDragStart={handleDragStart}
+  handleDragOver={handleDragOver}
+  handleDropOnColumn={handleDropOnColumn}
+  handleDropOnCard={handleDropOnCard}
+  getColumnIcon={getColumnIcon}
+  getColumnColor={getColumnColor}
+  handleDeleteTask={handleDeleteTask}
+  handleDeleteSelectedTasks={handleDeleteSelectedTasks}
+  handleAssignSelectedTasks={handleAssignSelectedTasks}
+  openTask={handleOpenTask}
+  highlightedTaskId={highlightedTaskId}
+
+  selectionMode={selectionMode}
+  setSelectionMode={setSelectionMode}
+
+  selectedTasks={selectedTasks}
+  setSelectedTasks={setSelectedTasks}
+
+  activeColumn={activeColumn}
+  setActiveColumn={setActiveColumn}
+
+  showBulkMenu={showBulkMenu}
+  setShowBulkMenu={setShowBulkMenu}
+  showAssignMemberModal={showAssignMemberModal}
+setShowAssignMemberModal={setShowAssignMemberModal}
+
+selectedMemberId={selectedMemberId}
+setSelectedMemberId={setSelectedMemberId}
+
+showChangePriorityModal={showChangePriorityModal}
+setShowChangePriorityModal={setShowChangePriorityModal}
+
+selectedPriority={selectedPriority}
+setSelectedPriority={setSelectedPriority}
+
+showMoveSelectedModal={showMoveSelectedModal}
+setShowMoveSelectedModal={setShowMoveSelectedModal}
+
+selectedStatus={selectedStatus}
+setSelectedStatus={setSelectedStatus}
+bulkMenuRef={bulkMenuRef}
+/>
     )}
 
     {/* Scrum Board */}
@@ -1506,6 +1795,52 @@ const handleBoardViewChange = async (type) => {
     </div>
   </div>
 )}
+
+<AssignMemberModal
+  open={showAssignMemberModal}
+  members={members}
+  selectedMemberId={selectedMemberId}
+  setSelectedMemberId={setSelectedMemberId}
+  onClose={() => {
+    setShowAssignMemberModal(false);
+    setSelectedMemberId("");
+  }}
+  onAssign={() => {
+    handleAssignSelectedTasks(selectedTasks, selectedMemberId);
+  }}
+/>
+
+<ChangePriorityModal
+  open={showChangePriorityModal}
+  selectedPriority={selectedPriority}
+  setSelectedPriority={setSelectedPriority}
+  onClose={() => {
+    setShowChangePriorityModal(false);
+    setSelectedPriority("");
+  }}
+  onUpdate={() => {
+  handleChangePrioritySelectedTasks(
+    selectedTasks,
+    selectedPriority
+  );
+}}
+/>
+<MoveSelectedModal
+  open={showMoveSelectedModal}
+  columns={columns}
+  selectedStatus={selectedStatus}
+  setSelectedStatus={setSelectedStatus}
+  onClose={() => {
+    setShowMoveSelectedModal(false);
+    setSelectedStatus("");
+  }}
+  onMove={() => {
+  handleMoveSelectedTasks(
+    selectedTasks,
+    selectedStatus
+  );
+}}
+/>
     </MainLayout>
   );
 }

@@ -1,5 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useState, useEffect, useContext, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import AppContext from "../../context/AppContext";
 import {
   CalendarDays,
@@ -7,10 +8,17 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  CheckSquare,
 } from "lucide-react";
 
 export default function Calendar() {
-  const { tasks, members, events: manualEvents, setEvents: setManualEvents } = useContext(AppContext);
+  const {
+  tasks,
+  members,
+  projects,
+  events: manualEvents,
+  setEvents: setManualEvents,
+} = useContext(AppContext);
   const currentUserId = members.find(m => m.email === localStorage.getItem("userEmail"))?.id;
 
   // 2. MAGICAL MERGE! Combine manual events and your real tasks into one giant calendar array!
@@ -19,14 +27,26 @@ export default function Calendar() {
     ...tasks
       .filter(task => task.assignee_id === currentUserId && task.due_date)
       .map(task => ({
-      id: `task-${task.id}`, // Add a prefix so it doesn't conflict with event IDs
-      title: task.name,
-      date: task.due_date,
-      status: task.status === "Completed" ? "Completed" : "Upcoming",
-      category: "Task", // Label it specifically as a task!
-      isTask: true      // Flag it so we know it's not a manual event
-    }))
+  id: `task-${task.id}`,
+  taskId: task.id,
+  projectId: task.project_id,
+  title: task.name,
+  date: task.due_date,
+  status: task.status,
+  category: "Task",
+  isTask: true
+}))
   ];
+
+  const isCompleted = (event) => {
+  if (!event.isTask) {
+    return event.status === "Completed";
+  }
+
+  const task = tasks.find((t) => `task-${t.id}` === event.id);
+
+  return task?.status === "Completed";
+};
 
   const [showModal, setShowModal] = useState(false);
   const [eventTitle, setEventTitle] = useState("");
@@ -41,6 +61,7 @@ export default function Calendar() {
   const [showEventListModal, setShowEventListModal] = useState(false);
 const [modalType, setModalType] = useState("all");
 const eventDateRef = useRef(null);
+const navigate = useNavigate();
   const handleAddEvent = async () => {
     if (!eventTitle.trim()) {
       alert("Event Title is required");
@@ -232,13 +253,17 @@ const pendingTasks = events.filter((event) => {
   );
 
   return (
-    event.status === "Upcoming" &&
+    (
+      event.isTask
+  ? !isCompleted(event)
+  : event.status === "Upcoming"
+    ) &&
     daysRemaining >= 0
   );
 }).length;
 
 const completedTasks = events.filter(
-  (event) => event.status === "Completed"
+  (event) => isCompleted(event)
 ).length;
 
 const missedTasks = events.filter((event) => {
@@ -249,10 +274,10 @@ const missedTasks = events.filter((event) => {
   );
 
   return (
-    daysRemaining < 0 &&
-    event.status !== "Completed" &&
-    event.status !== "Cancelled"
-  );
+  daysRemaining < 0 &&
+  !isCompleted(event) &&
+  event.status !== "Cancelled"
+);
 }).length;
 
 const cancelledTasks = events.filter(
@@ -278,14 +303,15 @@ const totalEvents =
 const cardFilteredEvents = (() => {
   switch (activeCard) {
     case "pending":
-      return selectedEvents.filter(
-        (event) => event.status === "Upcoming"
-      );
-
+  return selectedEvents.filter((event) =>
+    event.isTask
+      ? !isCompleted(event)
+      : event.status === "Upcoming"
+  );
     case "completed":
-      return selectedEvents.filter(
-        (event) => event.status === "Completed"
-      );
+  return selectedEvents.filter(
+    (event) => isCompleted(event)
+  );
 
     case "missed":
       return selectedEvents.filter((event) => {
@@ -296,10 +322,10 @@ const cardFilteredEvents = (() => {
         );
 
         return (
-          daysRemaining < 0 &&
-          event.status !== "Completed" &&
-          event.status !== "Cancelled"
-        );
+  daysRemaining < 0 &&
+  !isCompleted(event) &&
+  event.status !== "Cancelled"
+);
       });
 
     default:
@@ -351,25 +377,32 @@ const allFilteredEvents = (() => {
 const modalEvents = (() => {
   switch (modalType) {
     case "pending":
-      return events.filter((event) => event.status === "Upcoming");
-
+  return events.filter((event) =>
+    event.isTask
+      ? !isCompleted(event)
+      : event.status === "Upcoming"
+  );
     case "completed":
-      return events.filter((event) => event.status === "Completed");
+  return events.filter((event) => isCompleted(event));
 
     case "missed":
-      return events.filter((event) => {
-        const daysRemaining = Math.ceil(
-          (new Date(event.date).setHours(0, 0, 0, 0) -
-            new Date().setHours(0, 0, 0, 0)) /
-            (1000 * 60 * 60 * 24)
-        );
+  return events.filter((event) => {
+    const daysRemaining = Math.ceil(
+      (new Date(event.date).setHours(0, 0, 0, 0) -
+        new Date().setHours(0, 0, 0, 0)) /
+        (1000 * 60 * 60 * 24)
+    );
 
-        return (
-          daysRemaining < 0 &&
-          event.status !== "Completed" &&
-          event.status !== "Cancelled"
-        );
-      });
+    return (
+      daysRemaining < 0 &&
+      (
+        event.isTask
+  ? !isCompleted(event)
+  : event.status !== "Completed" &&
+    event.status !== "Cancelled"
+      )
+    );
+  });
 
     default:
       return events;
@@ -599,9 +632,7 @@ const modalEvents = (() => {
     );
   });
 
-  const pendingCount = dayEvents.filter(
-  (event) => event.status === "Upcoming"
-).length;
+  const pendingCount = dayEvents.filter((event) => !isCompleted(event)).length;
 
   const isPastDeadline =
     new Date(
@@ -686,14 +717,21 @@ const isMissed =
     <div
   key={event.id}
   onClick={() => {
-    const date = new Date(event.date);
-
-    setCurrentMonth(
-      new Date(date.getFullYear(), date.getMonth(), 1)
+  if (event.isTask) {
+    navigate(
+      `/projects/${event.projectId}?highlightTask=${event.taskId}`
     );
+    return;
+  }
 
-    setSelectedDate(date.getDate());
-  }}
+  const date = new Date(event.date);
+
+  setCurrentMonth(
+    new Date(date.getFullYear(), date.getMonth(), 1)
+  );
+
+  setSelectedDate(date.getDate());
+}}
   className="bg-white/5 border border-white/10 p-3 rounded-xl cursor-pointer hover:border-cyan-400 hover:bg-white/10 transition"
 >
                       <div className="flex justify-between items-center">
@@ -702,13 +740,33 @@ const isMissed =
   </p>
 
   <div className="flex flex-wrap items-center gap-3">
-  
 
+  <div
+    className={`flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-semibold ${
+      event.isTask
+        ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+        : "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+    }`}
+  >
+    {event.isTask ? (
+      <>
+        <CheckSquare size={14} />
+        <span>Task</span>
+      </>
+    ) : (
+      <>
+        <CalendarDays size={14} />
+        <span>Event</span>
+      </>
+    )}
+  </div>
+
+  {!event.isTask && (
   <button
     onClick={(e) => {
-  e.stopPropagation();
-  toggleEventStatus(event.id, event.status);
-}}
+      e.stopPropagation();
+      toggleEventStatus(event.id, event.status);
+    }}
     className={`relative w-10 h-5 rounded-full transition-all ${
       event.status === "Completed"
         ? "bg-green-500"
@@ -723,6 +781,7 @@ const isMissed =
       }`}
     />
   </button>
+)}
 </div>
 
 </div>
@@ -760,27 +819,29 @@ const isMissed =
 >
   {isMissed ? "Missed" : event.status}
 </span>
-<div className="flex flex-wrap gap-4 mt-2">
-  <button
-    onClick={(e) => {
-  e.stopPropagation();
-  handleEditEvent(event);
-}}
-    className="text-cyan-400 hover:text-cyan-300 text-sm font-medium transition"
-  >
-    Edit
-  </button>
+{!event.isTask && (
+  <div className="flex flex-wrap gap-4 mt-2">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleEditEvent(event);
+      }}
+      className="text-cyan-400 hover:text-cyan-300 text-sm font-medium transition"
+    >
+      Edit
+    </button>
 
-  <button
-    onClick={(e) => {
-  e.stopPropagation();
-  handleDeleteEvent(event.id);
-}}
-    className="text-red-400 hover:text-red-300 text-sm font-medium transition"
-  >
-    Delete
-  </button>
-</div>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDeleteEvent(event.id);
+      }}
+      className="text-red-400 hover:text-red-300 text-sm font-medium transition"
+    >
+      Delete
+    </button>
+  </div>
+)}
                     </div>
   );
                                     })}
@@ -943,19 +1004,37 @@ const isMissed =
         }}
         className="bg-white/5 border border-white/10 rounded-xl p-4 cursor-pointer hover:border-cyan-400 hover:bg-white/10 transition"
       >
-        <div className="flex justify-between items-center">
-          <h3 className="font-semibold text-white">
-            {event.title}
-          </h3>
+        <div>
+  <div className="flex items-center gap-2 flex-wrap">
+    <h3 className="font-semibold text-white">
+      {event.title}
+    </h3>
 
-          <span className="text-sm text-slate-400">
-            {event.date}
-          </span>
-        </div>
+    <div
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-semibold ${
+        event.isTask
+          ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+          : "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
+      }`}
+    >
+      {event.isTask ? (
+        <>
+          <CheckSquare size={14} />
+          <span>Task</span>
+        </>
+      ) : (
+        <>
+          <CalendarDays size={14} />
+          <span>Event</span>
+        </>
+      )}
+    </div>
+  </div>
 
-        <p className="text-sm text-slate-400 mt-2">
-          Status: {event.status}
-        </p>
+  <p className="text-sm text-slate-400 mt-2">
+    Status: {event.status}
+  </p>
+</div>
       </div>
     ))
   ) : (
